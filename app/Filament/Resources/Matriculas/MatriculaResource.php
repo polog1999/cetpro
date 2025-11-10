@@ -39,7 +39,7 @@ class MatriculaResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // RelationManagers\PagosRelationManager::class,
+            RelationManagers\PagosRelationManager::class,
         ];
     }
 
