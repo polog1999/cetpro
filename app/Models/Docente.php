@@ -18,18 +18,12 @@ class Docente extends Model
         'nombres',
         'apellido_paterno',
         'apellido_materno',
-        'modulo_id', #foreign key
+       
     ];
 
-    public function secciones() : HasMany
-    {
-        return $this->hasMany(Seccion::class);
-    }
+    
  
-    public function modulos() : BelongsToMany # el nombre de la clase, es el nombre de la tabla relacionada
-    {
-        return $this->belongsToMany(Modulo::class, 'docente_modulo');
-    }
+    
     // Accessor opcional para mostrar nombre completo en selects/listas
     public function getNombreCompletoAttribute(): string
     {

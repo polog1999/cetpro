@@ -91,4 +91,9 @@ class UsuarioResource extends Resource
         $user = Filament::auth()->user();
         return $user?->rol === Rol::ADMIN; // o 'admin'
     }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
 }

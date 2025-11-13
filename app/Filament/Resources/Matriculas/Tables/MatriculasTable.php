@@ -11,36 +11,37 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\IconColumn;
-
 use Filament\Actions\Action;
-
 
 class MatriculasTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            // IMPORTANTe en Filament v4: usa modifyQueryUsing para evitar N+1
-            ->modifyQueryUsing(fn ($query) => $query->with(['estudiante', 'seccion']))
+            // Importante en Filament v4: evitar N+1
+            ->modifyQueryUsing(fn ($query) => $query->with(['estudiante', 'ofertaAcademica']))
 
             ->columns([
                 TextColumn::make('codigo')
                     ->searchable(),
 
                 TextColumn::make('estudiante.nombres')
+                    ->label('Estudiante')
                     ->sortable(),
 
-                // OPCIÓN B: Ícono justo al costado del alumno (déjalo si quieres esta UI)
                 IconColumn::make('descargar_pdf')
-                    ->label('') // sin label = compacto
+                    ->label('')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->tooltip('Descargar PDF')
                     ->url(fn ($record) => route('matriculas.pdf', $record))
                     ->openUrlInNewTab(),
 
-                TextColumn::make('seccion.nombre')
+                TextColumn::make('ofertaAcademica.id_oferta')
+                    ->label('Oferta académica')
                     ->sortable(),
+
                 BadgeColumn::make('estado'),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -59,11 +60,11 @@ class MatriculasTable
                     ->preload()
                     ->label('Estudiante'),
 
-                SelectFilter::make('seccion')
-                    ->relationship('seccion', 'nombre')
+                SelectFilter::make('ofertaAcademica')
+                    ->relationship('ofertaAcademica', 'id_oferta')
                     ->searchable()
                     ->preload()
-                    ->label('Sección'),
+                    ->label('Oferta académica'),
 
                 SelectFilter::make('estado')->options([
                     'activa'    => 'Activa',
@@ -75,14 +76,12 @@ class MatriculasTable
             ->recordActions([
                 EditAction::make(),
 
-                // OPCIÓN A: botón "PDF" en la columna de acciones
                 Action::make('pdf')
-    ->label('PDF')
-    ->icon('heroicon-o-arrow-down-tray')
-    ->tooltip('Ver/descargar PDF de matrícula')
-    ->url(fn ($record) => route('matriculas.pdf', $record)) // sin ?download
-    ->openUrlInNewTab(),
-    
+                    ->label('PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->tooltip('Ver/descargar PDF de matrícula')
+                    ->url(fn ($record) => route('matriculas.pdf', $record))
+                    ->openUrlInNewTab(),
 
                 DeleteAction::make(),
             ])

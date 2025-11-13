@@ -7,23 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use App\Models\Estudiante;
-use App\Models\Seccion;
+use App\Models\OfertaAcademica;
 use App\Enums\EstadoMatricula;
-use Illuminate\Support\Str;
-
 use Illuminate\Database\Eloquent\Model;
 
 class Matricula extends Model
 {
+    use HasFactory;
+
+    protected $table = 'matriculas';
+
     protected $fillable = [
-        // 'codigo',
         'estudiante_id',
-        'seccion_id',
+        'oferta_academica_id',
         'estado',
     ];
 
     protected $casts = [
-        // ¡Esta es la clave!
         'estado' => EstadoMatricula::class,
     ];
 
@@ -32,9 +32,13 @@ class Matricula extends Model
         return $this->belongsTo(Estudiante::class);
     }
 
-    public function seccion(): BelongsTo
+    public function ofertaAcademica(): BelongsTo
     {
-        return $this->belongsTo(Seccion::class);
+        return $this->belongsTo(
+            OfertaAcademica::class,
+            'oferta_academica_id',
+            'id_oferta'
+        );
     }
 
     public function pagos(): HasMany
@@ -44,22 +48,21 @@ class Matricula extends Model
 
     protected static function booted(): void
     {
-        // Se ejecuta ANTES de que la matrícula se guarde
         static::creating(function (Matricula $matricula) {
-            
-            // 1. Obtenemos la Seccion
-            $seccion = Seccion::find($matricula->seccion_id);
-            // Obtenemos el código completo de la sección (ej: S-3-112025-0ZAO)
-            $codigoSeccion = $seccion->codigo ?? 'SIN-SECCION-CODIGO';
+
+            // 1. Obtenemos la Oferta Académica
+            $oferta = OfertaAcademica::find($matricula->oferta_academica_id);
+            $codigoOferta = $oferta
+                ? 'OF-' . str_pad($oferta->id_oferta, 4, '0', STR_PAD_LEFT)
+                : 'SIN-OFERTA';
 
             // 2. Obtenemos el Estudiante
             $estudiante = Estudiante::find($matricula->estudiante_id);
-            $dni = $estudiante->nro_documento ?? 'SIN-DNI'; // Asegúrate que 'nro_documento' sea la columna
+            $dni = $estudiante->nro_documento ?? 'SIN-DNI';
 
             // 3. Creamos el código de la matrícula
-            // Ya no necesitamos un bucle porque la combinación CODIGO_SECCION-DNI
-            // es única por definición de la validación DB (estudiante_id + seccion_id)
-            $matricula->codigo = "{$codigoSeccion}-{$dni}";
+            // Formato ejemplo: OF-0001-12345678
+            $matricula->codigo = "{$codigoOferta}-{$dni}";
         });
     }
 }

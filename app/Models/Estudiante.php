@@ -32,10 +32,7 @@ class Estudiante extends Model
         'fecha_nacimiento' => 'date', // o 'immutable_date'
     ];
 
-    public function secciones() : BelongsToMany
-    {
-        return $this->belongsToMany(Seccion::class, 'estudiante_seccion');
-    }
+   
 
     public function apoderado() : BelongsTo
     {
