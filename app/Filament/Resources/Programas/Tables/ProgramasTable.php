@@ -7,6 +7,13 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use App\Models\Programa;
+use Filament\Actions\Action;
+
+use App\Filament\Resources\Programas\ProgramaResource;
+
+
+
 
 class ProgramasTable
 {
@@ -39,11 +46,25 @@ class ProgramasTable
             ])
             ->recordActions([
                 EditAction::make(),
+
+                // 👇 Nuevo botón "Agregar cursos"
+            Action::make('agregarCursos')
+                ->label('Agregar cursos')
+                ->icon('heroicon-m-plus')
+                ->button()
+                ->url(fn (Programa $record): string =>
+                    ProgramaResource::getUrl('view', ['record' => $record])
+                ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
+
+              
+
+                
             ]);
+            
     }
 }

@@ -19,7 +19,7 @@ class MatriculasTable
     {
         return $table
             // Importante en Filament v4: evitar N+1
-            ->modifyQueryUsing(fn ($query) => $query->with(['estudiante', 'ofertaAcademica']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['estudiante', 'Seccion']))
 
             ->columns([
                 TextColumn::make('codigo')
@@ -36,8 +36,8 @@ class MatriculasTable
                     ->url(fn ($record) => route('matriculas.pdf', $record))
                     ->openUrlInNewTab(),
 
-                TextColumn::make('ofertaAcademica.id_oferta')
-                    ->label('Oferta académica')
+                TextColumn::make('seccion.id_seccion')
+                    ->label('Seccion')
                     ->sortable(),
 
                 BadgeColumn::make('estado'),
@@ -60,11 +60,11 @@ class MatriculasTable
                     ->preload()
                     ->label('Estudiante'),
 
-                SelectFilter::make('ofertaAcademica')
-                    ->relationship('ofertaAcademica', 'id_oferta')
+                SelectFilter::make('seccion')
+                    ->relationship('seccion', 'id_seccion')
                     ->searchable()
                     ->preload()
-                    ->label('Oferta académica'),
+                    ->label('Seccion'),
 
                 SelectFilter::make('estado')->options([
                     'activa'    => 'Activa',

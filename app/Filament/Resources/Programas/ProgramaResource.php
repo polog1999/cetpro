@@ -19,6 +19,14 @@ use App\Enums\Rol;
 
 use UnitEnum;
 
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+
+
+use App\Filament\Resources\Programas\RelationManagers\CursosRelationManager;
+
+use App\Filament\Resources\Programas\Pages\ViewPrograma;
+
 class ProgramaResource extends Resource
 {
     protected static ?string $model = Programa::class;
@@ -37,12 +45,7 @@ class ProgramaResource extends Resource
         return ProgramasTable::configure($table);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
+    
 
     public static function getPages(): array
     {
@@ -50,6 +53,7 @@ class ProgramaResource extends Resource
             'index' => ListProgramas::route('/'),
             'create' => CreatePrograma::route('/create'),
             'edit' => EditPrograma::route('/{record}/edit'),
+            'view'   => ViewPrograma::route('/{record}'),
         ];
     }
 
@@ -100,5 +104,30 @@ class ProgramaResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
+    }
+
+//Agregar form de cursos en edit
+    //  public static function getRelations(): array
+    //  {
+    //      return [
+    //          CursosRelationManager::class,
+    //      ];
+    //  }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->components([
+        TextEntry::make('nombre_programa')
+                ->label('Nombre'),
+
+            TextEntry::make('duracion')
+                ->label('Duración en meses'),
+
+            TextEntry::make('num_componentes')
+                ->label('Número de cursos'),
+
+            TextEntry::make('rubro.nombre_rubro')
+                ->label('Rubro'),
+        ]);
     }
 }

@@ -5,38 +5,33 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Enums\TipoOfertaAcademica;
-
 use App\Enums\Turno;
 use App\Enums\Modalidad; 
 
-class OfertaAcademica extends Model
+class Seccion extends Model
 {
     use HasFactory;
 
-    protected $table = 'oferta_academica';
-    protected $primaryKey = 'id_oferta';
+    // el nombre de la tabla NUEVA
+    protected $table = 'seccion'; // o 'secciones', según la migrate
+    protected $primaryKey = 'id_seccion'; // mientras no cambies el nombre de la PK
 
     protected $fillable = [
-        'tipo_oferta',      // 'PROG_ESTUDIO', 'PROG_CONTINUA', 'CURSO_LIBRE'
+        'seccion',
         'id_programa',
         'id_curso',
         'id_rubro',
-
-        // nuevos campos que moviste
         'modalidad',
         'turno',
         'dias',
         'horario',
         'docente_id',
-        
-        
     ];
 
     protected $casts = [
         'tipo_oferta' => TipoOfertaAcademica::class,
         'modalidad'   => Modalidad::class,
-        'turno'       => Turno::class,   // 👈 casteo al enum Turno
-        
+        'turno'       => Turno::class,
     ];
 
     public function programa()
@@ -61,6 +56,7 @@ class OfertaAcademica extends Model
 
     public function matriculas()
     {
-        return $this->hasMany(Matricula::class, 'oferta_academica_id', 'id_oferta');
+        return $this->hasMany(Matricula::class, 'seccion_id', 'id_seccion');
+        // si luego cambias este campo en la BD, aquí también lo ajustas
     }
 }

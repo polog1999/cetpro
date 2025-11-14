@@ -27,10 +27,10 @@ class Rubro extends Model
         return $this->hasMany(Programa::class, 'id_rubro', 'id_rubro');
     }
 
-    // Relación con OfertaAcademica
-    public function ofertasAcademicas()
+    // Relación con secciones
+    public function Secciones()
     {
-        return $this->hasMany(OfertaAcademica::class, 'id_rubro', 'id_rubro');
+        return $this->hasMany(Seccion::class, 'id_rubro', 'id_rubro');
     }
     public function docente()
     {

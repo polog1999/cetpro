@@ -14,7 +14,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 
 use App\Models\Estudiante;
-use App\Models\OfertaAcademica;
+use App\Models\Seccion;
 use App\Enums\TipoDocumento;
 use App\Enums\EstadoMatricula;
 
@@ -48,9 +48,9 @@ class MatriculaForm
                                     ->modalWidth('lg');
                             }),
 
-                        Select::make('oferta_academica_id')
-                            ->relationship('ofertaAcademica', 'id_oferta')
-                            ->label('Oferta académica')
+                        Select::make('seccion_id')
+                            ->relationship('seccion', 'id_seccion')
+                            ->label('Seccion')
                             ->searchable()
                             ->preload()
                             ->required()
@@ -92,17 +92,17 @@ class MatriculaForm
     private static function actualizarCodigoPreview(Get $get, Set $set): void
     {
         $estudianteId = $get('estudiante_id');
-        $ofertaId     = $get('oferta_academica_id');
+        $seccionId     = $get('seccion_id');
 
-        if (blank($estudianteId) || blank($ofertaId)) {
+        if (blank($estudianteId) || blank($seccionId)) {
             $set('codigo', null);
             return;
         }
 
         $estudiante = Estudiante::find($estudianteId);
-        $oferta     = OfertaAcademica::find($ofertaId);
+        $seccion     = Seccion::find($seccionId);
 
-        if (!$estudiante || !$oferta) {
+        if (!$estudiante || !$seccion) {
             $set('codigo', 'Error: Faltan datos...');
             return;
         }
@@ -111,8 +111,8 @@ class MatriculaForm
 
         // Mismo formato que en el boot() del modelo:
         // OF-0001-12345678
-        $codigoOferta  = 'OF-' . str_pad($oferta->id_oferta, 4, '0', STR_PAD_LEFT);
-        $codigoPreview = "{$codigoOferta}-{$dni}";
+        $codigoSeccion  = 'OF-' . str_pad($seccion->id_seccion, 4, '0', STR_PAD_LEFT);
+        $codigoPreview = "{$codigoSeccion}-{$dni}";
 
         $set('codigo', $codigoPreview);
     }

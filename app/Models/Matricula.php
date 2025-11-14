@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use App\Models\Estudiante;
-use App\Models\OfertaAcademica;
+use App\Models\Seccion;
 use App\Enums\EstadoMatricula;
 use Illuminate\Database\Eloquent\Model;
 
@@ -19,7 +19,7 @@ class Matricula extends Model
 
     protected $fillable = [
         'estudiante_id',
-        'oferta_academica_id',
+        'seccion_id',
         'estado',
     ];
 
@@ -32,13 +32,9 @@ class Matricula extends Model
         return $this->belongsTo(Estudiante::class);
     }
 
-    public function ofertaAcademica(): BelongsTo
+    public function seccion()
     {
-        return $this->belongsTo(
-            OfertaAcademica::class,
-            'oferta_academica_id',
-            'id_oferta'
-        );
+        return $this->belongsTo(Seccion::class, 'seccion_id', 'id_seccion');
     }
 
     public function pagos(): HasMany
@@ -46,23 +42,5 @@ class Matricula extends Model
         return $this->hasMany(Pago::class);
     }
 
-    protected static function booted(): void
-    {
-        static::creating(function (Matricula $matricula) {
-
-            // 1. Obtenemos la Oferta Académica
-            $oferta = OfertaAcademica::find($matricula->oferta_academica_id);
-            $codigoOferta = $oferta
-                ? 'OF-' . str_pad($oferta->id_oferta, 4, '0', STR_PAD_LEFT)
-                : 'SIN-OFERTA';
-
-            // 2. Obtenemos el Estudiante
-            $estudiante = Estudiante::find($matricula->estudiante_id);
-            $dni = $estudiante->nro_documento ?? 'SIN-DNI';
-
-            // 3. Creamos el código de la matrícula
-            // Formato ejemplo: OF-0001-12345678
-            $matricula->codigo = "{$codigoOferta}-{$dni}";
-        });
-    }
+    
 }

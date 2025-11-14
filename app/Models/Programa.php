@@ -36,8 +36,8 @@ class Programa extends Model
         return $this->hasMany(Curso::class, 'id_programa', 'id_programa');
     }
 
-    public function ofertasAcademicas()
+    public function secciones()
     {
-        return $this->hasMany(OfertaAcademica::class, 'id_programa', 'id_programa');
+        return $this->hasMany(Seccion::class, 'id_programa', 'id_programa');
     }
 }

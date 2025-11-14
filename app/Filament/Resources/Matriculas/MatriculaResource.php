@@ -36,12 +36,7 @@ class MatriculaResource extends Resource
         return MatriculasTable::configure($table);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            // RelationManagers\PagosRelationManager::class,
-        ];
-    }
+    
 
     public static function getPages(): array
     {

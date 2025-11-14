@@ -26,8 +26,8 @@ class Curso extends Model
         return $this->belongsTo(Programa::class, 'id_programa', 'id_programa');
     }
 
-    public function ofertasAcademicas()
+    public function secciones()
     {
-        return $this->hasMany(OfertaAcademica::class, 'id_curso', 'id_curso');
+        return $this->hasMany(Seccion::class, 'id_curso', 'id_curso');
     }
 }
