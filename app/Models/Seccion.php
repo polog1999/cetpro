@@ -17,10 +17,10 @@ class Seccion extends Model
     protected $primaryKey = 'id_seccion'; // mientras no cambies el nombre de la PK
 
     protected $fillable = [
-        'seccion',
+        'tipo_oferta',
         'id_programa',
         'id_curso',
-        'id_rubro',
+        
         'modalidad',
         'turno',
         'dias',
@@ -44,10 +44,7 @@ class Seccion extends Model
         return $this->belongsTo(Curso::class, 'id_curso', 'id_curso');
     }
 
-    public function rubro()
-    {
-        return $this->belongsTo(Rubro::class, 'id_rubro', 'id_rubro');
-    }
+    
 
     public function docente()
     {
