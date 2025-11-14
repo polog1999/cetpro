@@ -22,7 +22,12 @@ class Docente extends Model
     ];
 
     
- 
+  public function programas(): HasMany
+    {
+        // FK en programas = docente_id
+        // PK en docentes = id
+        return $this->hasMany(Programa::class, 'docente_id', 'id');
+    }
     
     // Accessor opcional para mostrar nombre completo en selects/listas
     public function getNombreCompletoAttribute(): string

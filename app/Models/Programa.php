@@ -13,21 +13,18 @@ class Programa extends Model
     protected $primaryKey = 'id_programa';
 
     protected $fillable = [
-        'modalidad',        // ENUM en la BD
-        'turno',            // ENUM en la BD
+        
         'nombre_programa',
         'duracion',
-        'dias',
-        'horario',
         'num_componentes',
-        'docente_id',
         'id_rubro',
     ];
 
-    public function docente()
-    {
-        return $this->belongsTo(Docente::class, 'id_docente', 'id_docente');
-    }
+    // ❌ Ya no hay docente_id en esta tabla, así que esta relación sobra
+    // public function docente()
+    // {
+    //     return $this->belongsTo(Docente::class, 'docente_id', 'id');
+    // }
 
     public function rubro()
     {

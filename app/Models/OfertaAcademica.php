@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Enums\TipoOfertaAcademica;
 
+use App\Enums\Turno;
+use App\Enums\Modalidad; 
+
 class OfertaAcademica extends Model
 {
     use HasFactory;
 
-    protected $table = 'oferta_academica';   // o 'ofertas_academicas' según tu migración
+    protected $table = 'oferta_academica';
     protected $primaryKey = 'id_oferta';
 
     protected $fillable = [
@@ -18,10 +21,22 @@ class OfertaAcademica extends Model
         'id_programa',
         'id_curso',
         'id_rubro',
+
+        // nuevos campos que moviste
+        'modalidad',
+        'turno',
+        'dias',
+        'horario',
+        'docente_id',
+        
+        
     ];
 
     protected $casts = [
         'tipo_oferta' => TipoOfertaAcademica::class,
+        'modalidad'   => Modalidad::class,
+        'turno'       => Turno::class,   // 👈 casteo al enum Turno
+        
     ];
 
     public function programa()
@@ -39,9 +54,13 @@ class OfertaAcademica extends Model
         return $this->belongsTo(Rubro::class, 'id_rubro', 'id_rubro');
     }
 
+    public function docente()
+    {
+        return $this->belongsTo(Docente::class, 'docente_id', 'id');
+    }
+
     public function matriculas()
     {
         return $this->hasMany(Matricula::class, 'oferta_academica_id', 'id_oferta');
     }
 }
-    
