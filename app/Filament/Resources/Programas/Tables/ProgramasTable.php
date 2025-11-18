@@ -9,11 +9,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Programa;
 use Filament\Actions\Action;
-
 use App\Filament\Resources\Programas\ProgramaResource;
-
-
-
+use App\Enums\TipoPrograma;
 
 class ProgramasTable
 {
@@ -22,22 +19,43 @@ class ProgramasTable
         return $table
             ->columns([
                 TextColumn::make('nombre_programa')
+                    ->label('Nombre')
                     ->searchable(),
+
+                TextColumn::make('tipo_programa')
+                    ->label('Tipo de programa')
+                    ->badge()
+                    ->formatStateUsing(
+                        fn (?TipoPrograma $state) => $state?->getLabel()
+                    )
+                    ->color(
+                        fn (?TipoPrograma $state) => $state?->getColor()
+                    ),
+
                 TextColumn::make('duracion')
+                    ->label('Duración (meses)')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('num_componentes')
+
+                TextColumn::make('num_cursos')
+                    ->label('Número de cursos')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('id_rubro')
-                    ->numeric()
-                    ->sortable(),
+
+                TextColumn::make('especialidad.nombre_especialidad')
+                    ->label('Especialidad')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
+                    ->label('Creado')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
                     ->dateTime()
+                    ->label('Actualizado')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -47,24 +65,18 @@ class ProgramasTable
             ->recordActions([
                 EditAction::make(),
 
-                // 👇 Nuevo botón "Agregar cursos"
-            Action::make('agregarCursos')
-                ->label('Agregar cursos')
-                ->icon('heroicon-m-plus')
-                ->button()
-                ->url(fn (Programa $record): string =>
-                    ProgramaResource::getUrl('view', ['record' => $record])
-                ),
+                Action::make('agregarCursos')
+                    ->label('Agregar cursos')
+                    ->icon('heroicon-m-plus')
+                    ->button()
+                    ->url(fn (Programa $record): string =>
+                        ProgramaResource::getUrl('view', ['record' => $record])
+                    ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-
-              
-
-                
             ]);
-            
     }
 }

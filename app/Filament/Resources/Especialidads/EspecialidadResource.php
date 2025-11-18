@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources\Rubros;
+namespace App\Filament\Resources\Especialidads;
 
-use App\Filament\Resources\Rubros\Pages\CreateRubro;
-use App\Filament\Resources\Rubros\Pages\EditRubro;
-use App\Filament\Resources\Rubros\Pages\ListRubros;
-use App\Filament\Resources\Rubros\Schemas\RubroForm;
-use App\Filament\Resources\Rubros\Tables\RubrosTable;
-use App\Models\Rubro;
+use App\Filament\Resources\Especialidads\Pages\CreateEspecialidad;
+use App\Filament\Resources\Especialidads\Pages\EditEspecialidad;
+use App\Filament\Resources\Especialidads\Pages\ListEspecialidads;
+use App\Filament\Resources\Especialidads\Schemas\EspecialidadForm;
+use App\Filament\Resources\Especialidads\Tables\EspecialidadsTable;
+use App\Models\Especialidad;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -19,22 +19,22 @@ use App\Enums\Rol;
 
 use UnitEnum;
 
-class RubroResource extends Resource
+class EspecialidadResource extends Resource
 {
-    protected static ?string $model = Rubro::class;
+    protected static ?string $model = Especialidad::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-    
+
     protected static string | UnitEnum | null $navigationGroup = 'Gestión Académica';
 
     public static function form(Schema $schema): Schema
     {
-        return RubroForm::configure($schema);
+        return EspecialidadForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return RubrosTable::configure($table);
+        return EspecialidadsTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -44,14 +44,12 @@ class RubroResource extends Resource
         ];
     }
 
-    
-
     public static function getPages(): array
     {
         return [
-            'index' => ListRubros::route('/'),
-            'create' => CreateRubro::route('/create'),
-            'edit' => EditRubro::route('/{record}/edit'),
+            'index' => ListEspecialidads::route('/'),
+            'create' => CreateEspecialidad::route('/create'),
+            'edit' => EditEspecialidad::route('/{record}/edit'),
         ];
     }
 
@@ -97,7 +95,8 @@ class RubroResource extends Resource
         return $user?->rol === Rol::ADMIN; // o 'admin'
     }
 
-    //Contar
+
+//Contar
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();

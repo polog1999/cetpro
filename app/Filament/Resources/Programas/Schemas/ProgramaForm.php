@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Programas\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
+use App\Enums\TipoPrograma;
 
 class ProgramaForm
 {
@@ -12,6 +13,13 @@ class ProgramaForm
     {
         return $schema
             ->components([
+
+                Select::make('tipo_programa')
+                    ->label('Tipo de programa')
+                    ->options(TipoPrograma::class) // usa las labels del enum
+                    ->native(false)
+                    ->required(),
+
                 TextInput::make('nombre_programa')
                     ->label('Nombre')
                     ->required(),
@@ -21,19 +29,19 @@ class ProgramaForm
                     ->numeric()
                     ->integer(),
 
-                TextInput::make('num_componentes')
+                TextInput::make('num_cursos')
                     ->label('Número de cursos')
                     ->numeric()
                     ->integer(),
 
-                Select::make('id_rubro')
-                    ->label('Rubro')
-                    ->relationship('rubro', 'nombre_rubro') // usa la relación del modelo Programa
+                
+
+                Select::make('id_especialidad')
+                    ->label('Especialidad')
+                    ->relationship('especialidad', 'nombre_especialidad')
                     ->searchable()
                     ->preload()
                     ->required(),
             ]);
     }
 }
-
-

@@ -7,6 +7,8 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use App\Enums\Turno;
+use App\Enums\Modalidad;
 
 class SeccionsTable
 {
@@ -14,33 +16,56 @@ class SeccionsTable
     {
         return $table
             ->columns([
-                TextColumn::make('tipo_oferta')
-                    ->searchable(),
-                TextColumn::make('id_programa')
-                    ->numeric()
+                TextColumn::make('programa.nombre_programa')
+                    ->label('Programa')
+                    ->searchable()
                     ->sortable(),
-                TextColumn::make('id_curso')
-                    ->numeric()
+
+                TextColumn::make('docente.nombre_completo')
+                    ->label('Docente')
+                    ->searchable()
                     ->sortable(),
+
+                TextColumn::make('turno')
+                    ->label('Turno')
+                    ->badge()
+                    ->formatStateUsing(fn (?Turno $state) => $state?->getLabel())
+                    ->color(fn (?Turno $state) => 'primary'),
+
+                TextColumn::make('modalidad')
+                    ->label('Modalidad')
+                    ->badge()
+                    ->formatStateUsing(fn (?Modalidad $state) => $state?->getLabel())
+                    ->color(fn (?Modalidad $state) => $state?->getColor()),
+
+                TextColumn::make('dias')
+                    ->label('Días')
+                    ->formatStateUsing(function ($state) {
+                        if (is_array($state)) {
+                            return implode(', ', $state);
+                        }
+
+                        return $state;
+                    }),
+
+                TextColumn::make('horario')
+                    ->label('Horario'),
+
+                TextColumn::make('aula')
+                    ->label('Aula')
+                    ->toggleable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
+                    ->label('Creado')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
                     ->dateTime()
+                    ->label('Actualizado')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('turno')
-                    ->searchable(),
-                TextColumn::make('dias')
-                    ->searchable(),
-                TextColumn::make('horario')
-                    ->searchable(),
-                TextColumn::make('docente_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('modalidad')
-                    ->searchable(),
             ])
             ->filters([
                 //

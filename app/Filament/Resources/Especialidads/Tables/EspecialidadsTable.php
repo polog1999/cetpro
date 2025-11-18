@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Rubros\Tables;
+namespace App\Filament\Resources\Especialidads\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -8,13 +8,13 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class RubrosTable
+class EspecialidadsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('nombre_rubro')
+                TextColumn::make('nombre_especialidad')
                     ->searchable(),
                 TextColumn::make('costo_mensual')
                     ->numeric()

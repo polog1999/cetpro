@@ -1,22 +1,16 @@
 <?php
 
 namespace App\Filament\Resources\Programas\RelationManagers;
-use Filament\Resources\RelationManagers\RelationManager;
 
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Resources\RelationManagers\HasManyRelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Schemas\Schema;
-
-use Filament\Actions\AssociateAction;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\DissociateAction;
-use Filament\Actions\DissociateBulkAction;
 use Filament\Actions\EditAction;
 
 class CursosRelationManager extends RelationManager
@@ -27,7 +21,6 @@ class CursosRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'nombre_curso';
 
-    // 👇 IMPORTANTE: desactivar modo solo lectura en la página "Ver"
     public function isReadOnly(): bool
     {
         return false;
@@ -53,10 +46,6 @@ class CursosRelationManager extends RelationManager
             Forms\Components\DatePicker::make('fecha_termino')
                 ->label('Fecha de término')
                 ->required(),
-
-            Forms\Components\TextInput::make('aula')
-                ->label('Aula')
-                ->maxLength(255),
         ]);
     }
 
@@ -78,13 +67,10 @@ class CursosRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('fecha_termino')
                     ->label('Fecha de término')
                     ->date('d/m/Y'),
-
-                Tables\Columns\TextColumn::make('aula')
-                    ->label('Aula'),
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->label('Agrega los cursos'),
+                    ->label('Agregar curso'),
             ])
             ->actions([
                 EditAction::make()
@@ -93,7 +79,7 @@ class CursosRelationManager extends RelationManager
                     ->label('Eliminar'),
             ])
             ->bulkActions([
-            DeleteBulkAction::make(),
+                DeleteBulkAction::make(),
             ]);
     }
 }

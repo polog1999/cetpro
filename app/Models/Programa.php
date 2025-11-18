@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Enums\TipoPrograma;
+use App\Models\Especialidad;
+use App\Models\Curso;
+use App\Models\Seccion;
+
 class Programa extends Model
 {
     use HasFactory;
@@ -13,22 +18,22 @@ class Programa extends Model
     protected $primaryKey = 'id_programa';
 
     protected $fillable = [
-        
         'nombre_programa',
         'duracion',
-        'num_componentes',
-        'id_rubro',
+        'num_cursos',
+        'id_especialidad',   // 👈 ya NO id_rubro
+        'tipo_programa',
     ];
 
-    // ❌ Ya no hay docente_id en esta tabla, así que esta relación sobra
-    // public function docente()
-    // {
-    //     return $this->belongsTo(Docente::class, 'docente_id', 'id');
-    // }
+    protected $casts = [
+        'tipo_programa' => TipoPrograma::class,
+    ];
 
-    public function rubro()
+    public function especialidad()
     {
-        return $this->belongsTo(Rubro::class, 'id_rubro', 'id_rubro');
+        // FK en programas: id_especialidad
+        // PK en especialidades: id_especialidad
+        return $this->belongsTo(Especialidad::class, 'id_especialidad', 'id_especialidad');
     }
 
     public function cursos()

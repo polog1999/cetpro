@@ -17,7 +17,6 @@ class Curso extends Model
         'duracion',
         'fecha_inicio',
         'fecha_termino',
-        'aula',
         'id_programa',
     ];
 
@@ -26,8 +25,8 @@ class Curso extends Model
         return $this->belongsTo(Programa::class, 'id_programa', 'id_programa');
     }
 
-    public function secciones()
+    public function matriculas()
     {
-        return $this->hasMany(Seccion::class, 'id_curso', 'id_curso');
+        return $this->hasMany(Matricula::class, 'id_curso', 'id_curso');
     }
 }
