@@ -7,19 +7,19 @@ use App\Enums\Turno;
 use App\Enums\TipoPrograma;
 use App\Models\Programa;
 use App\Models\Docente;
+
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Textarea; // 👈 NUEVO
+
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 
 use App\Enums\TipoDocumento;
-
-
 use Filament\Actions\Action;
-
 
 class SeccionForm
 {
@@ -28,7 +28,7 @@ class SeccionForm
         return $schema
             ->components([
 
-                // TIPO DE PROGRAMA (FILTRO, NO SE GUARDA EN BD)
+                // TIPO DE PROGRAMA 
                 ToggleButtons::make('tipo_programa')
                     ->label('Tipo de programa')
                     ->options([
@@ -38,33 +38,70 @@ class SeccionForm
                     ->inline()
                     ->required()
                     ->live()
-                    ->dehydrated(false) // 👈 solo se usa para filtrar, no se guarda
+                    ->dehydrated(false)
                     ->afterStateUpdated(function (Set $set) {
-                        // cuando cambia el tipo de programa, limpiamos el programa seleccionado
+                        // Resetea programa y textarea al cambiar tipo_programa
                         $set('id_programa', null);
+                        $set('cursos_programa', null);
                     }),
 
-                // PROGRAMA (se filtra por tipo_programa)
+                // PROGRAMA 
                 Select::make('id_programa')
                     ->label('Programa')
                     ->options(function (Get $get) {
                         $tipo = $get('tipo_programa');
-
-                        if (! $tipo) {
-                            return [];
-                        }
-
+                        if (! $tipo) return [];
+                        
                         return Programa::query()
-                            ->where('tipo_programa', $tipo) // columna enum en programas
+                            ->where('tipo_programa', $tipo)
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();
                     })
-                    ->placeholder('Seleccione un programa')
                     ->searchable()
                     ->preload()
                     ->required()
-                    ->disabled(fn (Get $get): bool => ! $get('tipo_programa')),
+                    ->live()
+                    ->disabled(fn (Get $get): bool => ! $get('tipo_programa'))
+                    ->afterStateUpdated(function (Get $get, Set $set) {
+                        $id = $get('id_programa');
+
+                        if (! $id) {
+                            // Nada seleccionado → textarea vacío
+                            $set('cursos_programa', null);
+                            return;
+                        }
+
+                        $programa = Programa::with('cursos')->find($id);
+
+                        if (! $programa || $programa->cursos->isEmpty()) {
+                            $set('cursos_programa', 'No hay cursos asignados a este programa.');
+                            return;
+                        }
+
+                        // Construir listado de cursos en texto plano
+                        $texto = $programa->cursos
+                            ->map(function ($curso) {
+                                $nombre = $curso->nombre_curso
+                                    ?? $curso->nombre
+                                    ?? 'Sin nombre';
+
+                                return '- ' . $nombre;
+                            })
+                            ->implode(PHP_EOL);
+
+                        $set('cursos_programa', $texto);
+                    }),
+
+                // 👇 TEXTAREA INFORMATIVO DE CURSOS
+                Textarea::make('cursos_programa')
+    ->label('Cursos del programa seleccionado')
+    ->placeholder('Seleccione un programa para ver sus cursos.')
+    ->disabled()        // Solo lectura
+    ->dehydrated(false) // No se guarda en BD
+    ->autosize()        // 👈 Se adapta al contenido
+    ->rows(1)           // Altura mínima inicial opcional
+    ->columnSpanFull(),
 
                 // TURNO
                 Select::make('turno')
@@ -94,63 +131,57 @@ class SeccionForm
                     ->inline()
                     ->required(),
 
+                // DOCENTE
                 Select::make('id_docente')
-    ->label('Docente')
-    ->options(function () {
-        return Docente::query()
-            ->orderBy('apellido_paterno')
-            ->orderBy('apellido_materno')
-            ->orderBy('nombres')
-            ->get()
-            ->mapWithKeys(fn (Docente $docente) => [
-                $docente->id => $docente->nombre_completo,
-            ])
-            ->toArray();
-    })
-    ->searchable()
-    ->preload()
-    ->required()
-    ->getOptionLabelUsing(fn ($value): ?string =>
-        Docente::find($value)?->nombre_completo
-    )
+                    ->label('Docente')
+                    ->options(function () {
+                        return Docente::query()
+                            ->orderBy('apellido_paterno')
+                            ->orderBy('apellido_materno')
+                            ->orderBy('nombres')
+                            ->get()
+                            ->mapWithKeys(fn (Docente $docente) => [
+                                $docente->id => $docente->nombre_completo,
+                            ])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->getOptionLabelUsing(fn ($value): ?string =>
+                        Docente::find($value)?->nombre_completo
+                    )
+                    ->createOptionForm([
+                        Select::make('tipo_documento')
+                            ->label('Tipo de documento')
+                            ->options(TipoDocumento::class)
+                            ->required(),
 
-    // 👉 Formulario para crear docentes al vuelo
-    ->createOptionForm([
-        Select::make('tipo_documento')
-            ->label('Tipo de documento')
-            ->options(TipoDocumento::class)   // enum con HasLabel
-            ->required(),
+                        TextInput::make('nro_documento')
+                            ->label('Nro. de documento')
+                            ->required(),
 
-        TextInput::make('nro_documento')
-            ->label('Nro. de documento')
-            ->required(),
+                        TextInput::make('nombres')
+                            ->label('Nombres')
+                            ->required(),
 
-        TextInput::make('nombres')
-            ->label('Nombres')
-            ->required(),
+                        TextInput::make('apellido_paterno')
+                            ->label('Apellido paterno')
+                            ->required(),
 
-        TextInput::make('apellido_paterno')
-            ->label('Apellido paterno')
-            ->required(),
-
-        TextInput::make('apellido_materno')
-            ->label('Apellido materno')
-            ->required(),
-    ])
-
-    ->createOptionAction(function (Action $action) {
-        return $action
-            ->label('Registrar docente')
-            ->modalHeading('Registrar nuevo docente')
-            ->modalSubmitActionLabel('Guardar docente');
-    })
-
-    ->createOptionUsing(function (array $data) {
-        return Docente::create($data)->getKey();
-    }),
-
-
-
+                        TextInput::make('apellido_materno')
+                            ->label('Apellido materno')
+                            ->required(),
+                    ])
+                    ->createOptionAction(function (Action $action) {
+                        return $action
+                            ->label('Registrar docente')
+                            ->modalHeading('Registrar nuevo docente')
+                            ->modalSubmitActionLabel('Guardar docente');
+                    })
+                    ->createOptionUsing(function (array $data) {
+                        return Docente::create($data)->getKey();
+                    }),
 
                 // HORA DE INICIO
                 TimePicker::make('hora_inicio')
@@ -164,7 +195,6 @@ class SeccionForm
                     ->seconds(false)
                     ->required(),
 
-                
                 // AULA
                 TextInput::make('aula')
                     ->label('Aula')
