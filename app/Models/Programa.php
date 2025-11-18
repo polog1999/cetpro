@@ -45,4 +45,5 @@ class Programa extends Model
     {
         return $this->hasMany(Seccion::class, 'id_programa', 'id_programa');
     }
+    
 }

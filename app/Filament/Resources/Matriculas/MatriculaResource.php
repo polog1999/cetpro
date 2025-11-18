@@ -18,13 +18,7 @@ class MatriculaResource extends Resource
 {
     protected static ?string $model = Matricula::class;
 
-    protected static ?string $modelLabel = 'Matrícula';
-    protected static ?string $pluralModelLabel = 'Matrículas';
-    protected static ?string $navigationLabel = 'Matrículas';
-
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
-
-    protected static ?string $recordTitleAttribute = 'nombre';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function form(Schema $schema): Schema
     {
@@ -36,7 +30,12 @@ class MatriculaResource extends Resource
         return MatriculasTable::configure($table);
     }
 
-    
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
 
     public static function getPages(): array
     {

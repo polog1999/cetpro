@@ -2,20 +2,16 @@
 
 namespace App\Filament\Resources\Estudiantes\Schemas;
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\FileUpload;
-use Filament\Schemas\Components\Component;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Group;
-use Filament\Actions\Action;
-use Filament\Schemas\Schema;
-
+use App\Enums\DistritoLima;
+use App\Enums\EstadoCivil;
+use App\Enums\GradoInstruccion;
+use App\Enums\Provincia;
 use App\Enums\TipoDocumento;
 use App\Enums\TipoGenero;
-use App\Enums\EstadoCivil;
-
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Schema;
 use App\Models\Apoderado;
 
 class EstudianteForm
@@ -24,124 +20,48 @@ class EstudianteForm
     {
         return $schema
             ->components([
-                Section::make()
-                    ->schema(static::getEstudiantesData())
-                    ->columns(),
-                Section::make('Apoderado / Responsable')
-                    ->schema([
-                        Select::make('apoderado_id')
-                            ->relationship('apoderado','nombres')
-                            ->preload()
-                            ->placeholder('Asignar un apoderado')
-                            ->nullable()
-                            ->createOptionForm([
-                                Select::make('tipo_documento')
-                                    ->options(TipoDocumento::class)
-                                    ->required(),
-                                TextInput::make('nro_documento')
-                                    ->required(),
-                                TextInput::make('nombres')
-                                    ->required(),
-                                TextInput::make('apellido_paterno')
-                                    ->required(),
-                                TextInput::make('apellido_materno')
-                                    ->required(),
-                                TextInput::make('telefono')
-                                    ->tel()
-                                    ->required(),
-                            ]),
-                            // ->createOptionModalHeading('Registrar Nuevo Apoderado'),
-                    ]),
-                    
-                Section::make('Foto')
-                    ->description('Máx. 1024 KB')
-                    ->schema([
-                        FileUpload::make('foto')
-                            ->label('Foto del Estudiante')
-                            ->image()
-                            ->maxSize(1024) // Tamaño máximo en KB
-                            ->directory('estudiantes/fotos')
-                            ->nullable(),
-                    ])
-                    ->collapsed(),
-                Section::make('Información adicional')
-                    ->schema([
-                        Select::make('genero')
-                            ->options(TipoGenero::class),
-                        Select::make('estado_civil')
-                            ->options(EstadoCivil::class),
-                        TextInput::make('telefono')
-                            ->label('Teléfono')
-                            ->tel(),
-                        TextInput::make('email')
-                            ->label('Correo Electrónico')
-                            ->email(),
-                    ])
-                    ->collapsed(),
+                Select::make('tipo_documento')
+                    ->options(TipoDocumento::class)
+                    ->required(),
+                TextInput::make('nro_documento')
+                    ->required(),
+                TextInput::make('nombres')
+                    ->required(),
+                TextInput::make('apellido_paterno')
+                    ->required(),
+                TextInput::make('apellido_materno')
+                    ->required(),
+                Select::make('genero')
+                    ->options(TipoGenero::class),
+                Select::make('estado_civil')
+                    ->options(EstadoCivil::class),
+                DatePicker::make('fecha_nacimiento'),
+                TextInput::make('telefono')
+                    ->tel(),
+                TextInput::make('direccion'),
+                TextInput::make('email')
+                    ->label('Email')
+                    ->email(),
+                // 🔹 AQUÍ el cambio importante
+                Select::make('apoderado_id')
+                    ->label('Apoderado')
+                    ->relationship(
+                        name: 'apoderado',
+                        titleAttribute: 'nombres', // columna real de la tabla
+                    )
+                    ->getOptionLabelFromRecordUsing(
+                        fn (Apoderado $record) => $record->nombre_completo
+                    )
+                    ->searchable(['nombres', 'apellido_paterno', 'apellido_materno'])
+                    ->preload(),
+                Select::make('grado_instruccion')
+                    ->options(GradoInstruccion::class),
+                Select::make('provincia')
+                    ->options(Provincia::class)
+                    ->default('Lima')
+                    ->required(),
+                Select::make('distrito')
+                    ->options(DistritoLima::class),
             ]);
-    }
-
-    /**
-     * @return array<Component>
-     */
-    public static function getEstudiantesData(): array
-    {
-        return
-        [
-            Select::make('tipo_documento')
-                ->options(TipoDocumento::class)
-                ->required(),
-            TextInput::make('nro_documento')
-                ->label('Número de Documento')
-                ->required(),
-            DatePicker::make('fecha_nacimiento')
-                ->label('Fecha de Nacimiento')
-                ->required(),
-            TextInput::make('nombres')
-                ->label('Nombres')
-                ->required(),
-            TextInput::make('apellido_paterno')
-                ->label('Apellido Paterno')
-                ->required(),
-            TextInput::make('apellido_materno')
-                ->label('Apellido Materno')
-                ->required(),
-        ];
-    }
-
-    /**
-     * @return array<Component>
-     */
-    public static function getApoderadoData(): array
-    {
-        return[
-            Select::make('apoderado_id')
-                ->relationship('apoderado', 'nombres')
-                ->searchable()
-                ->preload()
-                // ->required()
-                ->createOptionForm([
-                    Select::make('tipo_documento')
-                        ->options(TipoDocumento::class)
-                        ->required(),
-                    TextInput::make('nro_documento')
-                        ->required(),
-                    TextInput::make('nombres')
-                        ->required(),
-                    TextInput::make('apellido_paterno')
-                        ->required(),
-                    TextInput::make('apellido_materno')
-                        ->required(),
-                    TextInput::make('telefono')
-                        ->tel()
-                        ->required(),
-                ])
-                ->createOptionAction(function (Action $action) {
-                    return $action
-                        ->modalHeading('Crear Apoderado')
-                        ->modalSubmitActionLabel('Crear Apoderado')
-                        ->modalWidth('lg');
-                }),
-        ];
     }
 }

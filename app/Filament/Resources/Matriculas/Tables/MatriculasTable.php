@@ -5,42 +5,54 @@ namespace App\Filament\Resources\Matriculas\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Actions\Action;
 
 class MatriculasTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            // Importante en Filament v4: evitar N+1
-            ->modifyQueryUsing(fn ($query) => $query->with(['estudiante', 'Seccion']))
-
             ->columns([
-                TextColumn::make('codigo')
+                TextColumn::make('codigo_inscripcion')
+                    ->label('Código inscripción')
+                    ->searchable()
+                    ->sortable(),
+
+                // ESTUDIANTE: nombre completo (relación estudiante)
+                TextColumn::make('estudiante.nombre_completo')
+                    ->label('Estudiante')
+                    ->sortable()
                     ->searchable(),
 
-                TextColumn::make('estudiante.nombres')
-                    ->label('Estudiante')
-                    ->sortable(),
+                // ESTADO (enum)
+                TextColumn::make('estado')
+                    ->label('Estado')
+                    ->sortable()
+                    ->searchable(),
 
-                IconColumn::make('descargar_pdf')
-                    ->label('')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->tooltip('Descargar PDF')
-                    ->url(fn ($record) => route('matriculas.pdf', $record))
-                    ->openUrlInNewTab(),
+                // TIPO DE MATRÍCULA (enum)
+                TextColumn::make('tipo_matricula')
+                    ->label('Tipo de matrícula')
+                    ->sortable()
+                    ->searchable(),
+
+                // SECCIÓN: puedes mostrar algo representativo
+                TextColumn::make('seccion.programa.nombre_programa')
+                    ->label('Programa')
+                    ->sortable()
+                    ->toggleable(),
 
                 TextColumn::make('seccion.id_seccion')
-                    ->label('Seccion')
-                    ->sortable(),
+                    ->label('Sección')
+                    ->sortable()
+                    ->toggleable(),
 
-                BadgeColumn::make('estado'),
+                // CURSO: nombre del curso (relación curso)
+                TextColumn::make('curso.nombre_curso')
+                    ->label('Curso')
+                    ->sortable()
+                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -52,40 +64,12 @@ class MatriculasTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-
             ->filters([
-                SelectFilter::make('estudiante')
-                    ->relationship('estudiante', 'nombres')
-                    ->searchable()
-                    ->preload()
-                    ->label('Estudiante'),
-
-                SelectFilter::make('seccion')
-                    ->relationship('seccion', 'id_seccion')
-                    ->searchable()
-                    ->preload()
-                    ->label('Seccion'),
-
-                SelectFilter::make('estado')->options([
-                    'activa'    => 'Activa',
-                    'inactiva'  => 'Inactiva / Trunca',
-                    'culminada' => 'Culminada',
-                ]),
+                //
             ])
-
             ->recordActions([
                 EditAction::make(),
-
-                Action::make('pdf')
-                    ->label('PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->tooltip('Ver/descargar PDF de matrícula')
-                    ->url(fn ($record) => route('matriculas.pdf', $record))
-                    ->openUrlInNewTab(),
-
-                DeleteAction::make(),
             ])
-
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
