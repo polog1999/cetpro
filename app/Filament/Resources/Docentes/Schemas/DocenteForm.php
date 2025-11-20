@@ -3,7 +3,11 @@
 namespace App\Filament\Resources\Docentes\Schemas;
 
 use Filament\Forms\Components\TextInput;
+
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
+
+use App\Enums\TipoDocumento;
 
 class DocenteForm
 {
@@ -11,7 +15,8 @@ class DocenteForm
     {
         return $schema
             ->components([
-                TextInput::make('tipo_documento')
+                Select::make('tipo_documento')
+                    ->options(TipoDocumento::class)
                     ->required(),
                 TextInput::make('nro_documento')
                     ->required(),
