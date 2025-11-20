@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources\Cronogramas;
+namespace App\Filament\Resources\Pagos;
 
-use App\Filament\Resources\Cronogramas\Pages\CreateCronograma;
-use App\Filament\Resources\Cronogramas\Pages\EditCronograma;
-use App\Filament\Resources\Cronogramas\Pages\ListCronogramas;
-use App\Filament\Resources\Cronogramas\Schemas\CronogramaForm;
-use App\Filament\Resources\Cronogramas\Tables\CronogramasTable;
-use App\Models\Cronograma;
+use App\Filament\Resources\Pagos\Pages\CreatePago;
+use App\Filament\Resources\Pagos\Pages\EditPago;
+use App\Filament\Resources\Pagos\Pages\ListPagos;
+use App\Filament\Resources\Pagos\Schemas\PagoForm;
+use App\Filament\Resources\Pagos\Tables\PagosTable;
+use App\Models\Pago;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -19,22 +19,21 @@ use App\Enums\Rol;
 
 use UnitEnum;
 
-class CronogramaResource extends Resource
+class PagoResource extends Resource
 {
-    protected static ?string $model = Cronograma::class;
+    protected static ?string $model = Pago::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
     protected static string | UnitEnum | null $navigationGroup = 'Gestión de Pagos';
 
     public static function form(Schema $schema): Schema
     {
-        return CronogramaForm::configure($schema);
+        return PagoForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return CronogramasTable::configure($table);
+        return PagosTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -47,9 +46,9 @@ class CronogramaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListCronogramas::route('/'),
-            //'create' => CreateCronograma::route('/create'),
-            //'edit' => EditCronograma::route('/{record}/edit'),
+            'index' => ListPagos::route('/'),
+            'create' => CreatePago::route('/create'),
+            'edit' => EditPago::route('/{record}/edit'),
         ];
     }
 
@@ -67,22 +66,26 @@ class CronogramaResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->rol === Rol::ADMIN; // o 'admin'
     }
 
     public static function canEdit($record): bool
     {
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->rol === Rol::ADMIN; // o 'admin'
     }
 
     public static function canDelete($record): bool
     {
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->rol === Rol::ADMIN; // o 'admin'
     }
 
     public static function canDeleteAny(): bool
     {
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->rol === Rol::ADMIN; // o 'admin'
     }
 
     public static function shouldRegisterNavigation(): bool

@@ -45,4 +45,10 @@ class MatriculaResource extends Resource
             'edit' => EditMatricula::route('/{record}/edit'),
         ];
     }
+
+    //Contar
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
 }

@@ -25,6 +25,8 @@ class Pago extends Model
         'metodo_pago',
         'fecha_pago',
         'evidencia_path',
+        'num_liquidacion',     
+        'fecha_liquidacion',   
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class Pago extends Model
         'fecha_pago'        => 'date',
         'estado'            => EstadoPago::class,
         'monto'             => 'decimal:2',
+        'fecha_liquidacion' => 'date',
     ];
 
     /**
