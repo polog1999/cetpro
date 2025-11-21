@@ -10,6 +10,14 @@ use Filament\Forms\Form;
 use Filament\Schemas\Schema;
 use App\Enums\EstadoPago;
 
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\FileUpload;
+use App\Models\Pago;
+
 class PagosRelationManager extends RelationManager
 {
     protected static string $relationship = 'pagos'; // Asegúrate que en Modelo Cronograma exista "public function pagos()"
@@ -78,14 +86,9 @@ class PagosRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                
-                
-                
-
-
-            Tables\Columns\TextColumn::make('nro_cuota')
+                Tables\Columns\TextColumn::make('nro_cuota')
                     ->label('#')
-                    ->sortable()
+                    // ->sortable()
                     ->alignCenter()
                     ->width(40),
 
@@ -142,7 +145,37 @@ class PagosRelationManager extends RelationManager
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->headerActions([
-                // Tables\Actions\CreateAction::make(),
+                // Tables\Actions\CreateActio  n::make(),
+            ])
+            ->recordActions([
+                // EditAction::make(),
+                Action::make('subir_evidencia')
+                    ->label('Subir Evidencia')
+                    ->icon('heroicon-o-arrow-up-on-square')
+                    ->color('success')
+                    ->form([
+                        Select::make('metodo_pago')
+                            ->options([
+                                'efectivo'=>'Efectivo',
+                                'transferencia'=>'Transferencia',
+                                'Yape/Plin'=>'Yape/Plin',
+                            ])
+                            ->label('Método de pago'),
+                        FileUpload::make('evidencia_path')
+                            ->label('Archivo de evidencia')
+                            ->acceptedFileTypes(['applications/pdf', 'image/*'])
+                            ->required()
+                    ])
+                    ->action(function(Pago $record, array $data):void{
+                        $fechaActual = now();
+                        $record->update([
+                            'evidencia_path'=>$data['evidencia_path'],
+                            'metodo_pago'=>$data['metodo_pago'],
+                            'estado'=>EstadoPago::PAGADO,
+                            'fecha_pago'=>$fechaActual,
+                        ]);
+                    }),
+                // DeleteAction::make(),
             ]);
 
             
