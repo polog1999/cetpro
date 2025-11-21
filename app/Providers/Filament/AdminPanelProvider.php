@@ -19,10 +19,9 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-use App\Filament\Auth\Pages\Login as CustomLogin;
+use DiogoGPinto\AuthUIEnhancer\AuthUIEnhancerPlugin;
 
-use App\Filament\Pages\Settings;
-use Filament\Actions\Action;
+use App\Filament\Auth\Pages\Login as CustomLogin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -67,6 +66,12 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->plugins([
+                AuthUIEnhancerPlugin::make()
+                    ->formPanelPosition('left')
+                    ->emptyPanelBackgroundImageUrl(asset('imagen/mdlm.png')),
+            ])
             ->navigationGroups([
                 'Gestión estudiantil',
                 'Gestión académica',
@@ -78,7 +83,7 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->brandName('Plataforma de gestión documentaria')
-            ->brandLogo(asset('imagen/mdlm.png'))
+            ->brandLogo(asset('imagen/cetpro.png'))
             // ->topbar(false)
             ;
             // ->spa(hasPrefetching: true);
