@@ -9,12 +9,13 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Notifications\Notification;
-
-
+// use Filament\Schemas\Components\Utilities\Get;
+// use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
+
 use App\Enums\EstadoPago;
 use App\Models\Pago;
 
@@ -25,49 +26,37 @@ class PagosTable
         return $table
             ->columns([
                 // 🆕 Estudiante
+                TextColumn::make('nro_cuota')
+                    ->label('Nro. de cuota')
+                    ->numeric()
+                    ->sortable(),
                 TextColumn::make('cronograma.matricula.estudiante.nombre_completo')
                     ->label('Estudiante')
                     ->sortable()
                     ->searchable(),
 
-                // 🆕 Sección
-                TextColumn::make('cronograma.matricula.seccion.nombre_completo')
-                    ->label('Sección')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('cronograma.id')
-                    ->label('Cronograma')
-                    ->numeric()
-                    ->sortable(),
-
-                TextColumn::make('nro_cuota')
-                    ->numeric()
-                    ->sortable(),
-
                 TextColumn::make('codigo')
+                    ->label('Código')
                     ->searchable(),
 
                 TextColumn::make('monto')
+                    ->label('Monto')
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('estado')
+                    ->label('Estado')
                     ->searchable(),
 
                 TextColumn::make('fecha_vencimiento')
+                    ->label('Fecha de vencimiento')
                     ->date()
                     ->sortable(),
 
                 TextColumn::make('fecha_pago')
+                    ->label('Fecha de pago')
                     ->date()
                     ->sortable(),
-
-                TextColumn::make('metodo_pago')
-                    ->searchable(),
-
-                TextColumn::make('evidencia_path')
-                    ->searchable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -87,7 +76,6 @@ class PagosTable
                     ->sortable(),
             ])
             ->filters([
-                //
             ])
             ->recordActions([
                 // EditAction::make(),
@@ -95,27 +83,64 @@ class PagosTable
                     ->label('Subir Evidencia')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->color('success')
+                    ->visible(fn (Pago $record): bool => $record->estado === \App\Enums\EstadoPago::PENDIENTE)
                     ->form([
                         Select::make('metodo_pago')
                             ->options([
-                                'efectivo'=>'Efectivo',
-                                'transferencia'=>'Transferencia',
-                                'Yape/Plin'=>'Yape/Plin',
+                                'efectivo' => 'Efectivo',
+                                'yape' => 'Yape',
+                                'plin' => 'Plin',
+                                'transferencia' => 'Transferencia',
                             ])
-                            ->label('Método de pago'),
-                        FileUpload::make('evidencia_path')
-                            ->label('Archivo de evidencia')
-                            ->acceptedFileTypes(['applications/pdf', 'image/*'])
                             ->required()
+                            ->label('Método de Pago'),
+                        FileUpload::make('evidencia')
+                            ->label('Archivo de Evidencia')
+                            ->acceptedFileTypes(['application/pdf', 'image/*'])
+                            ->required(),
                     ])
-                    ->action(function(Pago $record, array $data):void{
+                    ->action(function (Pago $record, array $data): void {
+                        // Lógica para guardar la evidencia
                         $fechaActual = now();
                         $record->update([
-                            'evidencia_path'=>$data['evidencia'],
-                            'metodo_pago'=>$data['metodo_pago'],
-                            'estado'=>EstadoPago::PAGADO,
-                            'fecha_pago'=>$fechaActual,
+                            'evidencia' => $data['evidencia'],
+                            'metodoPago' => $data['metodo_pago'],
+                            'estado' => EstadoPago::PAGADO,
+                            'fecha_pago' => $fechaActual,
                         ]);
+                        Notification::make()->title('Evidencia subida')->success()->send();
+                    }),
+                Action::make('editar_evidencia')
+                    ->label('Editar evidencia')
+                    ->icon('heroicon-o-pencil')
+                    ->color('info')
+                    ->visible(fn (Pago $record): bool => $record->estado === \App\Enums\EstadoPago::PAGADO)
+                    ->form([
+                        Select::make('metodo_pago')
+                            ->options([
+                                'efectivo' => 'Efectivo',
+                                'yape' => 'Yape',
+                                'plin' => 'Plin',
+                                'transferencia' => 'Transferencia',
+                            ])
+                            ->required()
+                            ->label('Método de Pago'),
+                        FileUpload::make('evidencia')
+                            ->label('Archivo de Evidencia')
+                            ->acceptedFileTypes(['application/pdf', 'image/*'])
+                            ->required(),
+                    ])
+                    ->action(function (Pago $record, array $data): void {
+                        // Lógica para guardar la evidencia
+                        $fechaActual = now();
+                        $record->update([
+                            'evidencia' => $data['evidencia'],
+                            'metodoPago' => $data['metodo_pago'],
+                            'estado' => EstadoPago::PAGADO,
+                            'fecha_pago' => $fechaActual, // Registra la fecha de subida
+                        ]);
+                        Notification::make()->title('Evidencia subida')->success()->send();
+                        // $this->verPagos(); Recarga la vista para actualizar la tabla
                     }),
             ])
             ->toolbarActions([
