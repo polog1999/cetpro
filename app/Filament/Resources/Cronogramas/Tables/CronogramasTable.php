@@ -9,6 +9,14 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+
+use Filament\Actions\Action;
+use App\Filament\Resources\Cronogramas\CronogramaResource;
+use Doctrine\DBAL\Schema\View;
+use App\Models\Pago;
+
 class CronogramasTable
 {
     public static function configure(Table $table): Table
@@ -130,10 +138,25 @@ class CronogramasTable
                 //
             ])
 
+            
+            // Este botón redirige automáticamente a la página 'view'
+            
+
             // Sin acciones por registro (no editar)
             ->recordActions([
-                //
-            ])
+    
+
+            ViewAction::make('verPagos')
+                ->label('Ver Pagos') // El texto del botón
+                ->icon('heroicon-m-eye') // Usamos un 'ojo' en vez de 'plus' porque es para ver
+                ->button() // Estilo botón relleno
+                ->color('info') // Opcional: Color azulito
+                ->url(fn (Cronograma $record): string => 
+            // Como ya estamos en el cronograma, pasamos el $record directamente
+            CronogramaResource::getUrl('view', ['record' => $record])
+        ),
+])
+        
 
             ->toolbarActions([
                 BulkActionGroup::make([

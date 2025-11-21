@@ -19,6 +19,17 @@ use App\Enums\Rol;
 
 use UnitEnum;
 
+use App\Filament\Resources\Cronogramas\RelationManagers\PagosRelationManager; // El que creaste
+
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use App\Filament\Resources\Cronogramas\Pages\ViewCronograma;
+
+
+
+
+
 class CronogramaResource extends Resource
 {
     protected static ?string $model = Cronograma::class;
@@ -40,7 +51,7 @@ class CronogramaResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            PagosRelationManager::class,
         ];
     }
 
@@ -48,8 +59,7 @@ class CronogramaResource extends Resource
     {
         return [
             'index' => ListCronogramas::route('/'),
-            //'create' => CreateCronograma::route('/create'),
-            //'edit' => EditCronograma::route('/{record}/edit'),
+            'view' => ViewCronograma::route('/{record}'),
         ];
     }
 
@@ -97,4 +107,32 @@ class CronogramaResource extends Resource
     {
         return static::getModel()::count();
     }
+
+    //Infolist
+
+    public static function infolist(Schema $schema): Schema
+{
+    return $schema
+        ->components([
+            Section::make('Información de la Sección')
+            
+                ->description('Detalles del aula donde está este cronograma')
+                ->icon('heroicon-m-building-library')
+                ->schema([
+                    Grid::make(3)->schema([
+                        // Navegamos: Cronograma -> Matricula -> Seccion -> Campo
+                        TextEntry::make('matricula.seccion.nombre_seccion')
+                            ->label('Sección')
+                            ->weight('bold'),
+                        
+                        TextEntry::make('matricula.seccion.aula')
+                            ->label('Aula'),
+
+                        TextEntry::make('matricula.seccion.turno')
+                            ->label('Turno')
+                            ->badge(),
+                    ])
+                ])
+        ]);
+}
 }

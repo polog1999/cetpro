@@ -40,3 +40,4 @@ class Cronograma extends Model
         return $this->hasMany(Pago::class);
     }
 }
+
