@@ -18,13 +18,16 @@ use Filament\Facades\Filament;
 use App\Enums\Rol;
 
 use UnitEnum;
+use App\Enums\EstadoPago;
 
 use App\Filament\Resources\Cronogramas\RelationManagers\PagosRelationManager; // El que creaste
 
 use Filament\Infolists\Components\TextEntry;
+
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use App\Filament\Resources\Cronogramas\Pages\ViewCronograma;
+use Filament\Support\Enums\TextSize;
 
 
 
@@ -114,25 +117,65 @@ class CronogramaResource extends Resource
 {
     return $schema
         ->components([
-            Section::make('Información de la Sección')
             
-                ->description('Detalles del aula donde está este cronograma')
-                ->icon('heroicon-m-building-library')
+            
+            Section::make('Estado del Cronograma')
+                ->description('Resumen financiero y estado de deuda')
+                ->icon('heroicon-m-banknotes')
                 ->schema([
-                    Grid::make(3)->schema([
-                        // Navegamos: Cronograma -> Matricula -> Seccion -> Campo
-                        TextEntry::make('matricula.seccion.nombre_seccion')
-                            ->label('Sección')
-                            ->weight('bold'),
-                        
-                        TextEntry::make('matricula.seccion.aula')
-                            ->label('Aula'),
+                Grid::make(4)->schema([
+                            
+                            // 1. Monto Total
+                TextEntry::make('monto_total')
+                ->label('Monto Total')
+                ->money('PEN')
+                ->size(TextSize::Large)
+                ->weight('bold'),
 
-                        TextEntry::make('matricula.seccion.turno')
-                            ->label('Turno')
-                            ->badge(),
-                    ])
-                ])
+                            // 2. Progreso de Cuotas (Calculado)
+                TextEntry::make('progreso')
+                                ->label('Cuotas Pagadas')
+                                ->state(function (Cronograma $record): string {
+                                    // Contamos cuántos pagos tienen estado PAGADO
+                                    $pagadas = $record->pagos()
+                                        ->where('estado', EstadoPago::PAGADO)
+                                        ->count();
+                                    
+                                    return "{$pagadas} de {$record->num_cuotas}";
+                                })
+                                ->icon('heroicon-m-chart-pie'),
+
+                            // 3. Estado de Deuda (Lógica personalizada)
+                            TextEntry::make('estado_financiero')
+                                ->label('Estado Actual')
+                                ->badge()
+                                ->state(function (Cronograma $record): string {
+                                    // Buscamos si existe alguna cuota PENDIENTE y VENCIDA
+                                    $esDeudor = $record->pagos()
+                                        ->where('estado', EstadoPago::PENDIENTE)
+                                        ->where('fecha_vencimiento', '<', now()) // Venció antes de hoy
+                                        ->exists();
+
+                                    return $esDeudor ? 'Deudor' : 'Al día';
+                                })
+                                ->color(fn (string $state): string => match ($state) {
+                                    'Deudor' => 'danger',  // Rojo
+                                    'Al día' => 'success', // Verde
+                                    default => 'gray',
+                                })
+                                ->icon(fn (string $state): string => match ($state) {
+                                    'Deudor' => 'heroicon-m-exclamation-circle',
+                                    'Al día' => 'heroicon-m-check-badge',
+                                    default => 'heroicon-m-question-mark-circle',
+                                }),
+
+                            // 4. Dato extra (Matrícula)
+                            TextEntry::make('matricula.estudiante.nombre_completo')
+                                ->label('Estudiante')
+                                ->columnSpan(1),
+                        ]),
+                    ]),
+            
         ]);
 }
 }
