@@ -62,9 +62,14 @@ class Estudiante extends Model
             : null;
     }
 
-     public function apoderado(): BelongsTo
+    public function apoderado(): BelongsTo
     {
         // Si tu FK es apoderado_id y la PK de apoderados es id, está perfecto así:
         return $this->belongsTo(Apoderado::class, 'apoderado_id', 'id');
+    }
+
+    public function matriculas()
+    {
+        return $this->hasMany(\App\Models\Matricula::class, 'estudiante_id', 'id');
     }
 }

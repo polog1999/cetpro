@@ -66,15 +66,25 @@ class PagoResource extends Resource
 
     public static function canCreate(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return false;
     }
+
+    // public static function canCreate(): bool
+    // {
+    //     $user = Filament::auth()->user();
+    //     return $user?->rol === Rol::ADMIN; // o 'admin'
+    // }
+
+    // public static function canEdit($record): bool
+    // {
+    //     $user = Filament::auth()->user();
+    //     return $user?->rol === Rol::ADMIN; // o 'admin'
+    // }
 
     public static function canDelete($record): bool
     {
