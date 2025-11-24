@@ -8,6 +8,8 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\SelectFilter;
+use App\Enums\EstadoPago;
 
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
@@ -119,6 +121,39 @@ class CronogramasTable
                     ->sortable(),
 
                 // =========================
+                // ESTADO DE DEUDA
+                // =========================
+                TextColumn::make('estado_deuda')
+                    ->label('Estado de Deuda')
+                    ->badge()
+                    ->getStateUsing(function (Cronograma $record): string {
+                        $esDeudor = $record->pagos()
+                            ->where('estado', EstadoPago::PENDIENTE)
+                            ->where('fecha_vencimiento', '<', now())
+                            ->exists();
+
+                        return $esDeudor ? 'Deudor' : 'Al día';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Deudor' => 'danger',
+                        'Al día' => 'success',
+                        default => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match ($state) {
+                        'Deudor' => 'heroicon-m-exclamation-circle',
+                        'Al día' => 'heroicon-m-check-badge',
+                        default => 'heroicon-m-question-mark-circle',
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->withExists([
+                            'pagos as tiene_deuda' => function ($query) {
+                                $query->where('estado', EstadoPago::PENDIENTE)
+                                    ->where('fecha_vencimiento', '<', now());
+                            }
+                        ])->orderBy('tiene_deuda', $direction);
+                    }),
+
+                // =========================
                 // FECHAS
                 // =========================
                 TextColumn::make('created_at')
@@ -135,25 +170,74 @@ class CronogramasTable
             ])
 
             ->filters([
-                //
+                // =========================
+                // FILTRO POR NOMBRE DE ALUMNO
+                // =========================
+                SelectFilter::make('alumno')
+                    ->label('Alumno')
+                    ->searchable()
+                    ->multiple()
+                    ->options(function (): array {
+                        return \App\Models\Estudiante::query()
+                            ->orderBy('apellido_paterno')
+                            ->get()
+                            ->mapWithKeys(function ($estudiante) {
+                                $nombreCompleto = trim(
+                                    "{$estudiante->nombres} {$estudiante->apellido_paterno} {$estudiante->apellido_materno}"
+                                );
+                                return [$estudiante->id => $nombreCompleto];
+                            })
+                            ->toArray();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('matricula.estudiante', function (Builder $q) use ($data) {
+                            $q->whereIn('id', $data['values']);
+                        });
+                    }),
+
+                // =========================
+                // FILTRO POR ESTADO DE DEUDA
+                // =========================
+                SelectFilter::make('estado_deuda')
+                    ->label('Estado de Deuda')
+                    ->options([
+                        'con_deuda' => 'Deudor',
+                        'al_dia' => 'Al día',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        if ($data['value'] === 'con_deuda') {
+                            return $query->whereHas('pagos', function (Builder $q) {
+                                $q->where('estado', EstadoPago::PENDIENTE)
+                                    ->where('fecha_vencimiento', '<', now());
+                            });
+                        }
+
+                        if ($data['value'] === 'al_dia') {
+                            return $query->whereDoesntHave('pagos', function (Builder $q) {
+                                $q->where('estado', EstadoPago::PENDIENTE)
+                                    ->where('fecha_vencimiento', '<', now());
+                            });
+                        }
+
+                        return $query;
+                    }),
             ])
-
-            
-            // Este botón redirige automáticamente a la página 'view'
-            
-
-            // Sin acciones por registro (no editar)
             ->recordActions([
-    
 
             ViewAction::make('verPagos')
-                ->label('Ver Pagos') // El texto del botón
-                ->icon('heroicon-m-eye') // Usamos un 'ojo' en vez de 'plus' porque es para ver
-                ->button() // Estilo botón relleno
-                ->color('info') // Opcional: Color azulito
-                ->url(fn (Cronograma $record): string => 
-            // Como ya estamos en el cronograma, pasamos el $record directamente
-            CronogramaResource::getUrl('view', ['record' => $record])
+                ->label('Ver Pagos')
+                ->icon('heroicon-m-eye')
+                ->button()
+                ->color('info') 
+                ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])
         ),
 ])
         

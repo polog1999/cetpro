@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Seccions;
 use App\Filament\Resources\Seccions\Pages\CreateSeccion;
 use App\Filament\Resources\Seccions\Pages\EditSeccion;
 use App\Filament\Resources\Seccions\Pages\ListSeccions;
+use App\Filament\Resources\Seccions\Pages\VerAlumnos;
 use App\Filament\Resources\Seccions\Schemas\SeccionForm;
 use App\Filament\Resources\Seccions\Tables\SeccionsTable;
 use App\Models\Seccion;
@@ -22,6 +23,8 @@ use UnitEnum;
 class SeccionResource extends Resource
 {
     protected static ?string $model = Seccion::class;
+    protected static ?string $navigationLabel = 'Secciones';
+    protected static ?string $pluralModelLabel = 'Secciones';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -50,6 +53,7 @@ class SeccionResource extends Resource
             'index' => ListSeccions::route('/'),
             'create' => CreateSeccion::route('/create'),
             'edit' => EditSeccion::route('/{record}/edit'),
+            'ver-alumnos' => VerAlumnos::route('/{record}/ver-alumnos'),
         ];
     }
 

@@ -56,6 +56,7 @@ class Pago extends Model
 
     /**
      * Genera automáticamente el código del pago y el número de cuota.
+     * Formato: {dni_alumno}-{id_seccion}-{numero Pago}
      */
     protected static function booted(): void
     {
@@ -63,12 +64,13 @@ class Pago extends Model
             // Asegurarnos de tener el cronograma cargado
             $cronograma = $pago->cronograma ?? Cronograma::findOrFail($pago->cronograma_id);
             $matricula  = $cronograma->matricula;
-
-            // Ajusta esto según tu modelo Matricula:
-            // si tienes un accessor getCodigoAttribute(), usa $matricula->codigo
-            // si no, usa directamente codigo_inscripcion.
-            $codigoMatricula = $matricula->codigo ?? $matricula->codigo_inscripcion;
-
+            
+            // Obtener DNI del alumno
+            $dniAlumno = $matricula->estudiante->nro_documento ?? 'SIN-DNI';
+            
+            // Obtener ID de sección (puede ser null si es curso libre)
+            $idSeccion = $matricula->seccion_id ?? $matricula->id_curso ?? 'SIN-SECCION';
+            
             // Contar pagos existentes para ese cronograma
             $conteoPagos = Pago::where('cronograma_id', $pago->cronograma_id)->count();
             $numeroPago  = str_pad($conteoPagos + 1, 2, '0', STR_PAD_LEFT); // 01, 02, 03...
@@ -79,8 +81,9 @@ class Pago extends Model
             }
 
             // Si no viene un código ya definido, lo generamos
+            // Formato: {dni_alumno}-{id_seccion}-{numero Pago}
             if (empty($pago->codigo)) {
-                $pago->codigo = "{$codigoMatricula}-{$numeroPago}";
+                $pago->codigo = "{$dniAlumno}-{$idSeccion}-{$numeroPago}";
             }
         });
     }

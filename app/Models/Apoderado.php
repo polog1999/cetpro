@@ -24,7 +24,7 @@ class Apoderado extends Model
     }
 
     public function getNombreCompletoAttribute(): string
-{
-    return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
-}
+    {
+        return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
+    }
 }

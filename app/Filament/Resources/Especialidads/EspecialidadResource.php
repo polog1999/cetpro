@@ -22,6 +22,8 @@ use UnitEnum;
 class EspecialidadResource extends Resource
 {
     protected static ?string $model = Especialidad::class;
+    protected static ?string $navigationLabel = 'Especialidades';
+    protected static ?string $pluralModelLabel = 'Especialidades';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

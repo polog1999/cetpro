@@ -5,10 +5,18 @@ namespace App\Filament\Resources\Seccions\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Enums\Turno;
 use App\Enums\Modalidad;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Seccion;
+use App\Filament\Resources\Seccions\SeccionResource;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+// use Filament\Infolists\Components\Action;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class SeccionsTable
 {
@@ -71,7 +79,41 @@ class SeccionsTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                // EditAction::make(),
+                
+                Action::make('ver_alumnos')
+                    ->label('Ver alumnos')
+                    ->icon('heroicon-o-user-group')
+                    ->color('info')
+                    ->url(fn (Seccion $record): string => 
+                        SeccionResource::getUrl('ver-alumnos', ['record' => $record->id_seccion])
+                    ),
+                
+                Action::make('descargar_pdf')
+                    ->label('Descargar PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function (Seccion $record) {
+                        // Cargar relaciones necesarias
+                        $record->load([
+                            'programa.especialidad',
+                            'programa.cursos',
+                            'docente'
+                        ]);
+                        
+                        // Generar PDF
+                        $pdf = Pdf::loadView('pdf.seccion-pdf', [
+                            'seccion' => $record
+                        ]);
+                        
+                        // Nombre del archivo
+                        $filename = 'seccion-' . $record->id_seccion . '.pdf';
+                        
+                        // Retornar PDF como descarga
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->output();
+                        }, $filename);
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
