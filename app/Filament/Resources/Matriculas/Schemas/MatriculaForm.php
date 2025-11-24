@@ -41,11 +41,13 @@ class MatriculaForm
             ->components([
 
                 // ----------------------------------------
-                // CÓDIGO DE INSCRIPCIÓN
+                // CÓDIGO DE INSCRIPCIÓN (AUTOGENERADO)
                 // ----------------------------------------
                 TextInput::make('codigo_inscripcion')
                     ->label('Código de inscripción')
-                    ->required(),
+                    ->placeholder('Se generará automáticamente')
+                    ->disabled()
+                    ->dehydrated(true),
 
                 // ----------------------------------------
                 // ESTUDIANTE (SELECT + CREAR CON WIZARD)

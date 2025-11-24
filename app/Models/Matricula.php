@@ -231,11 +231,26 @@ class Matricula extends Model
     }
 
     /**
-     * Cuando se crea la matrícula, se genera automáticamente el cronograma
-     * (y dentro de él, sus pagos).
+     * Generación automática del código de inscripción y cronograma.
      */
     protected static function booted()
     {
+        // ANTES de guardar: generar código de inscripción
+        static::creating(function (Matricula $matricula) {
+            if (empty($matricula->codigo_inscripcion)) {
+                // Obtener DNI del estudiante
+                $estudiante = Estudiante::find($matricula->estudiante_id);
+                $dni = $estudiante?->nro_documento ?? 'SINDNI';
+                
+                // Obtener ID de sección (si existe)
+                $seccionId = $matricula->seccion_id ?? 'SIN';
+                
+                // Generar código: {dni_alumno}{id_seccion}
+                $matricula->codigo_inscripcion = $dni . $seccionId;
+            }
+        });
+        
+        // DESPUÉS de guardar: generar cronograma
         static::created(function (Matricula $matricula) {
             $matricula->generarCronograma();
         });
