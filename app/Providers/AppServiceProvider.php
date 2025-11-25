@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar Observer para actualizar estado de matrícula automáticamente
+        \App\Models\Pago::observe(\App\Observers\PagoObserver::class);
     }
 }

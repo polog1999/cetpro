@@ -39,5 +39,16 @@ class Cronograma extends Model
     {
         return $this->hasMany(Pago::class);
     }
+
+    /**
+     * Verifica si el cronograma tiene deudas (pagos pendientes y vencidos).
+     */
+    public function tieneDeuda(): bool
+    {
+        return $this->pagos()
+            ->where('estado', \App\Enums\EstadoPago::PENDIENTE)
+            ->where('fecha_vencimiento', '<', now())
+            ->exists();
+    }
 }
 

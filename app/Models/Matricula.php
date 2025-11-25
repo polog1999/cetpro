@@ -178,13 +178,18 @@ class Matricula extends Model
     {
         $fechas = [];
 
-        // Caso CURSO: una cuota con el fin de mes de fecha_inicio del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO) {
+        // Caso CURSO LIBRE: generar fechas según la duración del curso
+        if ($this->tipo_matricula === TipoMatricula::CURSO_LIBRE) {
             $curso = $this->curso;
 
             if ($curso && $curso->fecha_inicio) {
-                $inicio   = Carbon::parse($curso->fecha_inicio);
-                $fechas[] = $inicio->copy()->endOfMonth();
+                $inicio = Carbon::parse($curso->fecha_inicio);
+                $duracion = (int) $curso->duracion; // duración en meses
+                
+                // Generar una fecha de vencimiento por cada mes del curso
+                for ($i = 0; $i < $duracion; $i++) {
+                    $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
+                }
             }
         } else {
             // Programa de estudio / formación continua
@@ -195,10 +200,16 @@ class Matricula extends Model
                     ->orderBy('fecha_inicio')
                     ->get();
 
-                // Para cada curso, tomamos el fin de mes de su fecha_inicio
+                // Para cada curso, generar tantas fechas como su duración indique
                 foreach ($cursos as $curso) {
                     if ($curso->fecha_inicio) {
-                        $fechas[] = Carbon::parse($curso->fecha_inicio)->endOfMonth();
+                        $inicio = Carbon::parse($curso->fecha_inicio);
+                        $duracion = (int) $curso->duracion; // duración en meses
+                        
+                        // Generar una fecha de vencimiento por cada mes del curso
+                        for ($i = 0; $i < $duracion; $i++) {
+                            $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
+                        }
                     }
                 }
             }
@@ -229,6 +240,36 @@ class Matricula extends Model
         }
 
         return $fechas;
+    }
+
+    /**
+     * Actualiza el estado de la matrícula según el estado del cronograma.
+     * Si el cronograma tiene deudas, marca la matrícula como INTERRUMPIDO.
+     * Si no tiene deudas, la marca como EN PROCESO (a menos que ya esté CULMINADO).
+     */
+    public function actualizarEstadoSegunCronograma(): void
+    {
+        // Si no tiene cronograma, no hacer nada
+        if (!$this->cronograma) {
+            return;
+        }
+
+        // No modificar matrículas ya culminadas
+        if ($this->estado === EstadoMatricula::CULMINADO) {
+            return;
+        }
+
+        // Verificar si el cronograma tiene deudas
+        if ($this->cronograma->tieneDeuda()) {
+            // Tiene deudas -> INTERRUMPIDO
+            $this->estado = EstadoMatricula::INTERRUMPIDO;
+        } else {
+            // No tiene deudas -> EN PROCESO
+            $this->estado = EstadoMatricula::ENPROCESO;
+        }
+
+        // Guardar sin disparar eventos para evitar loops infinitos
+        $this->saveQuietly();
     }
 
     /**

@@ -98,7 +98,7 @@ class HorariosTable
                         ]);
                         
                         // Generar PDF
-                        $pdf = Pdf::loadView('pdf.seccion-pdf', [
+                        $pdf = Pdf::loadView('pdf.horario-pdf', [
                             'horario' => $record, // actualizado de 'seccion' a 'horario'
                         ]);
                         
