@@ -4,7 +4,25 @@ use Illuminate\Support\Facades\Route;// routes/web.php
 // routes/web.php
 use App\Http\Controllers\MatriculaPdfController;
 
+use App\Models\Pago;
 
+use Illuminate\Support\Facades\Storage;
+
+Route::get('/pagos/{pago}/evidencia', function (Pago $pago) {
+    // Si no tiene archivo, 404
+    abort_unless($pago->evidencia_path, 404);
+
+    // Ruta física del archivo en el disco public
+    $path = Storage::disk('public')->path($pago->evidencia_path);
+
+    // Si no existe el archivo, 404
+    abort_unless(file_exists($path), 404);
+
+    // Devuelve el archivo (PDF o imagen)
+    return response()->file($path);
+})
+    ->name('pagos.evidencia.show')
+    ->middleware(['web', 'auth']);   // mismo auth que tu panel
 
    
 
