@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Matriculas\Schemas;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\TipoDocumento;
-use App\Enums\TipoPrograma;
+use App\Enums\Tip;
 
 use App\Enums\DistritoLima;
 use App\Enums\EstadoCivil;
@@ -216,14 +216,72 @@ class MatriculaForm
                     ->required()
                     ->live()
                     ->afterStateUpdated(function (TipoMatricula|null $state, Set $set) {
-                        // Al cambiar tipo, limpiamos horario, curso y textarea
+                        // Al cambiar tipo, limpiamos todos los campos relacionados
+                        $set('programa_intermediario', null);
+                        $set('formacion_continua_intermediaria', null);
                         $set('horario_id', null);
                         $set('id_curso', null);
                         $set('cursos_matriculados', null);
                     }),
 
                 // ----------------------------------------
-                // HORARIO (FILTRADO POR TIPO DE MATRÍCULA)
+                // PROGRAMA INTERMEDIARIO (para Programa y Modulo)
+                // No se almacena, solo para filtrar
+                // ----------------------------------------
+                Select::make('programa_intermediario')
+                    ->label('Seleccionar Programa')
+                    ->options(function () {
+                        return \App\Models\Programa::where('tipo_programa', Tip::PROGRAMA)
+                            ->orderBy('nombre_programa')
+                            ->pluck('nombre_programa', 'id_programa')
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    ->dehydrated(false) // No se guarda en BD
+                    ->visible(fn (Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO])
+                    )
+                    ->required(fn (Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO])
+                    )
+                    ->afterStateUpdated(function ($state, Set $set) {
+                        $set('horario_id', null);
+                        $set('id_curso', null);
+                        $set('cursos_matriculados', null);
+                    }),
+
+                // ----------------------------------------
+                // FORMACION CONTINUA INTERMEDIARIA (para Formacion Continua y Curso)
+                // No se almacena, solo para filtrar
+                // ----------------------------------------
+                Select::make('formacion_continua_intermediaria')
+                    ->label('Seleccionar Formación Continua')
+                    ->options(function () {
+                        return \App\Models\Programa::where('tipo_programa', Tip::FORMACION_CONTINUA)
+                            ->orderBy('nombre_programa')
+                            ->pluck('nombre_programa', 'id_programa')
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    ->dehydrated(false) // No se guarda en BD
+                    ->visible(fn (Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::FORMACION_CONTINUA, TipoMatricula::CURSO])
+                    )
+                    ->required(fn (Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::FORMACION_CONTINUA, TipoMatricula::CURSO])
+                    )
+                    ->afterStateUpdated(function ($state, Set $set) {
+                        $set('horario_id', null);
+                        $set('id_curso', null);
+                        $set('cursos_matriculados', null);
+                    }),
+
+                // ----------------------------------------
+                // HORARIO (FILTRADO POR TIPO DE MATRÍCULA Y PROGRAMA)
                 // ----------------------------------------
                 Select::make('horario_id')
                     ->label('Horario')
@@ -239,18 +297,24 @@ class MatriculaForm
                                 return;
                             }
 
-                            $query->whereHas('programa', function (Builder $q) use ($tipoMatricula) {
-                                if ($tipoMatricula === TipoMatricula::PROG_ESTUDIO) {
-                                    $q->where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO->value);
-                                } elseif ($tipoMatricula === TipoMatricula::FORM_CONTINUA) {
-                                    $q->where('tipo_programa', TipoPrograma::FORMACION_CONTINUA->value);
-                                } elseif ($tipoMatricula === TipoMatricula::CURSO_LIBRE) {
-                                    $q->whereIn('tipo_programa', [
-                                        TipoPrograma::PROGRAMA_ESTUDIO->value,
-                                        TipoPrograma::FORMACION_CONTINUA->value,
-                                    ]);
+                            // Filtrar por programa intermediario seleccionado
+                            if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
+                                $programaId = $get('programa_intermediario');
+                                if ($programaId) {
+                                    $query->where('id_programa', $programaId);
+                                } else {
+                                    $query->whereRaw('1 = 0');
                                 }
-                            });
+                            }
+                            // Filtrar por formacion continua intermediaria seleccionada
+                            elseif ($tipoMatricula === TipoMatricula::FORMACION_CONTINUA || $tipoMatricula === TipoMatricula::CURSO) {
+                                $formacionId = $get('formacion_continua_intermediaria');
+                                if ($formacionId) {
+                                    $query->where('id_programa', $formacionId);
+                                } else {
+                                    $query->whereRaw('1 = 0');
+                                }
+                            }
                         },
                     )
                     ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
@@ -271,29 +335,41 @@ class MatriculaForm
                     ->preload()
                     ->live()
                     ->disabled(fn (Get $get) => ! $get('tipo_matricula'))
-                    ->afterStateHydrated(function ($state, Set $set) {
-                        static::fillCursosDeHorario($state, $set);
+                    ->afterStateHydrated(function ($state, Set $set, Get $get) {
+                        static::fillCursosDeHorario($state, $set, $get);
                     })
-                    ->afterStateUpdated(function ($state, Set $set) {
-                        static::fillCursosDeHorario($state, $set);
+                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                        static::fillCursosDeHorario($state, $set, $get);
                         $set('id_curso', null);
                     }),
 
                 // ----------------------------------------
-                // TEXTAREA INFORMATIVO DE CURSOS
+                // TEXTAREA INFORMATIVO DE CURSOS/MODULOS
                 // ----------------------------------------
                 Textarea::make('cursos_matriculados')
-                    ->label('Cursos del programa de la sección')
+                    ->label(function (Get $get) {
+                        $tipoMatricula = $get('tipo_matricula');
+                        if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
+                            return 'Módulos del programa del horario';
+                        }
+                        return 'Cursos de la formación continua del horario';
+                    })
                     ->rows(1)
                     ->autosize()
                     ->disabled()
                     ->dehydrated(false),
 
                 // ----------------------------------------
-                // CURSO (SOLO PARA CURSO LIBRE)
+                // CURSO/MODULO (PARA CURSO Y MODULO)
                 // ----------------------------------------
                 Select::make('id_curso')
-                    ->label('Curso (solo para curso libre)')
+                    ->label(function (Get $get) {
+                        $tipoMatricula = $get('tipo_matricula');
+                        if ($tipoMatricula === TipoMatricula::MODULO) {
+                            return 'Módulo';
+                        }
+                        return 'Curso';
+                    })
                     ->options(function (Get $get) {
                         $horarioId = $get('horario_id');
 
@@ -315,26 +391,25 @@ class MatriculaForm
                     })
                     ->searchable()
                     ->live()
-                    // oculto mientras NO sea curso libre
-                    ->hidden(fn (Get $get) =>
-                        $get('tipo_matricula') !== TipoMatricula::CURSO_LIBRE
+                    // visible solo para CURSO y MODULO
+                    ->visible(fn (Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO])
                     )
-                    // deshabilitado si no hay horario o no es curso libre
+                    // deshabilitado si no hay horario
                     ->disabled(fn (Get $get) =>
                         ! $get('horario_id')
-                        || $get('tipo_matricula') !== TipoMatricula::CURSO_LIBRE
                     )
-                    // requerido solo si es curso libre
+                    // requerido solo si es CURSO o MODULO
                     ->required(fn (Get $get) =>
-                        $get('tipo_matricula') === TipoMatricula::CURSO_LIBRE
+                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO])
                     ),
             ]);
     }
 
     /**
-     * Llena el textarea con los cursos del programa del horario seleccionado.
+     * Llena el textarea con los cursos/modulos del programa del horario seleccionado.
      */
-    protected static function fillCursosDeHorario($horarioId, Set $set): void
+    protected static function fillCursosDeHorario($horarioId, Set $set, Get $get): void
     {
         if (! $horarioId) {
             $set('cursos_matriculados', null);
@@ -354,7 +429,12 @@ class MatriculaForm
             ->get();
 
         if ($cursos->isEmpty()) {
-            $set('cursos_matriculados', 'Este programa no tiene cursos registrados.');
+            // Determinar el mensaje según el tipo de matrícula
+            $tipoMatricula = $get('tipo_matricula');
+            $mensaje = ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO)
+                ? 'Este programa no tiene módulos registrados.'
+                : 'Esta formación continua no tiene cursos registrados.';
+            $set('cursos_matriculados', $mensaje);
             return;
         }
 

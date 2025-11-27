@@ -66,8 +66,8 @@ class Matricula extends Model
         $duracion     = null;
         $especialidad = null;
 
-        // 1) CURSO LIBRE -> duración del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO_LIBRE) {
+        // 1) CURSO -> duración del curso
+        if ($this->tipo_matricula === TipoMatricula::CURSO) {
             $curso = $this->curso;
 
             if (! $curso) {
@@ -78,8 +78,8 @@ class Matricula extends Model
             $especialidad = $curso->programa?->especialidad; // programa del curso -> especialidad
         }
 
-        // 2) PROG_ESTUDIO o FORM_CONTINUA -> duración del programa
-        if (in_array($this->tipo_matricula, [TipoMatricula::PROG_ESTUDIO, TipoMatricula::FORM_CONTINUA], true)) {
+        // 2) PROGRAMA o FORMACION_CONTINUA -> duración del programa
+        if (in_array($this->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA], true)) {
             $programa = $this->horario?->programa;
 
             if (! $programa) {
@@ -178,8 +178,8 @@ class Matricula extends Model
     {
         $fechas = [];
 
-        // Caso CURSO LIBRE: una cuota con el fin de mes de fecha_inicio del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO_LIBRE) {
+        // Caso CURSO: una cuota con el fin de mes de fecha_inicio del curso
+        if ($this->tipo_matricula === TipoMatricula::CURSO) {
             $curso = $this->curso;
 
             if ($curso && $curso->fecha_inicio) {

@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Programas\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
-use App\Enums\TipoPrograma;
+use App\Enums\Tip;
 
 class ProgramaForm
 {
@@ -16,7 +16,7 @@ class ProgramaForm
 
                 Select::make('tipo_programa')
                     ->label('Tipo de programa')
-                    ->options(TipoPrograma::class) // usa las labels del enum
+                    ->options(Tip::class) // usa las labels del enum
                     ->native(false)
                     ->required(),
 

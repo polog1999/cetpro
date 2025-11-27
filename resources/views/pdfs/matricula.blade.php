@@ -55,14 +55,37 @@
         .text-center {
             text-align: center;
         }
+
+        .course-list {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .course-item {
+            margin: 3px 0;
+        }
+
+        .course-selected {
+            font-weight: bold;
+            background-color: #ffffcc;
+            padding: 2px 4px;
+        }
     </style>
 </head>
 <body>
 @php
-    $est   = $matricula->estudiante;
-    $sec   = $matricula->seccion;
-    $prog  = $sec?->programa;
-    $curso = $matricula->curso;
+    use App\Enums\TipoMatricula;
+    
+    $est     = $matricula->estudiante;
+    $horario = $matricula->horario;
+    $prog    = $horario?->programa;
+    $curso   = $matricula->curso;
+    $cursos  = $prog?->cursos ?? collect();
+    
+    // Determinar etiqueta según tipo de matrícula
+    $esTipoModulo = in_array($matricula->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO]);
+    $labelCursos = $esTipoModulo ? 'Módulos' : 'Cursos';
+    $labelCursosSingular = $esTipoModulo ? 'Módulo' : 'Curso';
 @endphp
 
 {{-- ENCABEZADO --}}
@@ -186,14 +209,20 @@
         <td></td>
         <td>ESPECIALIDAD / OPCIÓN OCUPACIONAL</td>
         <td colspan="3">{{ $prog?->nombre_programa }}</td>
-        <td>HORARIO</td>
-        <td>{{ $sec?->horario }}</td>
+        <td>TURNO</td>
+        <td>{{ $horario?->turno?->value ?? $horario?->turno }}</td>
     </tr>
     <tr>
-        <td>MÓDULO / CURSO</td>
+        <td>{{ $labelCursosSingular }} SELECCIONADO</td>
         <td colspan="3">
             @if($curso)
                 {{ $curso->nombre_curso }}
+            @else
+                @if(in_array($matricula->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA]))
+                    Matrícula completa (todos los {{ strtolower($labelCursos) }})
+                @else
+                    -
+                @endif
             @endif
         </td>
         <td>TIPO MATRÍCULA</td>
@@ -202,12 +231,13 @@
     <tr>
         <td>DURACIÓN</td>
         <td>{{ $prog?->duracion }}</td>
-        <td>INICIO</td>
-        <td>{{ $sec?->fecha_inicio ?? '' }}</td>
-        <td>TÉRMINO</td>
-        <td>{{ $sec?->fecha_fin ?? '' }}</td>
-        <td></td>
-        <td></td>
+        <td>MODALIDAD</td>
+        <td>{{ $horario?->modalidad?->value ?? $horario?->modalidad }}</td>
+        <td>HORARIO</td>
+        <td colspan="3">
+            {{ is_array($horario?->dias) ? implode(', ', $horario->dias) : $horario?->dias }} 
+            | {{ $horario?->horario }}
+        </td>
     </tr>
 </table>
 

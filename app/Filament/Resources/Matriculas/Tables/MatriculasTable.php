@@ -57,12 +57,20 @@ class MatriculasTable
             ->recordActions([
                 EditAction::make(),
 
-                // 👉 Botón para generar/descargar PDF
+                // 👉 Botón para generar/descargar PDF de la ficha
                 Action::make('pdf')
-                    ->label('PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
+                    ->label('Ficha PDF')
+                    ->icon('heroicon-o-document-text')
                     ->url(fn (Matricula $record) => route('matriculas.pdf', $record))
                     ->openUrlInNewTab(),
+
+                // 👉 Botón para generar/descargar PDF de cursos/módulos
+                Action::make('cursos_pdf')
+                    ->label('Cursos PDF')
+                    ->icon('heroicon-o-academic-cap')
+                    ->url(fn (Matricula $record) => route('matriculas.cursos-pdf', $record))
+                    ->openUrlInNewTab()
+                    ->color('success'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

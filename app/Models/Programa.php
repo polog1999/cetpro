@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-use App\Enums\TipoPrograma;
+use App\Enums\Tip;
 use App\Models\Especialidad;
 use App\Models\Curso;
 use App\Models\Horario;
@@ -27,7 +27,7 @@ class Programa extends Model
     ];
 
     protected $casts = [
-        'tipo_programa' => TipoPrograma::class,
+        'tipo_programa' => Tip::class,
     ];
 
     public function especialidad()

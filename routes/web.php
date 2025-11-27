@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;// routes/web.php
 // routes/web.php
 use App\Http\Controllers\MatriculaPdfController;
+use App\Http\Controllers\MatriculaCursosPdfController;
 
 use App\Models\Pago;
 
@@ -28,6 +29,9 @@ Route::get('/pagos/{pago}/evidencia', function (Pago $pago) {
 
 Route::get('/matriculas/{matricula}/pdf', [MatriculaPdfController::class, 'show'])
     ->name('matriculas.pdf');
+
+Route::get('/matriculas/{matricula}/cursos-pdf', [MatriculaCursosPdfController::class, 'show'])
+    ->name('matriculas.cursos-pdf');
 
 
 
