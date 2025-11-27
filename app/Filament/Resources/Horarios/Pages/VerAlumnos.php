@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\Seccions\Pages;
+namespace App\Filament\Resources\Horarios\Pages;
 
-use App\Filament\Resources\Seccions\SeccionResource;
+use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 
@@ -14,7 +14,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 
 use App\Models\Matricula;
 use App\Models\Estudiante;
-use App\Models\Seccion;
+use App\Models\Horario;
 use App\Filament\Resources\Estudiantes\EstudianteResource;
 use App\Filament\Resources\Matriculas\MatriculaResource;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,9 +26,9 @@ class VerAlumnos extends Page implements HasTable
     use InteractsWithTable;
     use InteractsWithRecord;
 
-    protected static string $resource = SeccionResource::class;
+    protected static string $resource = HorarioResource::class;
 
-    protected string $view = 'filament.resources.seccions.pages.ver-alumnos';
+    protected string $view = 'filament.resources.horarios.pages.ver-alumnos';
 
     public function mount(int|string $record): void
     {
@@ -54,21 +54,18 @@ class VerAlumnos extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            // 6. Define la consulta:
             // "Dame todas las matrículas (con sus estudiantes) 
-            // donde 'seccion_id' sea el ID de la sección que estamos viendo"
+            // donde 'horario_id' sea el ID del horario que estamos viendo"
             ->query(
                 Matricula::query()
                     ->with('estudiante')
-                    ->where('seccion_id', $this->record->id_seccion),
+                    ->where('horario_id', $this->record->id_horario),
             )
             ->columns([
-                // 7. Esta es la columna clickeable (Paso 3 de tu plan)
                 TextColumn::make('estudiante.nombres')
                     ->label('Nombre del Alumno')
                     ->searchable()
                     ->url(fn (Matricula $record): string => 
-                        // Redirige a la página de Edición de la Matrícula
                         EstudianteResource::getUrl('edit', ['record' => $record->estudiante_id])
                     ),
                 
@@ -79,11 +76,9 @@ class VerAlumnos extends Page implements HasTable
                     ->label('Cód. Matrícula')
                     ->searchable()
                     ->url(fn (Matricula $record): string => 
-                        // Redirige a la página de Edición de la Matrícula
                         MatriculaResource::getUrl('edit', ['record' => $record->id])
                     ),
             ])
-            // 8. Como pediste, sin botones de acción
             ->actions([])
             ->headerActions([])
             ->bulkActions([]);
@@ -97,9 +92,9 @@ class VerAlumnos extends Page implements HasTable
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('success')
                 ->action(function () {
-                    // Obtener todas las matrículas de esta sección con sus estudiantes
+                    // Obtener todas las matrículas de este horario con sus estudiantes
                     $matriculas = Matricula::query()
-                        ->where('seccion_id', $this->record->id_seccion)
+                        ->where('horario_id', $this->record->id_horario)
                         ->with('estudiante')
                         ->get();
                     
@@ -119,14 +114,14 @@ class VerAlumnos extends Page implements HasTable
                     
                     // Generar PDF
                     $pdf = Pdf::loadView('pdf.lista-alumnos', [
-                        'seccion' => $this->record,
-                        'alumnos' => $alumnos,
-                        'dias_estudio' => $dias_estudio,
+                        'horario'          => $this->record,
+                        'alumnos'          => $alumnos,
+                        'dias_estudio'     => $dias_estudio,
                         'codigo_matricula' => $codigo_matricula,
                     ]);
                     
                     // Nombre del archivo
-                    $filename = 'lista-alumnos-' . $this->record->id_seccion . '.pdf';
+                    $filename = 'lista-alumnos-' . $this->record->id_horario . '.pdf';
                     
                     // Retornar PDF como descarga
                     return response()->streamDownload(function () use ($pdf) {

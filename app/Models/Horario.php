@@ -4,17 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use App\Enums\Turno;
 use App\Enums\Modalidad;
 
-class Seccion extends Model
+class Horario extends Model
 {
     use HasFactory;
 
-    // Nombre actual de la tabla
-    protected $table = 'seccion'; // si tu tabla se llama 'secciones', cámbialo
-    protected $primaryKey = 'id_seccion';
+    // Nueva tabla y nueva PK
+    protected $table = 'horarios';
+    protected $primaryKey = 'id_horario';
 
     protected $fillable = [
         'id_programa',
@@ -29,7 +30,7 @@ class Seccion extends Model
     protected $casts = [
         'turno'     => Turno::class,
         'modalidad' => Modalidad::class,
-        'dias'         => 'array',
+        'dias'      => 'array',
     ];
 
     public function programa()
@@ -42,9 +43,8 @@ class Seccion extends Model
         return $this->belongsTo(Docente::class, 'id_docente', 'id');
     }
 
-    public function matriculas()
-    {
-        return $this->hasMany(Matricula::class, 'seccion_id', 'id_seccion');
-    }
+    public function matriculas(): HasMany
+{
+    return $this->hasMany(Matricula::class, 'horario_id', 'id_horario');
 }
-
+}

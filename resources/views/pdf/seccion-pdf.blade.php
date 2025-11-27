@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Información de Sección</title>
+    <title>Información de Horario</title>
     <style>
         * {
             margin: 0;
@@ -107,37 +107,37 @@
 <body>
     <div class="header">
         <div class="tipo-programa">
-            {{ $seccion->programa->tipo_programa?->getLabel() ?? 'Tipo de programa' }}
+            {{ $horario->programa->tipo_programa?->getLabel() ?? 'Tipo de programa' }}
         </div>
         <div class="nombre-programa">
-            {{ $seccion->programa->nombre_programa ?? 'Nombre del programa' }}
+            {{ $horario->programa->nombre_programa ?? 'Nombre del programa' }}
         </div>
         <div class="nombre-especialidad">
-            {{ $seccion->programa->especialidad->nombre_especialidad ?? 'Nombre de la especialidad' }}
+            {{ $horario->programa->especialidad->nombre_especialidad ?? 'Nombre de la especialidad' }}
         </div>
     </div>
     
     <div class="info-section">
         <div class="info-column">
             <div class="info-item">
-                <span class="info-label">Profesor: </span>{{ $seccion->docente->nombre_completo ?? '-' }}
+                <span class="info-label">Profesor: </span>{{ $horario->docente->nombre_completo ?? '-' }}
             </div>
             <div class="info-item">
-                <span class="info-label">Turno: </span>{{ $seccion->turno?->getLabel() ?? '-' }}
+                <span class="info-label">Turno: </span>{{ $horario->turno?->getLabel() ?? '-' }}
             </div>
             <div class="info-item">
-                <span class="info-label">Horario: </span>{{ $seccion->horario ?? '-' }}
+                <span class="info-label">Horas: </span>{{ $horario->horario ?? '-' }}
             </div>
             <div class="info-item">
-                <span class="info-label">Días: </span>{{ is_array($seccion->dias) ? implode(', ', $seccion->dias) : $seccion->dias }}
+                <span class="info-label">Días: </span>{{ is_array($horario->dias) ? implode(', ', $horario->dias) : $horario->dias }}
             </div>
         </div>
         <div class="info-column">
             <div class="info-item">
-                <span class="info-label">Duración: </span>{{ $seccion->programa->duracion ?? '-' }} meses
+                <span class="info-label">Duración: </span>{{ $horario->programa->duracion ?? '-' }} meses
             </div>
             <div class="info-item">
-                <span class="info-label">Coste: S/. </span>{{ number_format($seccion->programa->especialidad->costo_mensual ?? 0, 2) }}
+                <span class="info-label">Coste: S/. </span>{{ number_format($horario->programa->especialidad->costo_mensual ?? 0, 2) }}
             </div>
         </div>
     </div>
@@ -154,7 +154,7 @@
         </thead>
         <tbody>
             @php
-                $cursos = $seccion->programa->cursos ?? collect();
+                $cursos = $horario->programa->cursos ?? collect();
             @endphp
             
             @forelse($cursos as $index => $curso)
@@ -163,7 +163,7 @@
                     <td>{{ $curso->nombre_curso }}</td>
                     <td>{{ $curso->fecha_inicio ? \Carbon\Carbon::parse($curso->fecha_inicio)->format('d/m/Y') : '-' }}</td>
                     <td>{{ $curso->fecha_termino ? \Carbon\Carbon::parse($curso->fecha_termino)->format('d/m/Y') : '-' }}</td>
-                    <td>{{ $seccion->aula ?? '-' }}</td>
+                    <td>{{ $horario->aula ?? '-' }}</td>
                 </tr>
             @empty
                 <tr>

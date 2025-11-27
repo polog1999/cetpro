@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\Seccions\Pages;
+namespace App\Filament\Resources\Horarios\Pages;
 
-use App\Filament\Resources\Seccions\SeccionResource;
+use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Resources\Pages\CreateRecord;
 
-class CreateSeccion extends CreateRecord
+class CreateHorario extends CreateRecord
 {
-    protected static string $resource = SeccionResource::class;
+    protected static string $resource = HorarioResource::class;
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $inicio = $data['hora_inicio'] ?? null;

@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\Seccions;
+namespace App\Filament\Resources\Horarios;
 
-use App\Filament\Resources\Seccions\Pages\CreateSeccion;
-use App\Filament\Resources\Seccions\Pages\EditSeccion;
-use App\Filament\Resources\Seccions\Pages\ListSeccions;
-use App\Filament\Resources\Seccions\Pages\VerAlumnos;
-use App\Filament\Resources\Seccions\Schemas\SeccionForm;
-use App\Filament\Resources\Seccions\Tables\SeccionsTable;
-use App\Models\Seccion;
+use App\Filament\Resources\Horarios\Pages\CreateHorario;
+use App\Filament\Resources\Horarios\Pages\EditHorario;
+use App\Filament\Resources\Horarios\Pages\ListHorarios;
+use App\Filament\Resources\Horarios\Pages\VerAlumnos;
+use App\Filament\Resources\Horarios\Schemas\HorarioForm;
+use App\Filament\Resources\Horarios\Tables\HorariosTable;
+use App\Models\Horario;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -20,24 +20,37 @@ use App\Enums\Rol;
 
 use UnitEnum;
 
-class SeccionResource extends Resource
+class HorarioResource extends Resource
 {
-    protected static ?string $model = Seccion::class;
-    protected static ?string $navigationLabel = 'Secciones';
-    protected static ?string $pluralModelLabel = 'Secciones';
+    protected static ?string $model = Horario::class;
+    
+    protected static ?string $pluralModelLabel = 'Horarios';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Gestión Académica';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestión Académica';
+
+    // Texto que aparece en el menú lateral (navegación)
+    protected static ?string $navigationLabel = 'Horarios';
+    
+    public static function getModelLabel(): string
+    {
+        return 'Horario';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Horarios';
+    }
 
     public static function form(Schema $schema): Schema
     {
-        return SeccionForm::configure($schema);
+        return HorarioForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return SeccionsTable::configure($table);
+        return HorariosTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -50,59 +63,52 @@ class SeccionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListSeccions::route('/'),
-            'create' => CreateSeccion::route('/create'),
-            'edit' => EditSeccion::route('/{record}/edit'),
+            'index'       => ListHorarios::route('/'),
+            'create'      => CreateHorario::route('/create'),
+            'edit'        => EditHorario::route('/{record}/edit'),
             'ver-alumnos' => VerAlumnos::route('/{record}/ver-alumnos'),
         ];
     }
 
-
-
-    //Accesos
+    // Accesos
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
 
-        // Si guardas el rol como enum:
         return $user?->rol === Rol::ADMIN;
-
-        // Si guardas el rol como string:
-        // return $user?->rol === 'admin';
     }
 
     public static function canCreate(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return $user?->rol === Rol::ADMIN;
     }
 
     public static function canEdit($record): bool
     {
         $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return $user?->rol === Rol::ADMIN;
     }
 
     public static function canDelete($record): bool
     {
         $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return $user?->rol === Rol::ADMIN;
     }
 
     public static function canDeleteAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return $user?->rol === Rol::ADMIN;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return $user?->rol === Rol::ADMIN;
     }
 
-
-//Contar
+    // Contar
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();

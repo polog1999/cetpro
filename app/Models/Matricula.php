@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 use App\Models\Estudiante;
-use App\Models\Seccion;
+use App\Models\Horario;
+
 use App\Models\Curso;
 use App\Models\Cronograma;
 use App\Enums\EstadoMatricula;
@@ -25,7 +26,7 @@ class Matricula extends Model
     protected $fillable = [
         'codigo_inscripcion',
         'estudiante_id',
-        'seccion_id',
+        'horario_id',
         'estado',
         'tipo_matricula',
         'id_curso',
@@ -41,10 +42,10 @@ class Matricula extends Model
         return $this->belongsTo(Estudiante::class);
     }
 
-    public function seccion(): BelongsTo
-    {
-        return $this->belongsTo(Seccion::class, 'seccion_id', 'id_seccion');
-    }
+    public function horario(): BelongsTo
+{
+    return $this->belongsTo(Horario::class, 'horario_id', 'id_horario');
+}
 
     public function curso(): BelongsTo
     {
@@ -79,7 +80,7 @@ class Matricula extends Model
 
         // 2) PROG_ESTUDIO o FORM_CONTINUA -> duración del programa
         if (in_array($this->tipo_matricula, [TipoMatricula::PROG_ESTUDIO, TipoMatricula::FORM_CONTINUA], true)) {
-            $programa = $this->seccion?->programa;
+            $programa = $this->horario?->programa;
 
             if (! $programa) {
                 return null;
@@ -187,7 +188,7 @@ class Matricula extends Model
             }
         } else {
             // Programa de estudio / formación continua
-            $programa = $this->seccion?->programa;
+            $programa = $this->horario?->programa;
 
             if ($programa) {
                 $cursos = $programa->cursos()
@@ -242,11 +243,11 @@ class Matricula extends Model
                 $estudiante = Estudiante::find($matricula->estudiante_id);
                 $dni = $estudiante?->nro_documento ?? 'SINDNI';
                 
-                // Obtener ID de sección (si existe)
-                $seccionId = $matricula->seccion_id ?? 'SIN';
+                // Obtener ID de horario (si existe)
+                $horarioId = $matricula->horario_id ?? 'SIN';
                 
-                // Generar código: {dni_alumno}{id_seccion}
-                $matricula->codigo_inscripcion = $dni . $seccionId;
+                // Generar código: {dni_alumno}{id_horario}
+                $matricula->codigo_inscripcion = $dni . $horarioId;
             }
         });
         

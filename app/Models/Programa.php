@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Enums\TipoPrograma;
 use App\Models\Especialidad;
 use App\Models\Curso;
-use App\Models\Seccion;
+use App\Models\Horario;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Programa extends Model
 {
@@ -41,9 +42,9 @@ class Programa extends Model
         return $this->hasMany(Curso::class, 'id_programa', 'id_programa');
     }
 
-    public function secciones()
-    {
-        return $this->hasMany(Seccion::class, 'id_programa', 'id_programa');
-    }
+    public function horarios(): HasMany
+{
+    return $this->hasMany(Horario::class, 'id_programa', 'id_programa');
+}
     
 }

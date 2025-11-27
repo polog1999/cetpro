@@ -24,7 +24,7 @@ use Filament\Tables\Filters\SelectFilter;
 
 
 use App\Models\Programa;
-use App\Models\Seccion;
+use App\Models\Horario;
 use App\Models\Curso;
 
 use App\Enums\EstadoPago;
@@ -103,7 +103,7 @@ class PagosTable
             ->filters([
                 // ------------------ PROGRAMA ------------------
     Filter::make('estructura')
-        ->label('Programa / Sección / Curso')
+        ->label('Programa / Horario / Curso')
         ->form([
             // ---------------- PROGRAMA ----------------
             Select::make('programa_id')
@@ -120,28 +120,28 @@ class PagosTable
                 ->reactive()
                 ->afterStateUpdated(function ($state, callable $set) {
                     if ($state) {
-                        // Si elijo un programa, limpio sección y curso
-                        $set('seccion_id', null);
+                        // Si elijo un programa, limpio horario y curso
+                        $set('horario_id', null);
                         $set('curso_id', null);
                     }
                 }),
 
-            // ---------------- SECCIÓN -----------------
-            Select::make('seccion_id')
-                ->label('Sección')
+            // ---------------- HORARIO -----------------
+            Select::make('horario_id')
+                ->label('Horario')
                 ->options(fn () =>
-                    Seccion::query()
+                    Horario::query()
                         ->with('programa')
                         ->get()
-                        ->mapWithKeys(function (Seccion $seccion) {
-                            $programa = $seccion->programa->nombre_programa ?? 'Sin programa';
+                        ->mapWithKeys(function (Horario $horario) {
+                            $programa = $horario->programa->nombre_programa ?? 'Sin programa';
 
                             $texto = $programa
-                                .' | Sec. '.$seccion->id_seccion
-                                .' | Aula '.$seccion->aula;
+                                .' | Hor. '.$horario->id_horario
+                                .' | Aula '.$horario->aula;
 
                             return [
-                                $seccion->id_seccion => $texto,
+                                $horario->id_horario => $texto,
                             ];
                         })
                         ->toArray()
@@ -151,7 +151,7 @@ class PagosTable
                 ->reactive()
                 ->afterStateUpdated(function ($state, callable $set) {
                     if ($state) {
-                        // Si elijo sección, limpio programa y curso
+                        // Si elijo horario, limpio programa y curso
                         $set('programa_id', null);
                         $set('curso_id', null);
                     }
@@ -172,9 +172,9 @@ class PagosTable
                 ->reactive()
                 ->afterStateUpdated(function ($state, callable $set) {
                     if ($state) {
-                        // Si elijo curso, limpio programa y sección
+                        // Si elijo curso, limpio programa y horario
                         $set('programa_id', null);
-                        $set('seccion_id', null);
+                        $set('horario_id', null);
                     }
                 }),
         ])
@@ -182,15 +182,15 @@ class PagosTable
 
             if (! empty($data['programa_id'])) {
                 return $query->whereHas(
-                    'cronograma.matricula.seccion',
+                    'cronograma.matricula.horario',
                     fn (Builder $q) => $q->where('id_programa', $data['programa_id'])
                 );
             }
 
-            if (! empty($data['seccion_id'])) {
+            if (! empty($data['horario_id'])) {
                 return $query->whereHas(
                     'cronograma.matricula',
-                    fn (Builder $q) => $q->where('seccion_id', $data['seccion_id'])
+                    fn (Builder $q) => $q->where('horario_id', $data['horario_id'])
                 );
             }
 
@@ -209,15 +209,15 @@ class PagosTable
                 return $prog ? 'Programa: '.$prog->nombre_programa : null;
             }
 
-            if (! empty($data['seccion_id'])) {
-                $sec = Seccion::find($data['seccion_id']);
-                if (! $sec) {
+            if (! empty($data['horario_id'])) {
+                $hor = Horario::find($data['horario_id']);
+                if (! $hor) {
                     return null;
                 }
 
-                $programa = $sec->programa->nombre_programa ?? 'Sin programa';
+                $programa = $hor->programa->nombre_programa ?? 'Sin programa';
 
-                return 'Sección: '.$programa.' - Sec. '.$sec->id_seccion;
+                return 'Horario: '.$programa.' - Hor. '.$hor->id_horario;
             }
 
             if (! empty($data['curso_id'])) {

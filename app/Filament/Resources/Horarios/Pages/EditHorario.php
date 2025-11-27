@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\Seccions\Pages;
+namespace App\Filament\Resources\Horarios\Pages;
 
-use App\Filament\Resources\Seccions\SeccionResource;
+use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditSeccion extends EditRecord
+class EditHorario extends EditRecord
 {
-    protected static string $resource = SeccionResource::class;
+    protected static string $resource = HorarioResource::class;
 
     protected function getHeaderActions(): array
     {

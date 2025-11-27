@@ -36,7 +36,7 @@ class MatriculasTable
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('seccion.programa.nombre_programa')
+                TextColumn::make('horario.programa.nombre_programa')
                     ->label('Programa')
                     ->sortable()
                     ->toggleable(),

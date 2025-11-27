@@ -28,7 +28,7 @@ class CronogramasTable
             ->modifyQueryUsing(
                 fn (Builder $query) => $query->with([
                     'matricula.estudiante',
-                    'matricula.seccion.programa',
+                    'matricula.horario.programa',
                     'matricula.curso',
                 ])
             )
@@ -72,32 +72,32 @@ class CronogramasTable
                 // SECCIÓN + PROGRAMA / CURSO + HORARIO + DÍAS
                 // =========================
                 TextColumn::make('seccion_info')
-                    ->label('Sección / Programa')
+                    ->label('Horario / Programa')
                     ->getStateUsing(function (Cronograma $record) {
                         $matricula = $record->matricula;
-                        $seccion   = $matricula?->seccion;
+                        $horario   = $matricula?->horario;
                         $curso     = $matricula?->curso;
 
-                        // Si no hay sección ni curso
-                        if (! $seccion && ! $curso) {
+                        // Si no hay horario ni curso
+                        if (! $horario && ! $curso) {
                             return '-';
                         }
 
                         // Programa o curso matriculado
                         $principal = $curso?->nombre_curso
-                            ?? $seccion?->programa?->nombre_programa
+                            ?? $horario?->programa?->nombre_programa
                             ?? 'Sin programa / curso';
 
                         // Días
-                        $dias = $seccion?->dias ?? '';
+                        $dias = $horario?->dias ?? '';
                         if (is_array($dias)) {
                             $dias = implode(', ', $dias);
                         }
 
                         // Horario
-                        $horario = $seccion?->horario ?? '';
+                        $horarioTexto = $horario?->horario ?? '';
 
-                        $extra = trim($dias . ' ' . $horario);
+                        $extra = trim($dias . ' ' . $horarioTexto);
 
                         return $extra ? "{$principal} | {$extra}" : $principal;
                     })

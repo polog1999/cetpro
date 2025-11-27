@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Matriculas\Pages;
 use App\Filament\Resources\Matriculas\MatriculaResource;
 use App\Models\Estudiante;
 use App\Models\Matricula;
-use App\Models\Seccion;
+use App\Models\Horario;
 use App\Enums\TipoMatricula;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoPrograma;
@@ -40,7 +40,7 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
 
     public ?array $data = [];
     
-    public ?int $seccionSeleccionada = null;
+    public ?int $horarioSeleccionado = null;
 
     public function mount(): void
     {
@@ -56,29 +56,29 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
     {
         return $schema
             ->components([
-                Select::make('seccion_id')
-                    ->label('Sección')
+                Select::make('horario_id')
+                    ->label('Horario')
                     ->options(function () {
-                        return Seccion::with('programa')
+                        return Horario::with('programa')
                             ->get()
-                            ->mapWithKeys(function ($seccion) {
-                                $programa = $seccion->programa->nombre_programa ?? 'Sin programa';
-                                $turno = $seccion->turno?->value ?? '';
-                                $dias = is_array($seccion->dias) 
-                                    ? implode(', ', $seccion->dias) 
-                                    : ($seccion->dias ?? '');
-                                $horario = $seccion->horario ?? '';
+                            ->mapWithKeys(function ($horario) {
+                                $programa = $horario->programa->nombre_programa ?? 'Sin programa';
+                                $turno = $horario->turno?->value ?? '';
+                                $dias = is_array($horario->dias) 
+                                    ? implode(', ', $horario->dias) 
+                                    : ($horario->dias ?? '');
+                                $horarioTexto = $horario->horario ?? '';
                                 
-                                $label = "{$programa} | Turno: {$turno} | Días: {$dias} | Horario: {$horario}";
+                                $label = "{$programa} | Turno: {$turno} | Días: {$dias} | Horario: {$horarioTexto}";
                                 
-                                return [$seccion->id_seccion => $label];
+                                return [$horario->id_horario => $label];
                             });
                     })
                     ->searchable()
                     ->required()
                     ->live()
                     ->afterStateUpdated(function ($state) {
-                        $this->seccionSeleccionada = $state;
+                        $this->horarioSeleccionado = $state;
                     }),
             ])
             ->statePath('data');
@@ -89,10 +89,10 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
         return $table
             ->query(
                 Estudiante::query()
-                    ->when($this->seccionSeleccionada, function (Builder $query) {
-                        // Excluir estudiantes ya matriculados en esta sección
+                    ->when($this->horarioSeleccionado, function (Builder $query) {
+                        // Excluir estudiantes ya matriculados en este horario
                         $query->whereDoesntHave('matriculas', function (Builder $q) {
-                            $q->where('seccion_id', $this->seccionSeleccionada);
+                            $q->where('horario_id', $this->horarioSeleccionado);
                         });
                     })
             )
@@ -126,31 +126,31 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                     ->requiresConfirmation()
                     ->modalHeading('Confirmar matrícula masiva')
                     ->modalDescription(fn ($records) => 
-                        'Se matricularán ' . $records->count() . ' estudiante(s) en la sección seleccionada.'
+                        'Se matricularán ' . $records->count() . ' estudiante(s) en el horario seleccionado.'
                     )
                     ->action(function ($records) {
-                        if (!$this->seccionSeleccionada) {
+                        if (!$this->horarioSeleccionado) {
                             Notification::make()
                                 ->danger()
                                 ->title('Error')
-                                ->body('Debe seleccionar una sección primero.')
+                                ->body('Debe seleccionar un horario primero.')
                                 ->send();
                             return;
                         }
 
-                        $seccion = Seccion::with('programa')->find($this->seccionSeleccionada);
+                        $horario = Horario::with('programa')->find($this->horarioSeleccionado);
                         
-                        if (!$seccion) {
+                        if (!$horario) {
                             Notification::make()
                                 ->danger()
                                 ->title('Error')
-                                ->body('Sección no encontrada.')
+                                ->body('Horario no encontrado.')
                                 ->send();
                             return;
                         }
 
                         // Determinar tipo de matrícula según el programa
-                        $tipoPrograma = $seccion->programa->tipo_programa;
+                        $tipoPrograma = $horario->programa->tipo_programa;
                         $tipoMatricula = match($tipoPrograma) {
                             TipoPrograma::PROGRAMA_ESTUDIO => TipoMatricula::PROG_ESTUDIO,
                             TipoPrograma::FORMACION_CONTINUA => TipoMatricula::FORM_CONTINUA,
@@ -163,7 +163,7 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                             try {
                                 Matricula::create([
                                     'estudiante_id' => $estudiante->id,
-                                    'seccion_id' => $this->seccionSeleccionada,
+                                    'horario_id' => $this->horarioSeleccionado,
                                     'tipo_matricula' => $tipoMatricula,
                                     'estado' => EstadoMatricula::ENPROCESO,
                                     'id_curso' => null,
@@ -185,14 +185,14 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                         // Redirigir a la lista de matrículas
                         return redirect()->route('filament.admin.resources.matriculas.index');
                     })
-                    ->disabled(fn () => !$this->seccionSeleccionada)
+                    ->disabled(fn () => !$this->horarioSeleccionado)
                     ->deselectRecordsAfterCompletion(),
             ])
             ->emptyStateHeading('No hay estudiantes disponibles')
             ->emptyStateDescription(
-                $this->seccionSeleccionada 
-                    ? 'Todos los estudiantes ya están matriculados en esta sección o no hay estudiantes registrados.'
-                    : 'Seleccione una sección para ver los estudiantes disponibles.'
+                $this->horarioSeleccionado 
+                    ? 'Todos los estudiantes ya están matriculados en este horario o no hay estudiantes registrados.'
+                    : 'Seleccione un horario para ver los estudiantes disponibles.'
             );
     }
 

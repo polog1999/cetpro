@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Seccions\Schemas;
+namespace App\Filament\Resources\Horarios\Schemas;
 
 use App\Enums\Modalidad;
 use App\Enums\Turno;
@@ -8,12 +8,11 @@ use App\Enums\TipoPrograma;
 use App\Models\Programa;
 use App\Models\Docente;
 
-
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Components\Textarea; // 👈 NUEVO
+use Filament\Forms\Components\Textarea;
 
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
@@ -22,7 +21,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use App\Enums\TipoDocumento;
 use Filament\Actions\Action;
 
-class SeccionForm
+class HorarioForm
 {
     public static function configure(Schema $schema): Schema
     {
@@ -68,7 +67,6 @@ class SeccionForm
                         $id = $get('id_programa');
 
                         if (! $id) {
-                            // Nada seleccionado → textarea vacío
                             $set('cursos_programa', null);
                             return;
                         }
@@ -80,7 +78,6 @@ class SeccionForm
                             return;
                         }
 
-                        // Construir listado de cursos en texto plano
                         $texto = $programa->cursos
                             ->map(function ($curso) {
                                 $nombre = $curso->nombre_curso
@@ -94,15 +91,15 @@ class SeccionForm
                         $set('cursos_programa', $texto);
                     }),
 
-                // 👇 TEXTAREA INFORMATIVO DE CURSOS
+                // Textarea informativo de cursos
                 Textarea::make('cursos_programa')
-    ->label('Cursos del programa seleccionado')
-    ->placeholder('Seleccione un programa para ver sus cursos.')
-    ->disabled()        // Solo lectura
-    ->dehydrated(false) // No se guarda en BD
-    ->autosize()        // 👈 Se adapta al contenido
-    ->rows(1)           // Altura mínima inicial opcional
-    ->columnSpanFull(),
+                    ->label('Cursos del programa seleccionado')
+                    ->placeholder('Seleccione un programa para ver sus cursos.')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->autosize()
+                    ->rows(1)
+                    ->columnSpanFull(),
 
                 // TURNO
                 Select::make('turno')

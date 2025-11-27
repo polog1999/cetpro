@@ -14,7 +14,7 @@ use App\Enums\Provincia;
 use App\Enums\TipoGenero;
 
 use App\Models\Estudiante;
-use App\Models\Seccion;
+use App\Models\Horario;
 use App\Models\Curso;
 use App\Models\Apoderado;
 
@@ -216,20 +216,20 @@ class MatriculaForm
                     ->required()
                     ->live()
                     ->afterStateUpdated(function (TipoMatricula|null $state, Set $set) {
-                        // Al cambiar tipo, limpiamos sección, curso y textarea
-                        $set('seccion_id', null);
+                        // Al cambiar tipo, limpiamos horario, curso y textarea
+                        $set('horario_id', null);
                         $set('id_curso', null);
                         $set('cursos_matriculados', null);
                     }),
 
                 // ----------------------------------------
-                // SECCIÓN (FILTRADA POR TIPO DE MATRÍCULA)
+                // HORARIO (FILTRADO POR TIPO DE MATRÍCULA)
                 // ----------------------------------------
-                Select::make('seccion_id')
-                    ->label('Sección')
+                Select::make('horario_id')
+                    ->label('Horario')
                     ->relationship(
-                        name: 'seccion',
-                        titleAttribute: 'id_seccion',
+                        name: 'horario',
+                        titleAttribute: 'id_horario',
                         modifyQueryUsing: function (Builder $query, Get $get) {
                             /** @var TipoMatricula|null $tipoMatricula */
                             $tipoMatricula = $get('tipo_matricula');
@@ -253,29 +253,29 @@ class MatriculaForm
                             });
                         },
                     )
-                    ->getOptionLabelFromRecordUsing(function (Seccion $seccion): string {
-                        $programa  = $seccion->programa?->nombre_programa ?? 'Sin programa';
+                    ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
+                        $programa  = $horario->programa?->nombre_programa ?? 'Sin programa';
 
-                        $turno     = $seccion->turno?->value ?? $seccion->turno;
-                        $modalidad = $seccion->modalidad?->value ?? $seccion->modalidad;
+                        $turno     = $horario->turno?->value ?? $horario->turno;
+                        $modalidad = $horario->modalidad?->value ?? $horario->modalidad;
 
-                        $dias = is_array($seccion->dias)
-                            ? implode(', ', $seccion->dias)
-                            : $seccion->dias;
+                        $dias = is_array($horario->dias)
+                            ? implode(', ', $horario->dias)
+                            : $horario->dias;
 
-                        $horario = $seccion->horario ?? '';
+                        $horarioTexto = $horario->horario ?? '';
 
-                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Horario: {$horario} | {$modalidad}";
+                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | {$modalidad}";
                     })
                     ->searchable()
                     ->preload()
                     ->live()
                     ->disabled(fn (Get $get) => ! $get('tipo_matricula'))
                     ->afterStateHydrated(function ($state, Set $set) {
-                        static::fillCursosDeSeccion($state, $set);
+                        static::fillCursosDeHorario($state, $set);
                     })
                     ->afterStateUpdated(function ($state, Set $set) {
-                        static::fillCursosDeSeccion($state, $set);
+                        static::fillCursosDeHorario($state, $set);
                         $set('id_curso', null);
                     }),
 
@@ -295,19 +295,19 @@ class MatriculaForm
                 Select::make('id_curso')
                     ->label('Curso (solo para curso libre)')
                     ->options(function (Get $get) {
-                        $seccionId = $get('seccion_id');
+                        $horarioId = $get('horario_id');
 
-                        if (! $seccionId) {
+                        if (! $horarioId) {
                             return [];
                         }
 
-                        $seccion = Seccion::with('programa.cursos')->find($seccionId);
+                        $horario = Horario::with('programa.cursos')->find($horarioId);
 
-                        if (! $seccion || ! $seccion->programa) {
+                        if (! $horario || ! $horario->programa) {
                             return [];
                         }
 
-                        return $seccion->programa
+                        return $horario->programa
                             ->cursos()
                             ->orderBy('nombre_curso')
                             ->pluck('nombre_curso', 'id_curso') // key = id_curso, value = nombre_curso
@@ -319,9 +319,9 @@ class MatriculaForm
                     ->hidden(fn (Get $get) =>
                         $get('tipo_matricula') !== TipoMatricula::CURSO_LIBRE
                     )
-                    // deshabilitado si no hay sección o no es curso libre
+                    // deshabilitado si no hay horario o no es curso libre
                     ->disabled(fn (Get $get) =>
-                        ! $get('seccion_id')
+                        ! $get('horario_id')
                         || $get('tipo_matricula') !== TipoMatricula::CURSO_LIBRE
                     )
                     // requerido solo si es curso libre
@@ -332,24 +332,24 @@ class MatriculaForm
     }
 
     /**
-     * Llena el textarea con los cursos del programa de la sección seleccionada.
+     * Llena el textarea con los cursos del programa del horario seleccionado.
      */
-    protected static function fillCursosDeSeccion($seccionId, Set $set): void
+    protected static function fillCursosDeHorario($horarioId, Set $set): void
     {
-        if (! $seccionId) {
+        if (! $horarioId) {
             $set('cursos_matriculados', null);
             return;
         }
 
-        $seccion = Seccion::find($seccionId);
+        $horario = Horario::find($horarioId);
 
-        if (! $seccion) {
-            $set('cursos_matriculados', 'Sección no encontrada.');
+        if (! $horario) {
+            $set('cursos_matriculados', 'Horario no encontrado.');
             return;
         }
 
         $cursos = Curso::query()
-            ->where('id_programa', $seccion->id_programa)
+            ->where('id_programa', $horario->id_programa)
             ->orderBy('nombre_curso')
             ->get();
 

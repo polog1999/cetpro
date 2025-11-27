@@ -100,7 +100,7 @@
     
     <div class="programa-info">
         <div class="nombre-programa">
-            {{ $seccion->programa->nombre_programa ?? 'Sin programa' }}
+            {{ $horario->programa->nombre_programa ?? 'Sin programa' }}
         </div>
     </div>
     
