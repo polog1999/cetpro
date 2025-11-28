@@ -18,7 +18,7 @@ use UnitEnum;
 
 class ApoderadoResource extends Resource
 {
-    protected static string | UnitEnum | null $navigationGroup = 'Gestión Estudiantil';
+    protected static string | UnitEnum | null $navigationGroup = 'Gestión de Matrícula';
 
     protected static ?string $model = Apoderado::class;
 
