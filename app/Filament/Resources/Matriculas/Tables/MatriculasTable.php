@@ -66,7 +66,7 @@ class MatriculasTable
 
                 // 👉 Botón para generar/descargar PDF de cursos/módulos
                 Action::make('cursos_pdf')
-                    ->label('Cursos PDF')
+                    ->label('Cursos/Modulos PDF')
                     ->icon('heroicon-o-academic-cap')
                     ->url(fn (Matricula $record) => route('matriculas.cursos-pdf', $record))
                     ->openUrlInNewTab()
