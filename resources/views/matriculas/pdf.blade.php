@@ -239,6 +239,21 @@
             | {{ $horario?->horario }}
         </td>
     </tr>
+    <tr>
+        <td>GRADO ACADÉMICO</td>
+        <td colspan="7">
+            @php
+                $grado = match ($matricula->tipo_matricula) {
+                    TipoMatricula::FORMACION_CONTINUA => 'Certificado de Estudio',
+                    TipoMatricula::PROGRAMA => 'Título Auxiliar Técnico',
+                    TipoMatricula::CURSO => 'Certificado',
+                    TipoMatricula::MODULO => 'Certificado del Módulo',
+                    default => 'N/A',
+                };
+            @endphp
+            {{ $grado }}
+        </td>
+    </tr>
 </table>
 
 <br><br>

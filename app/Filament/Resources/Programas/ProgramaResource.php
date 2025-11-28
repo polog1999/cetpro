@@ -25,6 +25,9 @@ use App\Enums\TipoPrograma;
 class ProgramaResource extends Resource
 {
     protected static ?string $model = Programa::class;
+    protected static ?string $navigationLabel = 'Programas / Formación Continua';
+    protected static ?string $pluralModelLabel = 'Programas / Formación Continua';
+    protected static ?string $modelLabel = 'Programa / Formación Continua';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

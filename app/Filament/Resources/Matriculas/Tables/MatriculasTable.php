@@ -40,6 +40,20 @@ class MatriculasTable
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('grado_academico')
+                    ->label('Grado Académico')
+                    ->state(function (Matricula $record): string {
+                        return match ($record->tipo_matricula) {
+                            TipoMatricula::FORMACION_CONTINUA => 'Certificado de Estudio',
+                            TipoMatricula::PROGRAMA => 'Título Auxiliar Técnico',
+                            TipoMatricula::CURSO => 'Certificado',
+                            TipoMatricula::MODULO => 'Certificado del Módulo',
+                            default => 'N/A',
+                        };
+                    })
+                    ->badge()
+                    ->color('info'),
+
                 TextColumn::make('horario.programa.nombre_programa')
                     ->label('Programa')
                     ->sortable()
