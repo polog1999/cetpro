@@ -442,7 +442,18 @@ class MatriculaForm
             ->values()
             ->map(function ($curso, $index) {
                 $n = $index + 1;
-                return "{$n}. {$curso->nombre_curso}";
+                $nombre = $curso->nombre_curso;
+                
+                // Formatear las fechas si existen
+                $fechaInicio = $curso->fecha_inicio 
+                    ? \Carbon\Carbon::parse($curso->fecha_inicio)->format('d/m/Y')
+                    : 'Sin fecha';
+                    
+                $fechaFin = $curso->fecha_termino 
+                    ? \Carbon\Carbon::parse($curso->fecha_termino)->format('d/m/Y')
+                    : 'Sin fecha';
+                
+                return "{$n}. {$nombre} | Inicio: {$fechaInicio} | Fin: {$fechaFin}";
             })
             ->implode(PHP_EOL);
 
