@@ -14,7 +14,7 @@ class EspecialidadsTable
     {
         return $table
             ->columns([
-                TextColumn::make('nombre_especialidad')
+                TextColumn::make('Modulos')
                     ->searchable(),
                 TextColumn::make('costo_mensual')
                     ->numeric()
