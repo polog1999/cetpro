@@ -334,7 +334,25 @@ class MatriculaForm
                     ->searchable()
                     ->preload()
                     ->live()
-                    ->disabled(fn (Get $get) => ! $get('tipo_matricula'))
+                    ->disabled(function (Get $get) {
+                        $tipoMatricula = $get('tipo_matricula');
+                        
+                        if (! $tipoMatricula) {
+                            return true;
+                        }
+                        
+                        // Para Programa y Módulo, requiere programa_intermediario
+                        if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
+                            return ! $get('programa_intermediario');
+                        }
+                        
+                        // Para Formación Continua y Curso, requiere formacion_continua_intermediaria
+                        if ($tipoMatricula === TipoMatricula::FORMACION_CONTINUA || $tipoMatricula === TipoMatricula::CURSO) {
+                            return ! $get('formacion_continua_intermediaria');
+                        }
+                        
+                        return true;
+                    })
                     ->afterStateHydrated(function ($state, Set $set, Get $get) {
                         static::fillCursosDeHorario($state, $set, $get);
                     })
