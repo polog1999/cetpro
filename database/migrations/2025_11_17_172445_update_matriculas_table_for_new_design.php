@@ -26,13 +26,14 @@ return new class extends Migration
                 $table->unique('codigo_inscripcion');
             }
 
-            // tipo_matricula (enum con 3 opciones)
+            // tipo_matricula (enum con 4 opciones actualizadas)
             if (! Schema::hasColumn('matriculas', 'tipo_matricula')) {
                 $table->enum('tipo_matricula', [
-                    TipoMatricula::PROG_ESTUDIO->value,
-                    TipoMatricula::FORM_CONTINUA->value,
-                    TipoMatricula::CURSO_LIBRE->value,
-                ])->default(TipoMatricula::PROG_ESTUDIO->value)->after('estado');
+                    TipoMatricula::PROGRAMA->value,
+                    TipoMatricula::FORMACION_CONTINUA->value,
+                    TipoMatricula::CURSO->value,
+                    TipoMatricula::MODULO->value,
+                ])->default(TipoMatricula::PROGRAMA->value)->after('estado');
             }
 
             // id_curso nullable + FK

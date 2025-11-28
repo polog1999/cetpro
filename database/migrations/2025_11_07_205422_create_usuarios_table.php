@@ -20,7 +20,8 @@ return new class extends Migration
             $table->string('password');
 
             // rol almacenado como string y casteado al enum Rol
-            $table->string('rol', 50);
+            // nullable temporalmente para migración al nuevo sistema de roles
+            $table->string('rol', 50)->nullable();
 
             $table->timestamps();
         });

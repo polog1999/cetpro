@@ -74,38 +74,32 @@ class HorarioResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-
-        return $user?->rol === Rol::ADMIN;
+        return $user?->role?->es_admin || $user?->canAccessResource('HorarioResource') || false;
     }
 
     public static function canCreate(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN;
+        return static::canViewAny();
     }
 
     public static function canEdit($record): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN;
+        return static::canViewAny();
     }
 
     public static function canDelete($record): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN;
+        return static::canViewAny();
     }
 
     public static function canDeleteAny(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN;
+        return static::canViewAny();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN;
+        return static::canViewAny();
     }
 
     // Contar

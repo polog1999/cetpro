@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Usuarios\Schemas;
 
-use App\Enums\Rol;
+use App\Models\Role;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -16,23 +16,35 @@ class UsuarioForm
             ->components([
                 Select::make('empleado_id')
                     ->label('Empleado')
-    ->relationship('empleado', 'nombre') // base para la relación
-    ->getOptionLabelFromRecordUsing(function (Empleado $e) {
-        return trim($e->nombre.' '.$e->apellido_paterno.' '.$e->apellido_materno);
-    })
-    ->searchable()
-    ->preload()
-    ->required(),  
-    Select::make('rol')
-                    ->options(Rol::class)
+                    ->relationship('empleado', 'nombre') // base para la relación
+                    ->getOptionLabelFromRecordUsing(function (Empleado $e) {
+                        return trim($e->nombre.' '.$e->apellido_paterno.' '.$e->apellido_materno);
+                    })
+                    ->searchable()
+                    ->preload()
                     ->required(),
+                    
+                Select::make('role_id')
+                    ->label('Rol')
+                    ->relationship('role', 'nombre')
+                    ->getOptionLabelFromRecordUsing(function (Role $role) {
+                        return $role->nombre . ($role->es_admin ? ' (Admin)' : '');
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->helperText('Seleccione el rol que determinará los permisos del usuario'),
+                    
                 TextInput::make('usuario')
-                    ->required(),
+                    ->label('Nombre de usuario')
+                    ->required()
+                    ->unique(ignoreRecord: true),
+                    
                 TextInput::make('password')
                     ->password()
+                    ->label('Contraseña')
                     ->dehydrated(fn ($state) => filled($state)) // no sobrescribe si está vacío en editar
                     ->required(fn ($record) => $record === null),
-                
             ]);
     }
 }

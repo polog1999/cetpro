@@ -59,42 +59,32 @@ class EspecialidadResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-
-        // Si guardas el rol como enum:
-        return $user?->rol === Rol::ADMIN;
-
-        // Si guardas el rol como string:
-        // return $user?->rol === 'admin';
+        return $user?->role?->es_admin || $user?->canAccessResource('EspecialidadResource') || false;
     }
 
     public static function canCreate(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return static::canViewAny();
     }
 
     public static function canEdit($record): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return static::canViewAny();
     }
 
     public static function canDelete($record): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return static::canViewAny();
     }
 
     public static function canDeleteAny(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return static::canViewAny();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = Filament::auth()->user();
-        return $user?->rol === Rol::ADMIN; // o 'admin'
+        return static::canViewAny();
     }
 
 

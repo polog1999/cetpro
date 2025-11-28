@@ -47,8 +47,30 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         return $this->belongsTo(Empleado::class);
     }
 
+    /**
+     * Relación con Role
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Verificar si el usuario puede acceder a un recurso
+     */
+    public function canAccessResource(string $recurso): bool
+    {
+        return $this->role?->hasPermission($recurso) ?? false;
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
+        // Si tiene rol asignado, verificar que tenga permisos
+        if ($this->role) {
+            return true; // Cualquier rol puede acceder al panel (los permisos se verifican en cada recurso)
+        }
+
+        // Fallback para compatibilidad temporal durante migración
         return in_array($this->rol?->value, ['admin', 'secretaria'], true);
     }
 

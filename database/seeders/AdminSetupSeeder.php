@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use App\Models\Empleado;
 use App\Models\Usuario;
-use App\Enums\Rol;
+use App\Models\Role;
 
 class AdminSetupSeeder extends Seeder
 {
@@ -22,19 +22,24 @@ class AdminSetupSeeder extends Seeder
                     'apellido_materno'  => null,
                     'correo'            => env('ADMIN_EMAIL', 'admin@example.com'),
                     'celular'           => null,
-                    'tipo_documento'    => 'DNI', // ajusta a tu enum si aplica
+                    'tipo_documento'    => 'DNI',
                 ]
             );
 
-            // 2) Usuario admin (no duplica por usuario)
+            // 2) Obtener el rol de Administrador
+            $rolAdmin = Role::where('nombre', 'Administrador')->first();
+            
+            if (!$rolAdmin) {
+                throw new \Exception('Rol "Administrador" no encontrado. Ejecuta primero PermisoSeeder y RoleSeeder.');
+            }
+
+            // 3) Usuario admin (no duplica por usuario)
             Usuario::firstOrCreate(
                 ['usuario' => env('ADMIN_USER', 'admin')],
                 [
                     'empleado_id' => $empleado->id,
-                    // Si tu modelo Usuario tiene cast 'password' => 'hashed', se hashea solo:
                     'password'    => env('ADMIN_PASSWORD', 'admin123'),
-                    'rol'         => Rol::ADMIN->value, // o 'admin' si no usas enum
-                    
+                    'role_id'     => $rolAdmin->id, // Usar el nuevo sistema de roles
                 ]
             );
         });
