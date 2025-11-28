@@ -3,11 +3,15 @@
 namespace App\Filament\Resources\Matriculas\Tables;
 
 use App\Models\Matricula;
+use App\Models\Programa;
+use App\Models\Curso;
+use App\Enums\TipoMatricula;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class MatriculasTable
@@ -24,7 +28,7 @@ class MatriculasTable
                 TextColumn::make('estudiante.nombre_completo')
                     ->label('Estudiante')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable(['nombres', 'apellido_paterno', 'apellido_materno']),
 
                 TextColumn::make('estado')
                     ->label('Estado')
@@ -52,7 +56,32 @@ class MatriculasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                // Filtro por Tipo de Matrícula (Programa, Formación Continua, Curso, Módulo)
+                SelectFilter::make('tipo_matricula')
+                    ->label('Tipo de Matrícula')
+                    ->options([
+                        TipoMatricula::PROGRAMA->value => 'Programa',
+                        TipoMatricula::FORMACION_CONTINUA->value => 'Formación Continua',
+                        TipoMatricula::CURSO->value => 'Curso',
+                        TipoMatricula::MODULO->value => 'Módulo',
+                    ])
+                    ->placeholder('Todos los tipos'),
+
+                // Filtro por Programa
+                SelectFilter::make('programa')
+                    ->label('Programa')
+                    ->relationship('horario.programa', 'nombre_programa')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Todos los programas'),
+
+                // Filtro por Curso
+                SelectFilter::make('curso')
+                    ->label('Curso/Módulo')
+                    ->relationship('curso', 'nombre_curso')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Todos los cursos'),
             ])
             ->recordActions([
                 EditAction::make(),
