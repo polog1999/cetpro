@@ -41,13 +41,23 @@ class MatriculaForm
             ->components([
 
                 // ----------------------------------------
-                // CÓDIGO DE INSCRIPCIÓN (AUTOGENERADO)
+                // INFORMACIÓN DE MATRÍCULA (PARTE SUPERIOR)
                 // ----------------------------------------
                 TextInput::make('codigo_inscripcion')
                     ->label('Código de inscripción')
-                    ->placeholder('Se generará automáticamente')
+                    ->prefix('📋')
+                    ->placeholder('Se generará al seleccionar estudiante y horario')
                     ->disabled()
-                    ->dehydrated(true),
+                    ->dehydrated(true)
+                    ->columnSpan(1),
+
+                TextInput::make('estado')
+                    ->label('Estado Actual')
+                    ->prefix('⊗')
+                    ->default(EstadoMatricula::ENPROCESO->value)
+                    ->disabled()
+                    ->dehydrated(true)
+                    ->columnSpan(1),
 
                 // ----------------------------------------
                 // ESTUDIANTE (SELECT + CREAR CON WIZARD)
@@ -67,6 +77,11 @@ class MatriculaForm
                     ])
                     ->preload()
                     ->required()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                        static::generarCodigoInscripcion($set, $get);
+                    })
+                    ->columnSpanFull()
                     ->createOptionForm([
                         Wizard::make([
                             Step::make('Estudiante')
@@ -195,16 +210,7 @@ class MatriculaForm
                             ->icon('heroicon-m-plus')
                     ),
 
-                // ----------------------------------------
-                // ESTADO DE MATRÍCULA
-                // ----------------------------------------
-                ToggleButtons::make('estado')
-                    ->label('Estado')
-                    ->options(EstadoMatricula::class)
-                    ->default(EstadoMatricula::ENPROCESO)
-                    ->inline()
-                    ->disabled()
-                    ->dehydrated(true),
+
 
                 // ----------------------------------------
                 // TIPO DE MATRÍCULA (ENUM REAL)
@@ -359,6 +365,7 @@ class MatriculaForm
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         static::fillCursosDeHorario($state, $set, $get);
                         $set('id_curso', null);
+                        static::generarCodigoInscripcion($set, $get);
                     }),
 
                 // ----------------------------------------
@@ -476,5 +483,28 @@ class MatriculaForm
             ->implode(PHP_EOL);
 
         $set('cursos_matriculados', $texto);
+    }
+
+    /**
+     * Genera el código de inscripción basado en el DNI del estudiante y el ID del horario.
+     */
+    protected static function generarCodigoInscripcion(Set $set, Get $get): void
+    {
+        $estudianteId = $get('estudiante_id');
+        $horarioId = $get('horario_id');
+
+        if (! $estudianteId || ! $horarioId) {
+            $set('codigo_inscripcion', null);
+            return;
+        }
+
+        // Obtener DNI del estudiante
+        $estudiante = Estudiante::find($estudianteId);
+        $dni = $estudiante?->nro_documento ?? 'SINDNI';
+
+        // Generar código: {dni_alumno}{id_horario}
+        $codigo = $dni . $horarioId;
+
+        $set('codigo_inscripcion', $codigo);
     }
 }
