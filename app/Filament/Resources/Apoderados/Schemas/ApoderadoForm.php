@@ -15,19 +15,13 @@ class ApoderadoForm
         return $schema
             ->components([
                 Select::make('tipo_documento')
-                    ->options(TipoDocumento::class)
-                    ->required(),
-                TextInput::make('nro_documento')
-                    ->required(),
-                TextInput::make('apellido_paterno')
-                    ->required(),
-                TextInput::make('apellido_materno')
-                    ->required(),
-                TextInput::make('nombres')
-                    ->required(),
+                    ->options(TipoDocumento::class),
+                TextInput::make('nro_documento'),
+                TextInput::make('apellido_paterno'),
+                TextInput::make('apellido_materno'),
+                TextInput::make('nombres'),
                 TextInput::make('telefono')
-                    ->tel()
-                    ->required(),
+                    ->tel(),
             ]);
     }
 }

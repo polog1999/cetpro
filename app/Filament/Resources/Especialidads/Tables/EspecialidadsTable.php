@@ -14,11 +14,12 @@ class EspecialidadsTable
     {
         return $table
             ->columns([
-                TextColumn::make('Modulos')
+                TextColumn::make('nombre_especialidad')
                     ->searchable(),
                 TextColumn::make('costo_mensual')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => number_format($state, 2)),
                 TextColumn::make('num_resolucion')
                     ->searchable(),
                 TextColumn::make('fecha_registro')

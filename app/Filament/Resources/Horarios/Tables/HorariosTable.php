@@ -61,6 +61,13 @@ class HorariosTable
                     ->label('Aula')
                     ->toggleable(),
 
+                TextColumn::make('matriculas_count')
+                    ->label('Alumnos inscritos')
+                    ->counts('matriculas')
+                    ->badge()
+                    ->color('success')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->label('Creado')
@@ -85,11 +92,12 @@ class HorariosTable
                         HorarioResource::getUrl('ver-alumnos', ['record' => $record->id_horario])
                     ),
                 
-                Action::make('descargar_pdf')
-                    ->label('Descargar PDF')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('success')
-                    ->action(function (Horario $record) {
+                Action::make('visualizar_pdf')
+                    ->label('Visualizar PDF')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->modalHeading('Vista previa del PDF')
+                    ->modalContent(function (Horario $record) {
                         // Cargar relaciones necesarias
                         $record->load([
                             'programa.especialidad',
@@ -99,17 +107,48 @@ class HorariosTable
                         
                         // Generar PDF
                         $pdf = Pdf::loadView('pdf.horario-pdf', [
-                            'horario' => $record, // actualizado de 'seccion' a 'horario'
+                            'horario' => $record,
                         ]);
                         
-                        // Nombre del archivo
-                        $filename = 'horario-' . $record->id_horario . '.pdf';
+                        // Convertir PDF a base64 para mostrarlo en iframe
+                        $pdfBase64 = base64_encode($pdf->output());
                         
-                        // Retornar PDF como descarga
-                        return response()->streamDownload(function () use ($pdf) {
-                            echo $pdf->output();
-                        }, $filename);
-                    }),
+                        return view('components.pdf-preview', [
+                            'pdfBase64' => $pdfBase64,
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalFooterActions(function (Horario $record) {
+                        return [
+                            Action::make('descargar')
+                                ->label('Descargar archivo PDF')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('primary')
+                                ->action(function () use ($record) {
+                                    // Cargar relaciones necesarias
+                                    $record->load([
+                                        'programa.especialidad',
+                                        'programa.cursos',
+                                        'docente',
+                                    ]);
+                                    
+                                    // Generar PDF
+                                    $pdf = Pdf::loadView('pdf.horario-pdf', [
+                                        'horario' => $record,
+                                    ]);
+                                    
+                                    // Nombre del archivo
+                                    $filename = 'horario-' . $record->id_horario . '.pdf';
+                                    
+                                    // Retornar PDF como descarga
+                                    return response()->streamDownload(function () use ($pdf) {
+                                        echo $pdf->output();
+                                    }, $filename);
+                                }),
+                        ];
+                    })
+                    ->modalWidth('7xl'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

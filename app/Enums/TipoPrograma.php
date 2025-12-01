@@ -7,8 +7,8 @@ use Filament\Support\Contracts\HasLabel;
 
 enum TipoPrograma: string implements HasLabel, HasColor
 {
-    case PROGRAMA_ESTUDIO      = 'Programa de estudio';
-    case FORMACION_CONTINUA    = 'Programa de formación continua';
+    case PROGRAMA_ESTUDIO      = 'Programa';
+    case FORMACION_CONTINUA    = 'Formación continua';
 
     public function getLabel(): string
     {

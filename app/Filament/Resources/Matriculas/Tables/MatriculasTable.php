@@ -8,11 +8,13 @@ use App\Models\Curso;
 use App\Enums\TipoMatricula;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MatriculasTable
 {
@@ -21,7 +23,7 @@ class MatriculasTable
         return $table
             ->columns([
                 TextColumn::make('codigo_inscripcion')
-                    ->label('Código inscripción')
+                    ->label('Código de matrícula')
                     ->searchable()
                     ->sortable(),
 
@@ -98,22 +100,106 @@ class MatriculasTable
                     ->placeholder('Todos los cursos'),
             ])
             ->recordActions([
-                EditAction::make(),
 
-                // 👉 Botón para generar/descargar PDF de la ficha
-                Action::make('pdf')
-                    ->label('Ficha PDF')
-                    ->icon('heroicon-o-document-text')
-                    ->url(fn (Matricula $record) => route('matriculas.pdf', $record))
-                    ->openUrlInNewTab(),
+                // 👉 Botón para visualizar/descargar PDF de la ficha
+                Action::make('visualizar_ficha_pdf')
+                    ->label('Visualizar Ficha PDF')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->modalHeading('Vista previa - Ficha de Matrícula')
+                    ->modalContent(function (Matricula $record) {
+                        // Cargamos relaciones necesarias
+                        $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
 
-                // 👉 Botón para generar/descargar PDF de cursos/módulos
-                Action::make('cursos_pdf')
-                    ->label('Cursos/Modulos PDF')
+                        $pdf = Pdf::loadView('matriculas.pdf', [
+                                'matricula' => $record,
+                            ])
+                            ->setPaper('A4', 'portrait');
+                        
+                        // Convertir PDF a base64
+                        $pdfBase64 = base64_encode($pdf->output());
+                        
+                        return view('components.pdf-preview', [
+                            'pdfBase64' => $pdfBase64,
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalFooterActions(function (Matricula $record) {
+                        return [
+                            Action::make('descargar_ficha')
+                                ->label('Descargar archivo PDF')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('primary')
+                                ->action(function () use ($record) {
+                                    // Cargamos relaciones necesarias
+                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+
+                                    $pdf = Pdf::loadView('matriculas.pdf', [
+                                            'matricula' => $record,
+                                        ])
+                                        ->setPaper('A4', 'portrait');
+
+                                    $fileName = 'ficha-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.pdf';
+
+                                    return response()->streamDownload(function () use ($pdf) {
+                                        echo $pdf->output();
+                                    }, $fileName);
+                                }),
+                        ];
+                    })
+                    ->modalWidth('7xl'),
+
+                // 👉 Botón para visualizar/descargar PDF de cursos/módulos
+                Action::make('visualizar_cursos_pdf')
+                    ->label('Visualizar Cursos/Módulos PDF')
                     ->icon('heroicon-o-academic-cap')
-                    ->url(fn (Matricula $record) => route('matriculas.cursos-pdf', $record))
-                    ->openUrlInNewTab()
-                    ->color('success'),
+                    ->color('success')
+                    ->modalHeading('Vista previa - Cursos/Módulos del Programa')
+                    ->modalContent(function (Matricula $record) {
+                        // Cargamos relaciones necesarias
+                        $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+
+                        $pdf = Pdf::loadView('matriculas.cursos-pdf', [
+                                'matricula' => $record,
+                            ])
+                            ->setPaper('A4', 'portrait');
+                        
+                        // Convertir PDF a base64
+                        $pdfBase64 = base64_encode($pdf->output());
+                        
+                        return view('components.pdf-preview', [
+                            'pdfBase64' => $pdfBase64,
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalFooterActions(function (Matricula $record) {
+                        return [
+                            Action::make('descargar_cursos')
+                                ->label('Descargar archivo PDF')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('primary')
+                                ->action(function () use ($record) {
+                                    // Cargamos relaciones necesarias
+                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+
+                                    $pdf = Pdf::loadView('matriculas.cursos-pdf', [
+                                            'matricula' => $record,
+                                        ])
+                                        ->setPaper('A4', 'portrait');
+
+                                    $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.pdf';
+
+                                    return response()->streamDownload(function () use ($pdf) {
+                                        echo $pdf->output();
+                                    }, $fileName);
+                                }),
+                        ];
+                    })
+                    ->modalWidth('7xl'),
+                    
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

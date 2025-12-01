@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Matriculas\Schemas;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\TipoDocumento;
-use App\Enums\Tip;
+use App\Enums\TipoPrograma;
 
 use App\Enums\DistritoLima;
 use App\Enums\EstadoCivil;
@@ -25,6 +25,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
@@ -81,84 +82,87 @@ class MatriculaForm
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         static::generarCodigoInscripcion($set, $get);
                     })
-                    ->columnSpanFull()
                     ->createOptionForm([
                         Wizard::make([
                             Step::make('Estudiante')
                                 ->schema([
-                                    Select::make('tipo_documento')
-                                        ->options(TipoDocumento::class)
-                                        ->required(),
+                                    Section::make('Información requerida')
+                                    ->columns(2)
+                                    ->schema([
+                                        Select::make('tipo_documento')
+                                            ->options(TipoDocumento::class)
+                                            ->required(),
+    
+                                        TextInput::make('nro_documento')
+                                            ->required()
+                                            ->unique(Estudiante::class, 'nro_documento'),
+    
+                                        TextInput::make('nombres')
+                                            ->required()
+                                            ->columnSpanFull(),
+    
+                                        TextInput::make('apellido_paterno')
+                                            ->required(),
+    
+                                        TextInput::make('apellido_materno')
+                                            ->required(),
+                                    ]),
 
-                                    TextInput::make('nro_documento')
-                                        ->required()
-                                        ->unique(Estudiante::class, 'nro_documento'),
+                                    Section::make('Datos adicionales')
+                                    ->columns(2)
+                                    ->schema([
+                                        Select::make('genero')
+                                            ->options(TipoGenero::class),
+    
+                                        Select::make('estado_civil')
+                                            ->options(EstadoCivil::class),
+    
+                                        DatePicker::make('fecha_nacimiento'),
+    
+                                        TextInput::make('telefono')
+                                            ->tel(),
+    
+                                        TextInput::make('email')
+                                            ->label('Email')
+                                            ->email(),
+    
+                                        TextInput::make('direccion'),
+    
+                                        Select::make('grado_instruccion')
+                                            ->options(GradoInstruccion::class),
+    
+                                        Select::make('provincia')
+                                            ->options(Provincia::class)
+                                            ->default('Lima'),
+    
+                                        Select::make('distrito')
+                                            ->options(DistritoLima::class),
+                                    ])
+                                    ->collapsed(),
 
-                                    TextInput::make('nombres')
-                                        ->required()
-                                        ->columnSpanFull(),
-
-                                    TextInput::make('apellido_paterno')
-                                        ->required(),
-
-                                    TextInput::make('apellido_materno')
-                                        ->required(),
-
-                                    Select::make('genero')
-                                        ->options(TipoGenero::class),
-
-                                    Select::make('estado_civil')
-                                        ->options(EstadoCivil::class),
-
-                                    DatePicker::make('fecha_nacimiento'),
-
-                                    TextInput::make('telefono')
-                                        ->tel(),
-
-                                    TextInput::make('email')
-                                        ->label('Email')
-                                        ->email(),
-
-                                    TextInput::make('direccion')
-                                        ->columnSpanFull(),
-
-                                    Select::make('grado_instruccion')
-                                        ->options(GradoInstruccion::class),
-
-                                    Select::make('provincia')
-                                        ->options(Provincia::class)
-                                        ->default('Lima')
-                                        ->required(),
-
-                                    Select::make('distrito')
-                                        ->options(DistritoLima::class),
                                 ])
-                                ->columns(2),
+                                ->columns(1),
 
                             Step::make('Apoderado')
                                 ->schema([
                                     Select::make('apoderado_tipo_documento')
                                         ->label('Tipo de documento del apoderado')
                                         ->options(TipoDocumento::class)
-                                        ->required(),
+                                        ->nullable(),
 
                                     TextInput::make('apoderado_nro_documento')
                                         ->label('N° documento del apoderado')
-                                        ->required()
                                         ->unique(Apoderado::class, 'nro_documento'),
 
                                     TextInput::make('apoderado_nombres')
                                         ->label('Nombres del apoderado')
-                                        ->required()
                                         ->columnSpanFull(),
 
                                     TextInput::make('apoderado_apellido_paterno')
-                                        ->label('Apellido paterno del apoderado')
-                                        ->required(),
+                                        ->label('Apellido paterno del apoderado'),
 
                                     TextInput::make('apoderado_apellido_materno')
-                                        ->label('Apellido materno del apoderado')
-                                        ->required(),
+                                        ->label('Apellido materno del apoderado'),
 
                                     TextInput::make('apoderado_telefono')
                                         ->label('Teléfono del apoderado')
@@ -166,17 +170,17 @@ class MatriculaForm
                                         ->nullable(),
                                 ])
                                 ->columns(2),
-                        ]),
+                        ])->skippable(),
                     ])
                     ->createOptionUsing(function (array $data): int {
                         // 1) Crear apoderado
                         $apoderado = Apoderado::create([
-                            'tipo_documento'   => $data['apoderado_tipo_documento'] ?? null,
-                            'nro_documento'    => $data['apoderado_nro_documento'] ?? null,
-                            'nombres'          => $data['apoderado_nombres'] ?? null,
-                            'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
-                            'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
-                            'telefono'         => $data['apoderado_telefono'] ?? null,
+                            'tipo_documento'   => $data['apoderado_tipo_documento'],
+                            'nro_documento'    => $data['apoderado_nro_documento'],
+                            'nombres'          => $data['apoderado_nombres'],
+                            'apellido_paterno' => $data['apoderado_apellido_paterno'],
+                            'apellido_materno' => $data['apoderado_apellido_materno'],
+                            'telefono'         => $data['apoderado_telefono'],
                         ]);
 
                         // 2) Datos del estudiante
@@ -237,7 +241,7 @@ class MatriculaForm
                 Select::make('programa_intermediario')
                     ->label('Seleccionar Programa')
                     ->options(function () {
-                        return \App\Models\Programa::where('tipo_programa', Tip::PROGRAMA)
+                        return \App\Models\Programa::where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO)
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();
@@ -265,7 +269,7 @@ class MatriculaForm
                 Select::make('formacion_continua_intermediaria')
                     ->label('Seleccionar Formación Continua')
                     ->options(function () {
-                        return \App\Models\Programa::where('tipo_programa', Tip::FORMACION_CONTINUA)
+                        return \App\Models\Programa::where('tipo_programa', TipoPrograma::FORMACION_CONTINUA)
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();

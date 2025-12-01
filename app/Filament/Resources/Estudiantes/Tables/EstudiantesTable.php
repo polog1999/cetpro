@@ -6,7 +6,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class EstudiantesTable
 {
@@ -55,7 +57,85 @@ class EstudiantesTable
                     ->searchable(),
             ])
             ->filters([
-                //
+                Filter::make('nro_documento')
+                    ->label('DNI')
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $value): Builder => $query->where('nro_documento', 'like', "%{$value}%")
+                        )
+                    )
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['value']) {
+                            return null;
+                        }
+                        return 'DNI: ' . $data['value'];
+                    })
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('value')
+                            ->label('DNI')
+                            ->placeholder('Ingrese DNI'),
+                    ]),
+
+                Filter::make('nombres')
+                    ->label('Nombre')
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $value): Builder => $query->where('nombres', 'like', "%{$value}%")
+                        )
+                    )
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['value']) {
+                            return null;
+                        }
+                        return 'Nombre: ' . $data['value'];
+                    })
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('value')
+                            ->label('Nombre')
+                            ->placeholder('Ingrese nombre'),
+                    ]),
+
+                Filter::make('apellido_paterno')
+                    ->label('Apellido Paterno')
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $value): Builder => $query->where('apellido_paterno', 'like', "%{$value}%")
+                        )
+                    )
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['value']) {
+                            return null;
+                        }
+                        return 'Apellido Paterno: ' . $data['value'];
+                    })
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('value')
+                            ->label('Apellido Paterno')
+                            ->placeholder('Ingrese apellido paterno'),
+                    ]),
+
+                Filter::make('apellido_materno')
+                    ->label('Apellido Materno')
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $value): Builder => $query->where('apellido_materno', 'like', "%{$value}%")
+                        )
+                    )
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['value']) {
+                            return null;
+                        }
+                        return 'Apellido Materno: ' . $data['value'];
+                    })
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('value')
+                            ->label('Apellido Materno')
+                            ->placeholder('Ingrese apellido materno'),
+                    ]),
             ])
             ->recordActions([
                 EditAction::make(),

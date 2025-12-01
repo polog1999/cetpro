@@ -47,6 +47,25 @@ class ProgramasTable
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('horarios_count')
+                    ->label('Horarios')
+                    ->counts('horarios')
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+
+                TextColumn::make('matriculas_count')
+                    ->label('Total alumnos')
+                    ->getStateUsing(function (Programa $record): int {
+                        return $record->horarios()
+                            ->withCount('matriculas')
+                            ->get()
+                            ->sum('matriculas_count');
+                    })
+                    ->badge()
+                    ->color('success')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->label('Creado')

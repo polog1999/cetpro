@@ -87,11 +87,12 @@ class VerAlumnos extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('descargar_lista_pdf')
-                ->label('Descargar Lista PDF')
-                ->icon('heroicon-o-document-arrow-down')
-                ->color('success')
-                ->action(function () {
+            Actions\Action::make('visualizar_lista_pdf')
+                ->label('Visualizar Lista PDF')
+                ->icon('heroicon-o-eye')
+                ->color('info')
+                ->modalHeading('Vista previa del PDF - Lista de Alumnos')
+                ->modalContent(function () {
                     // Obtener todas las matrículas de este horario con sus estudiantes
                     $matriculas = Matricula::query()
                         ->where('horario_id', $this->record->id_horario)
@@ -109,7 +110,7 @@ class VerAlumnos extends Page implements HasTable
                             : $this->record->dias;
                     }
                     
-                    // Obtener código de matrícula (usamos el de la primera matrícula como ejemplo)
+                    // Obtener código de matrícula
                     $codigo_matricula = $matriculas->first()?->codigo_inscripcion ?? 'N/A';
                     
                     // Generar PDF
@@ -120,14 +121,61 @@ class VerAlumnos extends Page implements HasTable
                         'codigo_matricula' => $codigo_matricula,
                     ]);
                     
-                    // Nombre del archivo
-                    $filename = 'lista-alumnos-' . $this->record->id_horario . '.pdf';
+                    // Convertir PDF a base64
+                    $pdfBase64 = base64_encode($pdf->output());
                     
-                    // Retornar PDF como descarga
-                    return response()->streamDownload(function () use ($pdf) {
-                        echo $pdf->output();
-                    }, $filename);
-                }),
+                    return view('components.pdf-preview', [
+                        'pdfBase64' => $pdfBase64,
+                    ]);
+                })
+                ->modalSubmitAction(false)
+                ->modalCancelAction(false)
+                ->modalFooterActions(function () {
+                    return [
+                        Actions\Action::make('descargar')
+                            ->label('Descargar archivo PDF')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->color('primary')
+                            ->action(function () {
+                                // Obtener todas las matrículas de este horario con sus estudiantes
+                                $matriculas = Matricula::query()
+                                    ->where('horario_id', $this->record->id_horario)
+                                    ->with('estudiante')
+                                    ->get();
+                                
+                                // Extraer solo los estudiantes
+                                $alumnos = $matriculas->map(fn($m) => $m->estudiante)->filter();
+                                
+                                // Formatear días de estudio
+                                $dias_estudio = '';
+                                if ($this->record->dias) {
+                                    $dias_estudio = is_array($this->record->dias) 
+                                        ? implode(', ', $this->record->dias) 
+                                        : $this->record->dias;
+                                }
+                                
+                                // Obtener código de matrícula
+                                $codigo_matricula = $matriculas->first()?->codigo_inscripcion ?? 'N/A';
+                                
+                                // Generar PDF
+                                $pdf = Pdf::loadView('pdf.lista-alumnos', [
+                                    'horario'          => $this->record,
+                                    'alumnos'          => $alumnos,
+                                    'dias_estudio'     => $dias_estudio,
+                                    'codigo_matricula' => $codigo_matricula,
+                                ]);
+                                
+                                // Nombre del archivo
+                                $filename = 'lista-alumnos-' . $this->record->id_horario . '.pdf';
+                                
+                                // Retornar PDF como descarga
+                                return response()->streamDownload(function () use ($pdf) {
+                                    echo $pdf->output();
+                                }, $filename);
+                            }),
+                    ];
+                })
+                ->modalWidth('7xl'),
         ];
     }
 }

@@ -179,7 +179,7 @@ class Matricula extends Model
         $fechas = [];
 
         // Caso CURSO LIBRE: generar fechas según la duración del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO_LIBRE) {
+        if ($this->tipo_matricula === TipoMatricula::CURSO) {
             $curso = $this->curso;
 
             if ($curso && $curso->fecha_inicio) {
