@@ -22,4 +22,9 @@ class Apoderado extends Model
     {
         return $this->hasMany(Estudiante::class);
     }
+
+    public function getNombreCompletoAttribute(): string
+    {
+        return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
+    }
 }

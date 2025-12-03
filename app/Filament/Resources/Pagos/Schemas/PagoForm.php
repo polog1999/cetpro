@@ -14,10 +14,13 @@ class PagoForm
     {
         return $schema
             ->components([
-                TextInput::make('codigo')
+                Select::make('cronograma_id')
+                    ->relationship('cronograma', 'id')
                     ->required(),
-                Select::make('matricula_id')
-                    ->relationship('matricula', 'id')
+                TextInput::make('nro_cuota')
+                    ->required()
+                    ->numeric(),
+                TextInput::make('codigo')
                     ->required(),
                 TextInput::make('monto')
                     ->required()
@@ -28,9 +31,11 @@ class PagoForm
                     ->required(),
                 DatePicker::make('fecha_vencimiento')
                     ->required(),
-                TextInput::make('metodo_pago'),
                 DatePicker::make('fecha_pago'),
-                TextInput::make('evidencia'),
+                TextInput::make('metodo_pago'),
+                TextInput::make('evidencia_path'),
+                TextInput::make('num_liquidacion'),
+                DatePicker::make('fecha_liquidacion'),
             ]);
     }
 }

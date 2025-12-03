@@ -2,11 +2,9 @@
 
 namespace App\Filament\Resources\Pagos;
 
-use App\Filament\Resources\Secciones\Pages;
 use App\Filament\Resources\Pagos\Pages\CreatePago;
 use App\Filament\Resources\Pagos\Pages\EditPago;
 use App\Filament\Resources\Pagos\Pages\ListPagos;
-use App\Filament\Resources\Pagos\Pages\GestionarPagos;
 use App\Filament\Resources\Pagos\Schemas\PagoForm;
 use App\Filament\Resources\Pagos\Tables\PagosTable;
 use App\Models\Pago;
@@ -16,13 +14,17 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
+use Filament\Facades\Filament;
+use App\Enums\Rol;
+
+use UnitEnum;
+
 class PagoResource extends Resource
 {
     protected static ?string $model = Pago::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
-
-    protected static ?string $recordTitleAttribute = 'nombre';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string | UnitEnum | null $navigationGroup = 'Gestión de Pagos';
 
     public static function form(Schema $schema): Schema
     {
@@ -44,9 +46,48 @@ class PagoResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => GestionarPagos::route('/'),
+            'index' => ListPagos::route('/'),
             'create' => CreatePago::route('/create'),
             'edit' => EditPago::route('/{record}/edit'),
         ];
     }
+
+    //Accesos
+    public static function canViewAny(): bool
+    {
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || $user?->canAccessResource('PagoResource') || false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
+    }
+
+
+//Contar
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 }

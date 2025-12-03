@@ -17,7 +17,12 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $this->call(AdminSetupSeeder::class);
+        // Ejecutar seeders en orden correcto
+        $this->call([
+            PermisoSeeder::class,  // Primero los permisos
+            RoleSeeder::class,      // Luego los roles
+            AdminSetupSeeder::class, // Finalmente el usuario admin
+        ]);
     }
 
     

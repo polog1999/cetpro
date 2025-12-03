@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-use App\Models\Seccion;
-use App\Models\Modulo;
+use App\Models\Horario;
+
+
 
 
 class Docente extends Model
@@ -18,18 +19,17 @@ class Docente extends Model
         'nombres',
         'apellido_paterno',
         'apellido_materno',
-        'modulo_id', #foreign key
+       
     ];
 
-    public function secciones() : HasMany
-    {
-        return $this->hasMany(Seccion::class);
-    }
- 
-    public function modulos() : BelongsToMany # el nombre de la clase, es el nombre de la tabla relacionada
-    {
-        return $this->belongsToMany(Modulo::class, 'docente_modulo');
-    }
+    
+  public function horarios(): HasMany
+{
+    // FK en horarios = id_docente
+    // PK en docentes = id
+    return $this->hasMany(Horario::class, 'id_docente', 'id');
+}
+    
     // Accessor opcional para mostrar nombre completo en selects/listas
     public function getNombreCompletoAttribute(): string
     {

@@ -18,7 +18,7 @@ use UnitEnum;
 
 class ApoderadoResource extends Resource
 {
-    protected static string | UnitEnum | null $navigationGroup = 'Gestión Estudiantil';
+    protected static string | UnitEnum | null $navigationGroup = 'Gestión de Matrícula';
 
     protected static ?string $model = Apoderado::class;
 
@@ -55,5 +55,31 @@ class ApoderadoResource extends Resource
             'create' => CreateApoderado::route('/create'),
             'edit' => EditApoderado::route('/{record}/edit'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        $user = \Filament\Facades\Filament::auth()->user();
+        return $user?->role?->es_admin || $user?->canAccessResource('ApoderadoResource') || false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
     }
 }
