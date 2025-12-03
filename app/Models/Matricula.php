@@ -280,15 +280,30 @@ class Matricula extends Model
         // ANTES de guardar: generar código de inscripción
         static::creating(function (Matricula $matricula) {
             if (empty($matricula->codigo_inscripcion)) {
-                // Obtener DNI del estudiante
-                $estudiante = Estudiante::find($matricula->estudiante_id);
-                $dni = $estudiante?->nro_documento ?? 'SINDNI';
+                // Obtener el horario y su programa asociado
+                $horario = Horario::find($matricula->horario_id);
                 
-                // Obtener ID de horario (si existe)
-                $horarioId = $matricula->horario_id ?? 'SIN';
-                
-                // Generar código: {dni_alumno}{id_horario}
-                $matricula->codigo_inscripcion = $dni . $horarioId;
+                if ($horario && $horario->id_programa) {
+                    // Obtener el año actual
+                    $year = now()->format('Y');
+                    
+                    // Formatear el ID del programa a 3 dígitos
+                    $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+                    
+                    // Contar cuántas matrículas ya existen para este programa en este año
+                    $prefijo = "{$year}-{$programaId}";
+                    $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")
+                        ->count();
+                    
+                    // Número secuencial (siguiente después del último)
+                    $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+                    
+                    // Generar código: YYYY-XXX-NNN
+                    $matricula->codigo_inscripcion = "{$year}-{$programaId}-{$secuencial}";
+                } else {
+                    // Fallback si no hay horario o programa
+                    $matricula->codigo_inscripcion = now()->format('Y') . '-000-000';
+                }
             }
         });
         

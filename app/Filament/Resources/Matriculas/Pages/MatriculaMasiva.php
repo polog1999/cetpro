@@ -158,6 +158,7 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                         };
 
                         $matriculasCreadas = 0;
+                        $errores = [];
                         
                         foreach ($records as $estudiante) {
                             try {
@@ -171,16 +172,33 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                                 
                                 $matriculasCreadas++;
                             } catch (\Exception $e) {
-                                // Continuar con el siguiente si hay error
+                                // Registrar el error para diagnóstico
+                                \Log::error('Error en matrícula masiva', [
+                                    'estudiante_id' => $estudiante->id,
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString()
+                                ]);
+                                
+                                $errores[] = "Estudiante {$estudiante->nombres}: " . $e->getMessage();
                                 continue;
                             }
                         }
 
-                        Notification::make()
-                            ->success()
-                            ->title('Matrícula masiva completada')
-                            ->body("Se matricularon {$matriculasCreadas} estudiante(s) exitosamente.")
-                            ->send();
+                        // Mostrar notificación con resultados
+                        if ($matriculasCreadas > 0) {
+                            Notification::make()
+                                ->success()
+                                ->title('Matrícula masiva completada')
+                                ->body("Se matricularon {$matriculasCreadas} estudiante(s) exitosamente." . 
+                                    (count($errores) > 0 ? "\n\nErrores: " . count($errores) : ''))
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->warning()
+                                ->title('No se pudo crear ninguna matrícula')
+                                ->body('Errores encontrados: ' . implode('; ', array_slice($errores, 0, 3)))
+                                ->send();
+                        }
 
                         // Redirigir a la lista de matrículas
                         return redirect()->route('filament.admin.resources.matriculas.index');

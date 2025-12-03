@@ -69,6 +69,46 @@ class CronogramasTable
                     ),
 
                 // =========================
+                // DNI DEL ALUMNO
+                // =========================
+                TextColumn::make('dni')
+                    ->label('DNI')
+                    ->getStateUsing(function (Cronograma $record) {
+                        return $record->matricula?->estudiante?->nro_documento ?? '-';
+                    })
+                    ->searchable(
+                        query: function (Builder $query, string $search): Builder {
+                            return $query->whereHas(
+                                'matricula.estudiante',
+                                fn (Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
+                            );
+                        }
+                    ),
+
+                // =========================
+                // CÓDIGO DEL PROGRAMA (XXX)
+                // =========================
+                TextColumn::make('codigo_programa')
+                    ->label('Código Programa')
+                    ->getStateUsing(function (Cronograma $record) {
+                        $horario = $record->matricula?->horario;
+                        
+                        if (!$horario || !$horario->id_programa) {
+                            return '-';
+                        }
+                        
+                        // Formatear el ID del programa a 3 dígitos (igual que en el código de matrícula)
+                        return str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+                    })
+                    ->sortable(
+                        query: function (Builder $query, string $direction): Builder {
+                            return $query->join('matriculas', 'cronogramas.matricula_id', '=', 'matriculas.id')
+                                ->join('horarios', 'matriculas.horario_id', '=', 'horarios.id_horario')
+                                ->orderBy('horarios.id_programa', $direction);
+                        }
+                    ),
+
+                // =========================
                 // SECCIÓN + PROGRAMA / CURSO + HORARIO + DÍAS
                 // =========================
                 TextColumn::make('seccion_info')

@@ -15,6 +15,7 @@ class EspecialidadsTable
         return $table
             ->columns([
                 TextColumn::make('nombre_especialidad')
+                    ->label('Modulo')
                     ->searchable(),
                 TextColumn::make('costo_mensual')
                     ->numeric()
