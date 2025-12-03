@@ -144,6 +144,7 @@ class MatriculaForm
                                 ->columns(1),
 
                             Step::make('Apoderado')
+                                ->description('Opcional. Solo si requiere')
                                 ->schema([
                                     Select::make('apoderado_tipo_documento')
                                         ->label('Tipo de documento del apoderado')

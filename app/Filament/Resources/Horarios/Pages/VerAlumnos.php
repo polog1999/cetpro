@@ -20,6 +20,8 @@ use App\Filament\Resources\Matriculas\MatriculaResource;
 use Illuminate\Database\Eloquent\Builder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AlumnosHorarioExport;
 
 class VerAlumnos extends Page implements HasTable
 {
@@ -172,6 +174,37 @@ class VerAlumnos extends Page implements HasTable
                                 return response()->streamDownload(function () use ($pdf) {
                                     echo $pdf->output();
                                 }, $filename);
+                            }),
+                        Actions\Action::make('exportar_excel')
+                            ->label('Exportar a Excel')
+                            ->icon('heroicon-o-table-cells')
+                            ->color('success')
+                            ->action(function () {
+                                // Obtener todas las matrículas de este horario con sus estudiantes
+                                $matriculas = Matricula::query()
+                                    ->where('horario_id', $this->record->id_horario)
+                                    ->with('estudiante')
+                                    ->get();
+                                
+                                // Extraer solo los estudiantes
+                                $alumnos = $matriculas->map(fn($m) => $m->estudiante)->filter();
+                                
+                                // Formatear días de estudio
+                                $dias_estudio = '';
+                                if ($this->record->dias) {
+                                    $dias_estudio = is_array($this->record->dias) 
+                                        ? implode(', ', $this->record->dias) 
+                                        : $this->record->dias;
+                                }
+                                
+                                // Nombre del archivo
+                                $filename = 'lista-alumnos-' . $this->record->id_horario . '.xlsx';
+                                
+                                // Exportar a Excel
+                                return Excel::download(
+                                    new AlumnosHorarioExport($this->record, $alumnos, $dias_estudio),
+                                    $filename
+                                );
                             }),
                     ];
                 })

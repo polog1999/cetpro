@@ -13,8 +13,13 @@ use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\FichaMatriculaExport;
+use App\Exports\CursosMatriculaExport;
 
 class MatriculasTable
 {
@@ -29,8 +34,8 @@ class MatriculasTable
 
                 TextColumn::make('estudiante.nombre_completo')
                     ->label('Estudiante')
-                    ->sortable()
-                    ->searchable(['nombres', 'apellido_paterno', 'apellido_materno']),
+                    // ->sortable(['estudiante.nombres', 'estudiante.apellido_paterno', 'estudiante.apellido_materno'])
+                    ->searchable(['estudiante.nombres', 'estudiante.apellido_paterno', 'estudiante.apellido_materno']),
 
                 TextColumn::make('estado')
                     ->label('Estado')
@@ -72,6 +77,26 @@ class MatriculasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // Filtro por Nombre de Estudiante
+                Filter::make('estudiante')
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('nombre_estudiante')
+                            ->label('Buscar estudiante')
+                            ->placeholder('Escriba nombre o apellidos...')
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['nombre_estudiante'] ?? null,
+                            fn (Builder $query, $search): Builder => $query->whereHas('estudiante', function (Builder $query) use ($search) {
+                                $query->where(function (Builder $query) use ($search) {
+                                    $query->where('nombres', 'ilike', "%{$search}%")
+                                        ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                        ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                                });
+                            })
+                        );
+                    }),
+
                 // Filtro por Tipo de Matrícula (Programa, Formación Continua, Curso, Módulo)
                 SelectFilter::make('tipo_matricula')
                     ->label('Tipo de Matrícula')
@@ -194,6 +219,21 @@ class MatriculasTable
                                     return response()->streamDownload(function () use ($pdf) {
                                         echo $pdf->output();
                                     }, $fileName);
+                                }),
+                            Action::make('exportar_cursos_excel')
+                                ->label('Exportar a Excel')
+                                ->icon('heroicon-o-table-cells')
+                                ->color('success')
+                                ->action(function () use ($record) {
+                                    // Cargamos relaciones necesarias
+                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+                                    
+                                    $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.xlsx';
+                                    
+                                    return Excel::download(
+                                        new CursosMatriculaExport($record),
+                                        $fileName
+                                    );
                                 }),
                         ];
                     })
