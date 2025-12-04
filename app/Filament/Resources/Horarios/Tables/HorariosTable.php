@@ -4,6 +4,9 @@ namespace App\Filament\Resources\Horarios\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -83,15 +86,15 @@ class HorariosTable
             ->filters([
                 //
             ])
-            ->recordActions([
-                Action::make('ver_alumnos')
-                    ->label('Ver alumnos')
-                    ->icon('heroicon-o-user-group')
+            ->actions([
+                ViewAction::make('verAlumnos')
+                    ->label('Ver Alumnos')
+                    ->icon('heroicon-m-users')
+                    ->button()
                     ->color('info')
-                    ->url(fn (Horario $record): string => 
-                        HorarioResource::getUrl('ver-alumnos', ['record' => $record->id_horario])
-                    ),
-                
+                    ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
+                EditAction::make(),
+                DeleteAction::make(),
                 Action::make('visualizar_pdf')
                     ->label('Visualizar PDF')
                     ->icon('heroicon-o-eye')

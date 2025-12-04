@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Programas\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Programa;
@@ -83,6 +85,7 @@ class ProgramasTable
             ])
             ->recordActions([
                 EditAction::make(),
+                DeleteAction::make(), // Added DeleteAction
 
                 Action::make('agregarCursos')
                     ->label('Agregar cursos')
@@ -94,7 +97,7 @@ class ProgramasTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make(), // Removed DeleteBulkAction
                 ]),
             ]);
     }

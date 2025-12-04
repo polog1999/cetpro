@@ -271,17 +271,19 @@ class CronogramasTable
                     }),
             ])
             ->recordActions([
-
-            ViewAction::make('verPagos')
-                ->label('Ver Pagos')
-                ->icon('heroicon-m-eye')
-                ->button()
-                ->color('info') 
-                ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])
-        ),
-])
-        
-
+                ViewAction::make('verPagos')
+                    ->label('Ver Pagos')
+                    ->icon('heroicon-m-eye')
+                    ->button()
+                    ->color('info') 
+                    ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])),
+                EditAction::make(),
+                Action::make('delete')
+                    ->requiresConfirmation()
+                    ->action(fn (Cronograma $record) => $record->delete())
+                    ->color('danger')
+                    ->icon('heroicon-o-trash'),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

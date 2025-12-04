@@ -5,13 +5,14 @@ namespace App\Filament\Resources\Pagos\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 use Illuminate\Database\Eloquent\Builder;
 // use Filament\Schemas\Components\Utilities\Get;
 // use Filament\Schemas\Components\Utilities\Set;
-use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
@@ -308,16 +309,12 @@ Action::make('editar_evidencia')
 
         Notification::make()->title('Evidencia actualizada')->success()->send();
     }),
-
-                
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-
-                // 👇 Nueva acción
-    
             ]);
     }
 }
