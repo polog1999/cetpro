@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Rol;
 use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;   // << implementarlo
@@ -22,7 +21,6 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         'empleado_id',
         'usuario',      // campo “username”
         'password',
-        'rol',
         'email',        // opcional si luego quieres recuperación por correo
         'remember_token',
     ];
@@ -38,7 +36,6 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         );
     }
     protected $casts = [
-        'rol' => Rol::class,
         'password' => 'hashed',   // << Laravel hashea automáticamente al setear
     ];
 
@@ -70,8 +67,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
             return true; // Cualquier rol puede acceder al panel (los permisos se verifican en cada recurso)
         }
 
-        // Fallback para compatibilidad temporal durante migración
-        return in_array($this->rol?->value, ['admin', 'secretaria'], true);
+        return false;
     }
 
     // Requerido por HasName para mostrar el nombre en el topbar de Filament
