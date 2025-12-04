@@ -9,10 +9,12 @@ class CreateRole extends CreateRecord
 {
     protected static string $resource = RoleResource::class;
 
+    protected array $permisosToSync = [];
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // No guardar los campos de permisos temporales
-        $permisos = array_merge(
+        $this->permisosToSync = array_merge(
             $data['permisos_estudiantil'] ?? [],
             $data['permisos_academica'] ?? [],
             $data['permisos_administrativa'] ?? [],
@@ -25,19 +27,15 @@ class CreateRole extends CreateRecord
         unset($data['permisos_administrativa']);
         unset($data['permisos_financiera']);
         unset($data['permisos_usuarios']);
-
-        // Guardar los permisos en un atributo temporal
-        $data['_permisos'] = $permisos;
+        unset($data['_permisos']); // Ensure this is clean
 
         return $data;
     }
 
     protected function afterCreate(): void
     {
-        $permisos = $this->data['_permisos'] ?? [];
-
-        if (!empty($permisos)) {
-            $this->record->permisos()->sync($permisos);
+        if (!empty($this->permisosToSync)) {
+            $this->record->permisos()->sync($this->permisosToSync);
         }
     }
 }

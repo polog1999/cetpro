@@ -36,17 +36,17 @@ class RolesTable
                     ->badge()
                     ->color('info'),
 
-                TextColumn::make('permisos')
+                TextColumn::make('permisos.nombre')
                     ->label('Permisos')
-                    ->formatStateUsing(function ($record) {
+                    ->badge()
+                    ->formatStateUsing(function ($state, $record) {
                         if ($record->es_admin) {
                             return 'Acceso Total';
                         }
-                        $count = $record->permisos()->count();
-                        return $count . ' ' . ($count === 1 ? 'permiso' : 'permisos');
+                        return $state;
                     })
-                    ->badge()
-                    ->color(fn ($record) => $record->es_admin ? 'success' : 'warning'),
+                    ->color(fn ($record) => $record->es_admin ? 'success' : 'warning')
+                    ->wrap(),
 
                 TextColumn::make('descripcion')
                     ->label('Descripción')

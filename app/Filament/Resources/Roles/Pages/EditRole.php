@@ -51,10 +51,12 @@ class EditRole extends EditRecord
         return $data;
     }
 
+    protected array $permisosToSync = [];
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         // Combinar todos los  permisos de los diferentes grupos
-        $permisos = array_merge(
+        $this->permisosToSync = array_merge(
             $data['permisos_estudiantil'] ?? [],
             $data['permisos_academica'] ?? [],
             $data['permisos_administrativa'] ?? [],
@@ -67,18 +69,14 @@ class EditRole extends EditRecord
         unset($data['permisos_administrativa']);
         unset($data['permisos_financiera']);
         unset($data['permisos_usuarios']);
-
-        // Guardar en atributo temporal
-        $data['_permisos'] = $permisos;
+        unset($data['_permisos']);
 
         return $data;
     }
 
     protected function afterSave(): void
     {
-        $permisos = $this->data['_permisos'] ?? [];
-
         // Sincronizar permisos (esto eliminará los antiguos y agregará los nuevos)
-        $this->record->permisos()->sync($permisos);
+        $this->record->permisos()->sync($this->permisosToSync);
     }
 }
