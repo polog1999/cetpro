@@ -19,10 +19,12 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     protected $fillable = [
         'empleado_id',
+        'role_id',      // << Nuevo campo
         'usuario',      // campo “username”
         'password',
         'email',        // opcional si luego quieres recuperación por correo
         'remember_token',
+        'activo',       // << Nuevo campo
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -36,7 +38,8 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         );
     }
     protected $casts = [
-        'password' => 'hashed',   // << Laravel hashea automáticamente al setear
+        'password' => 'hashed',
+        'activo' => 'boolean',  // << Casteo a booleano
     ];
 
     public function empleado(): BelongsTo
