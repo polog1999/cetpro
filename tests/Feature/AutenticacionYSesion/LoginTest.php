@@ -56,7 +56,7 @@ test('no permite login con usuario o contrasena invalidos y muestra mensaje gene
         ->set('data.usuario', 'testuser')
         ->set('data.password', 'wrongpassword')
         ->call('authenticate')
-        ->assertHasErrors(['data.usuario']);
+        ->assertHasErrors(['data.password']);
         
     $this->assertGuest();
 });

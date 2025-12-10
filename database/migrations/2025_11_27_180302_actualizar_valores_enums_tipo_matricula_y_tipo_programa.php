@@ -11,8 +11,10 @@ return new class extends Migration
     public function up(): void
     {
         // 1. Eliminar restricciones CHECK existentes
-        DB::statement('ALTER TABLE matriculas DROP CONSTRAINT IF EXISTS matriculas_tipo_matricula_check');
-        DB::statement('ALTER TABLE programas DROP CONSTRAINT IF EXISTS programas_tipo_programa_check');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE matriculas DROP CONSTRAINT IF EXISTS matriculas_tipo_matricula_check');
+            DB::statement('ALTER TABLE programas DROP CONSTRAINT IF EXISTS programas_tipo_programa_check');
+        }
         
         // 2. Actualizar valores de TipoMatricula en tabla matriculas
         DB::table('matriculas')
@@ -37,8 +39,10 @@ return new class extends Migration
             ->update(['tipo_programa' => 'Formación continua']);
         
         // 4. Recrear restricciones CHECK con los nuevos valores
-        DB::statement("ALTER TABLE matriculas ADD CONSTRAINT matriculas_tipo_matricula_check CHECK (tipo_matricula IN ('Programa', 'Formación continua', 'Curso', 'Módulo'))");
-        DB::statement("ALTER TABLE programas ADD CONSTRAINT programas_tipo_programa_check CHECK (tipo_programa IN ('Programa', 'Formación continua'))");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE matriculas ADD CONSTRAINT matriculas_tipo_matricula_check CHECK (tipo_matricula IN ('Programa', 'Formación continua', 'Curso', 'Módulo'))");
+            DB::statement("ALTER TABLE programas ADD CONSTRAINT programas_tipo_programa_check CHECK (tipo_programa IN ('Programa', 'Formación continua'))");
+        }
     }
 
     /**
@@ -47,8 +51,10 @@ return new class extends Migration
     public function down(): void
     {
         // 1. Eliminar restricciones CHECK actuales
-        DB::statement('ALTER TABLE matriculas DROP CONSTRAINT IF EXISTS matriculas_tipo_matricula_check');
-        DB::statement('ALTER TABLE programas DROP CONSTRAINT IF EXISTS programas_tipo_programa_check');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE matriculas DROP CONSTRAINT IF EXISTS matriculas_tipo_matricula_check');
+            DB::statement('ALTER TABLE programas DROP CONSTRAINT IF EXISTS programas_tipo_programa_check');
+        }
         
         // 2. Revertir cambios de TipoMatricula
         DB::table('matriculas')
@@ -73,7 +79,9 @@ return new class extends Migration
             ->update(['tipo_programa' => 'Programa de formación continua']);
         
         // 4. Recrear restricciones CHECK con los valores antiguos
-        DB::statement("ALTER TABLE matriculas ADD CONSTRAINT matriculas_tipo_matricula_check CHECK (tipo_matricula IN ('Programa de estudio', 'Programa de formación continua', 'Curso libre'))");
-        DB::statement("ALTER TABLE programas ADD CONSTRAINT programas_tipo_programa_check CHECK (tipo_programa IN ('Programa de estudio', 'Programa de formación continua'))");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE matriculas ADD CONSTRAINT matriculas_tipo_matricula_check CHECK (tipo_matricula IN ('Programa de estudio', 'Programa de formación continua', 'Curso libre'))");
+            DB::statement("ALTER TABLE programas ADD CONSTRAINT programas_tipo_programa_check CHECK (tipo_programa IN ('Programa de estudio', 'Programa de formación continua'))");
+        }
     }
 };

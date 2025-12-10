@@ -33,6 +33,7 @@ class EstudianteForm
                 TextInput::make('nro_documento')
                     ->key('nro_documento_component')
                     ->required()
+                    ->unique(ignoreRecord: true)
                     ->maxLength(function ($get) {
                         $tipo = $get('tipo_documento');
                         if (! $tipo instanceof TipoDocumento) {

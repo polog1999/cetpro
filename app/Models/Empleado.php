@@ -6,8 +6,11 @@ use App\Enums\TipoDocumento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Empleado extends Model
 {
+    use HasFactory;
     protected $table = 'empleados';
 
     protected $fillable = [

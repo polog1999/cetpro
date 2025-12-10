@@ -89,7 +89,12 @@ class HorarioResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return static::canViewAny();
+        if (!static::canViewAny()) {
+            return false;
+        }
+        
+        // No permitir eliminación si el horario tiene matrículas
+        return !$record->matriculas()->exists();
     }
 
     public static function canDeleteAny(): bool

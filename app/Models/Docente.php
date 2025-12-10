@@ -11,8 +11,11 @@ use App\Models\Horario;
 
 
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Docente extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'tipo_documento',
         'nro_documento',

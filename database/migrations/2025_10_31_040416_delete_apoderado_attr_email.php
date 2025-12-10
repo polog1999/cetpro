@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('apoderados', function (Blueprint $table) {
+            $table->dropUnique('apoderados_email_unique');
             $table->dropColumn('email');
         });
     }

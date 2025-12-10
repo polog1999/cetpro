@@ -22,7 +22,8 @@ class UsuarioForm
                     })
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->helperText('Seleccione el empleado para crear su usuario de acceso'),
                     
                 Select::make('role_id')
                     ->label('Rol')
@@ -38,13 +39,20 @@ class UsuarioForm
                 TextInput::make('usuario')
                     ->label('Nombre de usuario')
                     ->required()
-                    ->unique(ignoreRecord: true),
-                    
+                    ->unique(ignoreRecord: true)
+                    ->helperText('Nombre de usuario para iniciar sesión'),
+
                 TextInput::make('password')
                     ->password()
                     ->label('Contraseña')
                     ->dehydrated(fn ($state) => filled($state)) // no sobrescribe si está vacío en editar
-                    ->required(fn ($record) => $record === null),
+                    ->required(fn ($record) => $record === null)
+                    ->helperText('Contraseña de acceso al sistema'),
+
+                \Filament\Forms\Components\Toggle::make('activo')
+                    ->label('Usuario Activo')
+                    ->default(true)
+                    ->helperText('Si se desactiva, el usuario no podrá iniciar sesión.'),
             ]);
     }
 }

@@ -191,13 +191,73 @@ class HorarioForm
                 TimePicker::make('hora_fin')
                     ->label('Hora de fin')
                     ->seconds(false)
-                    ->required(),
+                    ->required()
+                    ->rules([
+                        function (Get $get, ?\App\Models\Horario $record) {
+                            return function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                                $docenteId = $get('id_docente');
+                                $aula = $get('aula');
+                                $dias = $get('dias');
+                                $horaInicio = $get('hora_inicio');
+                                $horaFin = $value;
+
+                                if (! $docenteId || ! $dias || ! $horaInicio || ! $horaFin) {
+                                    return;
+                                }
+
+                                $query = \App\Models\Horario::query();
+
+                                if ($record) {
+                                    $query->where('id_horario', '!=', $record->id_horario);
+                                }
+
+                                $query->where(function ($q) use ($docenteId, $aula) {
+                                    $q->where('id_docente', $docenteId);
+                                    if ($aula) {
+                                        $q->orWhere('aula', $aula);
+                                    }
+                                });
+
+                                // Verificar superposición de días
+                                $query->where(function ($q) use ($dias) {
+                                    foreach ($dias as $dia) {
+                                        // Asumiendo que 'dias' es JSON en la BD
+                                        // SQLite/Postgres soportan whereJsonContains
+                                        $q->orWhereJsonContains('dias', $dia);
+                                    }
+                                });
+
+                                // Verificar superposición de horas
+                                $query->where(function ($q) use ($horaInicio, $horaFin) {
+                                    $q->where('hora_inicio', '<', $horaFin)
+                                      ->where('hora_fin', '>', $horaInicio);
+                                });
+
+                                if ($query->exists()) {
+                                    $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
+                                }
+                            };
+                        },
+                    ]),
 
                 // AULA
                 TextInput::make('aula')
                     ->label('Aula')
                     ->maxLength(255)
                     ->nullable(),
+
+                // VACANTES
+                TextInput::make('vacantes')
+                    ->label('Vacantes')
+                    ->numeric()
+                    ->default(20)
+                    ->required(),
+
+                // ACTIVO
+                \Filament\Forms\Components\Toggle::make('activo')
+                    ->label('Activo')
+                    ->default(true)
+                    ->required(),
             ]);
     }
 }

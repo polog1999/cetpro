@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
-use App\Models\Permiso;
+use App\Filament\Resources\Roles\Schemas\RoleForm;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
@@ -20,63 +20,42 @@ class EditRole extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // Cargar permisos actuales del rol y separarlos por grupo
-        $permisosActuales = $this->record->permisos()->pluck('permisos.id')->toArray();
-
-        $data['permisos_estudiantil'] = Permiso::where('grupo', 'Gestión Estudiantil')
-            ->whereIn('id', $permisosActuales)
-            ->pluck('id')
-            ->toArray();
-
-        $data['permisos_academica'] = Permiso::where('grupo', 'Gestión Académica')
-            ->whereIn('id', $permisosActuales)
-            ->pluck('id')
-            ->toArray();
-
-        $data['permisos_administrativa'] = Permiso::where('grupo', 'Gestión Administrativa')
-            ->whereIn('id', $permisosActuales)
-            ->pluck('id')
-            ->toArray();
-
-        $data['permisos_financiera'] = Permiso::where('grupo', 'Gestión Financiera')
-            ->whereIn('id', $permisosActuales)
-            ->pluck('id')
-            ->toArray();
-
-        $data['permisos_usuarios'] = Permiso::where('grupo', 'Gestión de Usuarios')
-            ->whereIn('id', $permisosActuales)
-            ->pluck('id')
-            ->toArray();
-
-        return $data;
+        // Cargar los toggles con los permisos actuales del rol
+        $togglesData = RoleForm::fillPermisosToggles($this->record);
+        
+        return array_merge($data, $togglesData);
     }
 
     protected array $permisosToSync = [];
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Combinar todos los  permisos de los diferentes grupos
-        $this->permisosToSync = array_merge(
-            $data['permisos_estudiantil'] ?? [],
-            $data['permisos_academica'] ?? [],
-            $data['permisos_administrativa'] ?? [],
-            $data['permisos_financiera'] ?? [],
-            $data['permisos_usuarios'] ?? []
-        );
+        // Extraer IDs de permisos desde los toggles
+        $this->permisosToSync = RoleForm::extractPermisosFromToggles($data);
 
-        unset($data['permisos_estudiantil']);
-        unset($data['permisos_academica']);
-        unset($data['permisos_administrativa']);
-        unset($data['permisos_financiera']);
-        unset($data['permisos_usuarios']);
-        unset($data['_permisos']);
+        // Limpiar todos los campos de permisos del data
+        foreach ($data as $key => $value) {
+            if (str_starts_with($key, 'permiso_')) {
+                unset($data[$key]);
+            }
+        }
 
         return $data;
     }
 
     protected function afterSave(): void
     {
-        // Sincronizar permisos (esto eliminará los antiguos y agregará los nuevos)
-        $this->record->permisos()->sync($this->permisosToSync);
+        // Sincronizar permisos (elimina antiguos y agrega nuevos)
+        if (!$this->record->es_admin) {
+            $this->record->permisos()->sync($this->permisosToSync);
+        } else {
+            // Si es admin, quitar todos los permisos (no los necesita)
+            $this->record->permisos()->sync([]);
+        }
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

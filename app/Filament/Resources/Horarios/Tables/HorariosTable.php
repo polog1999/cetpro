@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Horarios\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -21,6 +22,7 @@ use Filament\Infolists\Components\RepeatableEntry;
 
 class HorariosTable
 {
+    use PreventDeleteWithDependencies;
     public static function configure(Table $table): Table
     {
         return $table
@@ -94,7 +96,15 @@ class HorariosTable
                     ->color('info')
                     ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'matriculas',
+                            'matrícula(s) activa(s)'
+                        )
+                    ),
                 Action::make('visualizar_pdf')
                     ->label('Visualizar PDF')
                     ->icon('heroicon-o-eye')
@@ -155,7 +165,16 @@ class HorariosTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(fn (DeleteBulkAction $action, $records) => 
+                            self::preventBulkDeleteWithDependencies(
+                                $action,
+                                $records,
+                                'matriculas',
+                                'matrícula(s)',
+                                'id_horario'
+                            )
+                        ),
                 ]),
             ]);
     }

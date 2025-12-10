@@ -52,8 +52,10 @@ return new class extends Migration
             $table->foreignId('modulo_id')->nullable()->constrained('modulos');
         });
 
-        Schema::table('seccions', function (Blueprint $table) {
-            $table->foreignId('modulo_id')->nullable()->constrained('modulos');
-        });
+        if (Schema::hasTable('seccions')) {
+            Schema::table('seccions', function (Blueprint $table) {
+                $table->foreignId('modulo_id')->nullable()->constrained('modulos');
+            });
+        }
     }
 };

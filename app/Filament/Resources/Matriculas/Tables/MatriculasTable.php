@@ -275,6 +275,25 @@ class MatriculasTable
                         );
                     }),
                     
+                Action::make('anular')
+                    ->label('Anular')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->form([
+                        \Filament\Forms\Components\Textarea::make('motivo_anulacion')
+                            ->label('Motivo de anulación')
+                            ->required(),
+                    ])
+                    ->action(function (Matricula $record, array $data) {
+                        $record->update([
+                            'estado' => \App\Enums\EstadoMatricula::ANULADO,
+                            'motivo_anulacion' => $data['motivo_anulacion'],
+                            'fecha_anulacion' => now(),
+                        ]);
+                    })
+                    ->visible(fn (Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
+
                 DeleteAction::make(),
             ])
             ->toolbarActions([

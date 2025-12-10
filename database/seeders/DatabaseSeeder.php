@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             PermisoSeeder::class,  // Primero los permisos
             RoleSeeder::class,      // Luego los roles
             AdminSetupSeeder::class, // Finalmente el usuario admin
+            DocenteSeeder::class,
+            EmpleadoSeeder::class,
         ]);
     }
 

@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use App\Models\Estudiante;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Apoderado extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'tipo_documento',
         'nro_documento',

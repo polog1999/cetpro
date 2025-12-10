@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
+use App\Filament\Resources\Roles\Schemas\RoleForm;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateRole extends CreateRecord
@@ -13,29 +14,30 @@ class CreateRole extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // No guardar los campos de permisos temporales
-        $this->permisosToSync = array_merge(
-            $data['permisos_estudiantil'] ?? [],
-            $data['permisos_academica'] ?? [],
-            $data['permisos_administrativa'] ?? [],
-            $data['permisos_financiera'] ?? [],
-            $data['permisos_usuarios'] ?? []
-        );
+        // Extraer IDs de permisos desde los toggles
+        $this->permisosToSync = RoleForm::extractPermisosFromToggles($data);
 
-        unset($data['permisos_estudiantil']);
-        unset($data['permisos_academica']);
-        unset($data['permisos_administrativa']);
-        unset($data['permisos_financiera']);
-        unset($data['permisos_usuarios']);
-        unset($data['_permisos']); // Ensure this is clean
+        // Limpiar todos los campos de permisos del data
+        // (para que no intente guardarlos en la tabla roles)
+        foreach ($data as $key => $value) {
+            if (str_starts_with($key, 'permiso_')) {
+                unset($data[$key]);
+            }
+        }
 
         return $data;
     }
 
     protected function afterCreate(): void
     {
-        if (!empty($this->permisosToSync)) {
+        // Sincronizar permisos después de crear el rol
+        if (!empty($this->permisosToSync) && !$this->record->es_admin) {
             $this->record->permisos()->sync($this->permisosToSync);
         }
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

@@ -22,7 +22,8 @@ class ProgramaForm
 
                 TextInput::make('nombre_programa')
                     ->label('Nombre')
-                    ->required(),
+                    ->required()
+                    ->unique(ignoreRecord: true),
 
                 TextInput::make('duracion')
                     ->label('Duración en meses')

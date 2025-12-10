@@ -337,6 +337,9 @@ class MatriculaForm
                                     $query->whereRaw('1 = 0');
                                 }
                             }
+
+                            // Solo mostrar horarios activos
+                            $query->where('activo', true);
                         },
                     )
                     ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
@@ -374,6 +377,34 @@ class MatriculaForm
                         }
                         
                         return true;
+                    })
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                            // 1. Validar vacantes
+                            $horario = Horario::find($value);
+                            if ($horario) {
+                                $matriculados = Matricula::where('horario_id', $value)
+                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                                    ->count();
+                                
+                                if ($matriculados >= $horario->vacantes) {
+                                    $fail('No hay vacantes disponibles en este horario.');
+                                }
+                            }
+
+                            // 2. Validar duplicado
+                            $estudianteId = $get('estudiante_id');
+                            if ($estudianteId) {
+                                $exists = Matricula::where('estudiante_id', $estudianteId)
+                                    ->where('horario_id', $value)
+                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                                    ->exists();
+                                
+                                if ($exists) {
+                                    $fail('El estudiante ya está matriculado en este horario.');
+                                }
+                            }
+                        };
                     })
                     ->afterStateHydrated(function ($state, Set $set, Get $get) {
                         static::fillCursosDeHorario($state, $set, $get);

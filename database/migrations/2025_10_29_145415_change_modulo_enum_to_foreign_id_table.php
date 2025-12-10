@@ -22,9 +22,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('seccions', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('modulo_id');
-            $table->string('modulo')->after('id')->nullable();
-        });
+        if (Schema::hasTable('seccions')) {
+            Schema::table('seccions', function (Blueprint $table) {
+                $table->dropConstrainedForeignId('modulo_id');
+                $table->string('modulo')->after('id')->nullable();
+            });
+        }
     }
 };

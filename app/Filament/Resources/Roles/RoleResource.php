@@ -78,7 +78,15 @@ class RoleResource extends Resource
     public static function canDelete($record): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin ?? false;
+        
+        // Solo admin puede intentar eliminar
+        if (!($user?->role?->es_admin ?? false)) {
+            return false;
+        }
+        
+        // Verificar si el rol tiene usuarios asignados
+        // Si tiene usuarios, no permitir eliminación
+        return $record->usuarios()->count() === 0;
     }
 
     public static function shouldRegisterNavigation(): bool

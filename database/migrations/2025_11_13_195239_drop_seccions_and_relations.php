@@ -27,30 +27,30 @@ return new class extends Migration
         // Opcional: solo si quieres poder hacer rollback.
         // Puedes dejarlo vacío si ya no piensas volver a usar seccions.
 
-        Schema::create('seccions', function (Blueprint $table) {
-            $table->id();
-            $table->string('nombre');
-            $table->foreignId('docente_id')->constrained('docentes');
-            $table->string('modalidad');
-            $table->json('dias_estudio')->nullable();
-            $table->date('fecha_inicio')->nullable();
-            $table->date('fecha_fin')->nullable();
-            $table->string('turno');
-            $table->time('hora_inicio')->nullable();
-            $table->time('hora_fin')->nullable();
-            $table->string('codigo')->nullable();
-            $table->timestamps();
-        });
+        // Schema::create('seccions', function (Blueprint $table) {
+        //     $table->id();
+        //     $table->string('nombre');
+        //     $table->foreignId('docente_id')->constrained('docentes');
+        //     $table->string('modalidad');
+        //     $table->json('dias_estudio')->nullable();
+        //     $table->date('fecha_inicio')->nullable();
+        //     $table->date('fecha_fin')->nullable();
+        //     $table->string('turno');
+        //     $table->time('hora_inicio')->nullable();
+        //     $table->time('hora_fin')->nullable();
+        //     $table->string('codigo')->nullable();
+        //     $table->timestamps();
+        // });
 
-        Schema::create('estudiante_seccion', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('estudiante_id')->constrained('estudiantes')->onDelete('cascade');
-            $table->foreignId('seccion_id')->constrained('seccions')->onDelete('cascade');
-            $table->timestamps();
-        });
+        // Schema::create('estudiante_seccion', function (Blueprint $table) {
+        //     $table->id();
+        //     $table->foreignId('estudiante_id')->constrained('estudiantes')->onDelete('cascade');
+        //     $table->foreignId('seccion_id')->constrained('seccions')->onDelete('cascade');
+        //     $table->timestamps();
+        // });
 
-        Schema::table('matriculas', function (Blueprint $table) {
-            $table->foreignId('seccion_id')->nullable()->constrained('seccions');
-        });
+        // Schema::table('matriculas', function (Blueprint $table) {
+        //     $table->foreignId('seccion_id')->nullable()->constrained('seccions');
+        // });
     }
 };

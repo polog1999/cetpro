@@ -65,11 +65,51 @@ class RolesTable
             ])
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(function (DeleteAction $action, $record) {
+                        // Verificar si el rol tiene usuarios
+                        $cantidadUsuarios = $record->usuarios()->count();
+                        
+                        if ($cantidadUsuarios > 0) {
+                            // Cancelar la acción y mostrar notificación
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('No se puede eliminar el rol')
+                                ->body("Este rol tiene {$cantidadUsuarios} usuario(s) asignado(s). Para eliminarlo, primero debe reasignar o eliminar estos usuarios.")
+                                ->persistent()
+                                ->send();
+                            
+                            // Cancelar la eliminación
+                            $action->cancel();
+                        }
+                    }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function (DeleteBulkAction $action, $records) {
+                            // Verificar si alguno de los roles seleccionados tiene usuarios
+                            $rolesConUsuarios = [];
+                            
+                            foreach ($records as $record) {
+                                $cantidadUsuarios = $record->usuarios()->count();
+                                if ($cantidadUsuarios > 0) {
+                                    $rolesConUsuarios[] = "{$record->nombre} ({$cantidadUsuarios} usuarios)";
+                                }
+                            }
+                            
+                            if (!empty($rolesConUsuarios)) {
+                                \Filament\Notifications\Notification::make()
+                                    ->warning()
+                                    ->title('No se pueden eliminar algunos roles')
+                                    ->body('Los siguientes roles tienen usuarios asignados: ' . implode(', ', $rolesConUsuarios))
+                                    ->persistent()
+                                    ->send();
+                                
+                                // Cancelar la eliminación
+                                $action->cancel();
+                            }
+                        }),
                 ]),
             ]);
     }

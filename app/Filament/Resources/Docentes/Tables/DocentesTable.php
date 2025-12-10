@@ -2,29 +2,46 @@
 
 namespace App\Filament\Resources\Docentes\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
 
 class DocentesTable
 {
+    use PreventDeleteWithDependencies;
+
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('tipo_documento')
-                    ->searchable(),
                 TextColumn::make('nro_documento')
-                    ->searchable(),
+                    ->label('N° Documento')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('nombres')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('apellido_paterno')
-                    ->searchable(),
+                    ->label('Apellido Paterno')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('apellido_materno')
+                    ->label('Apellido Materno')
                     ->searchable(),
+                    
+                // Columna visual para horarios
+                TextColumn::make('horarios_count')
+                    ->label('Horarios')
+                    ->counts('horarios')
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+                    
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -39,11 +56,28 @@ class DocentesTable
             ])
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'horarios',
+                            'horario(s) asignado(s)'
+                        )
+                    ),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(fn (DeleteBulkAction $action, $records) => 
+                            self::preventBulkDeleteWithDependencies(
+                                $action,
+                                $records,
+                                'horarios',
+                                'horario(s)',
+                                'nombres'
+                            )
+                        ),
                 ]),
             ]);
     }

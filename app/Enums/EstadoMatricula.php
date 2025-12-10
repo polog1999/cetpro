@@ -14,6 +14,7 @@ enum EstadoMatricula: string implements HasColor, HasIcon, HasLabel
     case ENPROCESO = 'En proceso';
     case CULMINADO = 'Culminado';
     case INTERRUMPIDO = 'Interrumpido / Inhabilitado';
+    case ANULADO = 'Anulado';
     
     public function getLabel(): string
     {
@@ -21,6 +22,7 @@ enum EstadoMatricula: string implements HasColor, HasIcon, HasLabel
             self::ENPROCESO => 'En proceso',
             self::CULMINADO => 'Culminado',
             self::INTERRUMPIDO => 'Interrumpido / Inhabilitado',
+            self::ANULADO => 'Anulado',
         };
     }
 
@@ -30,6 +32,7 @@ enum EstadoMatricula: string implements HasColor, HasIcon, HasLabel
             self::ENPROCESO => 'warning',
             self::CULMINADO => 'success',
             self::INTERRUMPIDO => 'danger',
+            self::ANULADO => 'gray',
         };
     }
 
@@ -39,6 +42,7 @@ enum EstadoMatricula: string implements HasColor, HasIcon, HasLabel
             self::ENPROCESO => 'heroicon-m-arrow-path',
             self::CULMINADO => 'heroicon-m-check-badge',
             self::INTERRUMPIDO => 'heroicon-m-x-circle',
+            self::ANULADO => 'heroicon-m-trash',
         };
     }
 }

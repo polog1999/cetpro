@@ -72,7 +72,12 @@ class DocenteResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return static::canViewAny();
+        if (!static::canViewAny()) {
+            return false;
+        }
+        
+        // No permitir eliminación si el docente está asignado a horarios
+        return !$record->horarios()->exists();
     }
 
     public static function canDeleteAny(): bool
