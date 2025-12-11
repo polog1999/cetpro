@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Cronogramas\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use App\Models\Cronograma;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,13 +14,12 @@ use App\Enums\EstadoPago;
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
 
-use Filament\Actions\Action;
 use App\Filament\Resources\Cronogramas\CronogramaResource;
-use Doctrine\DBAL\Schema\View;
 use App\Models\Pago;
 
 class CronogramasTable
 {
+    use PreventDeleteWithDependencies;
     public static function configure(Table $table): Table
     {
         return $table
@@ -277,17 +276,13 @@ class CronogramasTable
                     ->button()
                     ->color('info') 
                     ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])),
-                EditAction::make(),
-                Action::make('delete')
-                    ->requiresConfirmation()
-                    ->action(fn (Cronograma $record) => $record->delete())
-                    ->color('danger')
-                    ->icon('heroicon-o-trash'),
+                // EditAction removido porque CronogramaResource::canEdit() = false
+                // DeleteAction removido porque CronogramaResource::canDelete() = false
+                // Los cronogramas NO se eliminan por integridad financiera
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                // Bulk actions removidos porque CronogramaResource::canDeleteAny() = false
+                // Los cronogramas NUNCA se eliminan por integridad financiera y auditoría
             ]);
     }
 }

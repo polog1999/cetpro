@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Horarios\Schemas;
 
 use App\Enums\Modalidad;
 use App\Enums\Turno;
-use App\Enums\Tip; // Changed from TipoPrograma to Tip
+use App\Enums\TipoPrograma; // Usando TipoPrograma estándar del sistema
 use App\Models\Programa;
 use App\Models\Docente;
 
@@ -32,8 +32,8 @@ class HorarioForm
                 ToggleButtons::make('tipo_programa')
                     ->label('Tipo de programa')
                     ->options([
-                        Tip::PROGRAMA->value           => 'Programa', // Updated from TipoPrograma::PROGRAMA_ESTUDIO
-                        Tip::FORMACION_CONTINUA->value => 'Formación continua', // Updated from TipoPrograma::FORMACION_CONTINUA
+                        TipoPrograma::PROGRAMA_ESTUDIO->value      => 'Programa',
+                        TipoPrograma::FORMACION_CONTINUA->value    => 'Formación continua',
                     ])
                     ->inline()
                     ->required()

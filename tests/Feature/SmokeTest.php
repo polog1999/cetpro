@@ -106,8 +106,8 @@ class SmokeTest extends TestCase
     {
         $response = $this->get('/pagos/1/evidencia/descargar');
         
-        // Debe requerir autenticación
-        $response->assertRedirect();
+        // Debe requerir autenticación (redirige a login)
+        $response->assertStatus(302);
     }
 
     /**

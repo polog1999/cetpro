@@ -319,6 +319,9 @@ class MatriculaForm
                                 return;
                             }
 
+                            // Cargar relaciones necesarias
+                            $query->with('programa');
+
                             // Filtrar por programa intermediario seleccionado
                             if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
                                 $programaId = $get('programa_intermediario');
@@ -352,9 +355,26 @@ class MatriculaForm
                             ? implode(', ', $horario->dias)
                             : $horario->dias;
 
-                        $horarioTexto = $horario->horario ?? '';
+                        // Formatear hora_inicio y hora_fin usando Carbon para asegurar el formato correcto
+                        $horarioTexto = '';
+                        if (!empty($horario->hora_inicio) && !empty($horario->hora_fin)) {
+                            try {
+                                $inicio = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                                $fin = \Carbon\Carbon::parse($horario->hora_fin)->format('H:i');
+                                $horarioTexto = "{$inicio} - {$fin}";
+                            } catch (\Exception $e) {
+                                // Si hay error al parsear, intentar mostrar directamente
+                                $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5) . ' - ' . substr($horario->hora_fin ?? '', 0, 5);
+                            }
+                        } elseif (!empty($horario->hora_inicio)) {
+                            try {
+                                $horarioTexto = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                            } catch (\Exception $e) {
+                                $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5);
+                            }
+                        }
 
-                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | {$modalidad}";
+                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | Modalidad: {$modalidad}";
                     })
                     ->searchable()
                     ->preload()
