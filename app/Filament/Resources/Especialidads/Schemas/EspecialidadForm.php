@@ -13,6 +13,7 @@ class EspecialidadForm
         return $schema
             ->components([
                 TextInput::make('nombre_especialidad')
+                    ->label('Servicio No Exclusivo')
                     ->required(),
                 TextInput::make('costo_mensual')
                     ->required()

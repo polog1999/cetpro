@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources\Horarios\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -18,6 +22,7 @@ use Filament\Infolists\Components\RepeatableEntry;
 
 class HorariosTable
 {
+    use PreventDeleteWithDependencies;
     public static function configure(Table $table): Table
     {
         return $table
@@ -83,15 +88,23 @@ class HorariosTable
             ->filters([
                 //
             ])
-            ->recordActions([
-                Action::make('ver_alumnos')
-                    ->label('Ver alumnos')
-                    ->icon('heroicon-o-user-group')
+            ->actions([
+                ViewAction::make('verAlumnos')
+                    ->label('Ver Alumnos')
+                    ->icon('heroicon-m-users')
+                    ->button()
                     ->color('info')
-                    ->url(fn (Horario $record): string => 
-                        HorarioResource::getUrl('ver-alumnos', ['record' => $record->id_horario])
+                    ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
+                EditAction::make(),
+                DeleteAction::make()
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'matriculas',
+                            'matrícula(s) activa(s)'
+                        )
                     ),
-                
                 Action::make('visualizar_pdf')
                     ->label('Visualizar PDF')
                     ->icon('heroicon-o-eye')
@@ -152,7 +165,16 @@ class HorariosTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(fn (DeleteBulkAction $action, $records) => 
+                            self::preventBulkDeleteWithDependencies(
+                                $action,
+                                $records,
+                                'matriculas',
+                                'matrícula(s)',
+                                'id_horario'
+                            )
+                        ),
                 ]),
             ]);
     }

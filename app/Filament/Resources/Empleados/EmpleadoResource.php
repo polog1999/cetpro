@@ -69,7 +69,12 @@ class EmpleadoResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return static::canViewAny();
+        if (!static::canViewAny()) {
+            return false;
+        }
+        
+        // No permitir eliminación si el empleado tiene usuario asignado
+        return !$record->usuario()->exists();
     }
 
     public static function canDeleteAny(): bool

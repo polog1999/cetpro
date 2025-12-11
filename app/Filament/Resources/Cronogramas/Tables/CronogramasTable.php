@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Cronogramas\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use App\Models\Cronograma;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,13 +14,12 @@ use App\Enums\EstadoPago;
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
 
-use Filament\Actions\Action;
 use App\Filament\Resources\Cronogramas\CronogramaResource;
-use Doctrine\DBAL\Schema\View;
 use App\Models\Pago;
 
 class CronogramasTable
 {
+    use PreventDeleteWithDependencies;
     public static function configure(Table $table): Table
     {
         return $table
@@ -65,6 +64,46 @@ class CronogramasTable
                                         ->orWhere('nro_documento', 'ilike', "%{$search}%");
                                 }
                             );
+                        }
+                    ),
+
+                // =========================
+                // DNI DEL ALUMNO
+                // =========================
+                TextColumn::make('dni')
+                    ->label('DNI')
+                    ->getStateUsing(function (Cronograma $record) {
+                        return $record->matricula?->estudiante?->nro_documento ?? '-';
+                    })
+                    ->searchable(
+                        query: function (Builder $query, string $search): Builder {
+                            return $query->whereHas(
+                                'matricula.estudiante',
+                                fn (Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
+                            );
+                        }
+                    ),
+
+                // =========================
+                // CÓDIGO DEL PROGRAMA (XXX)
+                // =========================
+                TextColumn::make('codigo_programa')
+                    ->label('Código Programa')
+                    ->getStateUsing(function (Cronograma $record) {
+                        $horario = $record->matricula?->horario;
+                        
+                        if (!$horario || !$horario->id_programa) {
+                            return '-';
+                        }
+                        
+                        // Formatear el ID del programa a 3 dígitos (igual que en el código de matrícula)
+                        return str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+                    })
+                    ->sortable(
+                        query: function (Builder $query, string $direction): Builder {
+                            return $query->join('matriculas', 'cronogramas.matricula_id', '=', 'matriculas.id')
+                                ->join('horarios', 'matriculas.horario_id', '=', 'horarios.id_horario')
+                                ->orderBy('horarios.id_programa', $direction);
                         }
                     ),
 
@@ -231,21 +270,19 @@ class CronogramasTable
                     }),
             ])
             ->recordActions([
-
-            ViewAction::make('verPagos')
-                ->label('Ver Pagos')
-                ->icon('heroicon-m-eye')
-                ->button()
-                ->color('info') 
-                ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])
-        ),
-])
-        
-
+                ViewAction::make('verPagos')
+                    ->label('Ver Pagos')
+                    ->icon('heroicon-m-eye')
+                    ->button()
+                    ->color('info') 
+                    ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])),
+                // EditAction removido porque CronogramaResource::canEdit() = false
+                // DeleteAction removido porque CronogramaResource::canDelete() = false
+                // Los cronogramas NO se eliminan por integridad financiera
+            ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                // Bulk actions removidos porque CronogramaResource::canDeleteAny() = false
+                // Los cronogramas NUNCA se eliminan por integridad financiera y auditoría
             ]);
     }
 }

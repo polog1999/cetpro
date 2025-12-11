@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Programas\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Programa;
@@ -14,6 +17,8 @@ use App\Enums\TipoPrograma;
 
 class ProgramasTable
 {
+    use PreventDeleteWithDependencies;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -83,6 +88,15 @@ class ProgramasTable
             ])
             ->recordActions([
                 EditAction::make(),
+                DeleteAction::make()
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'horarios',
+                            'horario(s)'
+                        )
+                    ),
 
                 Action::make('agregarCursos')
                     ->label('Agregar cursos')
@@ -94,7 +108,16 @@ class ProgramasTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(fn (DeleteBulkAction $action, $records) => 
+                            self::preventBulkDeleteWithDependencies(
+                                $action,
+                                $records,
+                                'horarios',
+                                'horario(s)',
+                                'nombre_programa'
+                            )
+                        ),
                 ]),
             ]);
     }

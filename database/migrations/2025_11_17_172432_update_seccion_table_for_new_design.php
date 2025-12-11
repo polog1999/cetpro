@@ -3,18 +3,36 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('seccion', function (Blueprint $table) {
-
-            // 1) Eliminar id_curso si existe (sin dropForeign)
-            if (Schema::hasColumn('seccion', 'id_curso')) {
-                $table->dropColumn('id_curso');
+        // 1) Eliminar id_curso si existe
+        if (Schema::hasColumn('seccion', 'id_curso')) {
+            try {
+                DB::transaction(function () {
+                    Schema::table('seccion', function (Blueprint $table) {
+                        $table->dropForeign(['id_curso']);
+                    });
+                });
+            } catch (\Exception $e) {
+                try {
+                    DB::transaction(function () {
+                        Schema::table('seccion', function (Blueprint $table) {
+                            $table->dropForeign('oferta_academica_id_curso_foreign');
+                        });
+                    });
+                } catch (\Exception $e2) {}
             }
 
+            Schema::table('seccion', function (Blueprint $table) {
+                $table->dropColumn('id_curso');
+            });
+        }
+
+        Schema::table('seccion', function (Blueprint $table) {
             // 2) Eliminar tipo_oferta
             if (Schema::hasColumn('seccion', 'tipo_oferta')) {
                 $table->dropColumn('tipo_oferta');

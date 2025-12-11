@@ -21,5 +21,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Registrar Observer para actualizar estado de matrícula automáticamente
         \App\Models\Pago::observe(\App\Observers\PagoObserver::class);
+
+        // Registrar Policies
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\Usuario::class, \App\Policies\UsuarioPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\Role::class, \App\Policies\RolePolicy::class);
     }
 }

@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('estado_civil', 20)->nullable(false)->change();
             $table->date('fecha_nacimiento')->nullable(false)->change();
             $table->string('telefono', 20)->nullable(false)->change();
-            $table->string('email', 100)->unique()->nullable(false)->change();
+            $table->string('email', 100)->nullable(false)->change();
         });
     }
 };

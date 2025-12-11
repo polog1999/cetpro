@@ -174,15 +174,26 @@ class MatriculaForm
                         ])->skippable(),
                     ])
                     ->createOptionUsing(function (array $data): int {
-                        // 1) Crear apoderado
-                        $apoderado = Apoderado::create([
-                            'tipo_documento'   => $data['apoderado_tipo_documento'],
-                            'nro_documento'    => $data['apoderado_nro_documento'],
-                            'nombres'          => $data['apoderado_nombres'],
-                            'apellido_paterno' => $data['apoderado_apellido_paterno'],
-                            'apellido_materno' => $data['apoderado_apellido_materno'],
-                            'telefono'         => $data['apoderado_telefono'],
-                        ]);
+                        // 1) Verificar si se proporcionaron datos del apoderado
+                        $apoderadoId = null;
+                        
+                        // Solo crear apoderado si al menos uno de los campos principales tiene valor
+                        if (
+                            !empty($data['apoderado_tipo_documento']) || 
+                            !empty($data['apoderado_nro_documento']) || 
+                            !empty($data['apoderado_nombres'])
+                        ) {
+                            $apoderado = Apoderado::create([
+                                'tipo_documento'   => $data['apoderado_tipo_documento'] ?? null,
+                                'nro_documento'    => $data['apoderado_nro_documento'] ?? null,
+                                'nombres'          => $data['apoderado_nombres'] ?? null,
+                                'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
+                                'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
+                                'telefono'         => $data['apoderado_telefono'] ?? null,
+                            ]);
+                            
+                            $apoderadoId = $apoderado->id;
+                        }
 
                         // 2) Datos del estudiante
                         $estudianteData = [
@@ -200,7 +211,7 @@ class MatriculaForm
                             'grado_instruccion' => $data['grado_instruccion'] ?? null,
                             'provincia'         => $data['provincia'] ?? null,
                             'distrito'          => $data['distrito'] ?? null,
-                            'apoderado_id'      => $apoderado->id,
+                            'apoderado_id'      => $apoderadoId, // Será null si no se creó apoderado
                         ];
 
                         // 3) Crear estudiante
@@ -308,6 +319,9 @@ class MatriculaForm
                                 return;
                             }
 
+                            // Cargar relaciones necesarias
+                            $query->with('programa');
+
                             // Filtrar por programa intermediario seleccionado
                             if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
                                 $programaId = $get('programa_intermediario');
@@ -326,6 +340,9 @@ class MatriculaForm
                                     $query->whereRaw('1 = 0');
                                 }
                             }
+
+                            // Solo mostrar horarios activos
+                            $query->where('activo', true);
                         },
                     )
                     ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
@@ -338,9 +355,26 @@ class MatriculaForm
                             ? implode(', ', $horario->dias)
                             : $horario->dias;
 
-                        $horarioTexto = $horario->horario ?? '';
+                        // Formatear hora_inicio y hora_fin usando Carbon para asegurar el formato correcto
+                        $horarioTexto = '';
+                        if (!empty($horario->hora_inicio) && !empty($horario->hora_fin)) {
+                            try {
+                                $inicio = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                                $fin = \Carbon\Carbon::parse($horario->hora_fin)->format('H:i');
+                                $horarioTexto = "{$inicio} - {$fin}";
+                            } catch (\Exception $e) {
+                                // Si hay error al parsear, intentar mostrar directamente
+                                $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5) . ' - ' . substr($horario->hora_fin ?? '', 0, 5);
+                            }
+                        } elseif (!empty($horario->hora_inicio)) {
+                            try {
+                                $horarioTexto = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                            } catch (\Exception $e) {
+                                $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5);
+                            }
+                        }
 
-                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | {$modalidad}";
+                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | Modalidad: {$modalidad}";
                     })
                     ->searchable()
                     ->preload()
@@ -363,6 +397,34 @@ class MatriculaForm
                         }
                         
                         return true;
+                    })
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                            // 1. Validar vacantes
+                            $horario = Horario::find($value);
+                            if ($horario) {
+                                $matriculados = Matricula::where('horario_id', $value)
+                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                                    ->count();
+                                
+                                if ($matriculados >= $horario->vacantes) {
+                                    $fail('No hay vacantes disponibles en este horario.');
+                                }
+                            }
+
+                            // 2. Validar duplicado
+                            $estudianteId = $get('estudiante_id');
+                            if ($estudianteId) {
+                                $exists = Matricula::where('estudiante_id', $estudianteId)
+                                    ->where('horario_id', $value)
+                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                                    ->exists();
+                                
+                                if ($exists) {
+                                    $fail('El estudiante ya está matriculado en este horario.');
+                                }
+                            }
+                        };
                     })
                     ->afterStateHydrated(function ($state, Set $set, Get $get) {
                         static::fillCursosDeHorario($state, $set, $get);
@@ -491,24 +553,43 @@ class MatriculaForm
     }
 
     /**
-     * Genera el código de inscripción basado en el DNI del estudiante y el ID del horario.
+     * Genera el código de inscripción en formato "YYYY-XXX-NNN"
+     * donde YYYY = año actual, XXX = ID del programa con 3 dígitos, 
+     * y NNN = número secuencial de matrícula para ese programa/año
      */
     protected static function generarCodigoInscripcion(Set $set, Get $get): void
     {
-        $estudianteId = $get('estudiante_id');
         $horarioId = $get('horario_id');
 
-        if (! $estudianteId || ! $horarioId) {
+        if (! $horarioId) {
             $set('codigo_inscripcion', null);
             return;
         }
 
-        // Obtener DNI del estudiante
-        $estudiante = Estudiante::find($estudianteId);
-        $dni = $estudiante?->nro_documento ?? 'SINDNI';
+        // Obtener el horario y su programa asociado
+        $horario = Horario::find($horarioId);
+        
+        if (! $horario || ! $horario->id_programa) {
+            $set('codigo_inscripcion', null);
+            return;
+        }
 
-        // Generar código: {dni_alumno}{id_horario}
-        $codigo = $dni . $horarioId;
+        // Obtener el año actual
+        $year = now()->format('Y');
+        
+        // Formatear el ID del programa a 3 dígitos
+        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+        
+        // Contar cuántas matrículas ya existen para este programa en este año
+        $prefijo = "{$year}-{$programaId}";
+        $count = \App\Models\Matricula::where('codigo_inscripcion', 'like', "{$prefijo}-%")
+            ->count();
+        
+        // Número secuencial (siguiente después del último)
+        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        
+        // Generar código: YYYY-XXX-NNN
+        $codigo = "{$year}-{$programaId}-{$secuencial}";
 
         $set('codigo_inscripcion', $codigo);
     }

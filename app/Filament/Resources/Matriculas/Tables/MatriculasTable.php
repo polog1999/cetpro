@@ -97,6 +97,48 @@ class MatriculasTable
                         );
                     }),
 
+                // Filtro por DNI del Estudiante
+                Filter::make('dni')
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('dni_estudiante')
+                            ->label('DNI')
+                            ->placeholder('Buscar por DNI...')
+                            ->numeric()
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['dni_estudiante'] ?? null,
+                            fn (Builder $query, $dni): Builder => $query->whereHas('estudiante', function (Builder $query) use ($dni) {
+                                $query->where('nro_documento', 'ilike', "%{$dni}%");
+                            })
+                        );
+                    }),
+
+                // Filtro por Código del Programa
+                SelectFilter::make('codigo_programa')
+                    ->label('Código Programa')
+                    ->options(function (): array {
+                        return \App\Models\Programa::query()
+                            ->orderBy('id_programa')
+                            ->get()
+                            ->mapWithKeys(function ($programa) {
+                                $codigo = str_pad($programa->id_programa, 3, '0', STR_PAD_LEFT);
+                                return [$programa->id_programa => "{$codigo} - {$programa->nombre_programa}"];
+                            })
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->placeholder('Todos los códigos')
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('horario', function (Builder $q) use ($data) {
+                            $q->where('id_programa', $data['value']);
+                        });
+                    }),
+
                 // Filtro por Tipo de Matrícula (Programa, Formación Continua, Curso, Módulo)
                 SelectFilter::make('tipo_matricula')
                     ->label('Tipo de Matrícula')
@@ -107,14 +149,6 @@ class MatriculasTable
                         TipoMatricula::MODULO->value => 'Módulo',
                     ])
                     ->placeholder('Todos los tipos'),
-
-                // Filtro por Programa
-                SelectFilter::make('programa')
-                    ->label('Programa')
-                    ->relationship('horario.programa', 'nombre_programa')
-                    ->searchable()
-                    ->preload()
-                    ->placeholder('Todos los programas'),
 
                 // Filtro por Curso
                 SelectFilter::make('curso')
@@ -220,25 +254,46 @@ class MatriculasTable
                                         echo $pdf->output();
                                     }, $fileName);
                                 }),
-                            Action::make('exportar_cursos_excel')
-                                ->label('Exportar a Excel')
-                                ->icon('heroicon-o-table-cells')
-                                ->color('success')
-                                ->action(function () use ($record) {
-                                    // Cargamos relaciones necesarias
-                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
-                                    
-                                    $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.xlsx';
-                                    
-                                    return Excel::download(
-                                        new CursosMatriculaExport($record),
-                                        $fileName
-                                    );
-                                }),
                         ];
                     })
                     ->modalWidth('7xl'),
+
+                // 👉 Botón para exportar directamente a Excel (sin modal)
+                Action::make('exportar_excel')
+                    ->label('Exportar excel (cursos)')
+                    ->icon('heroicon-o-table-cells')
+                    ->color('success')
+                    ->action(function (Matricula $record) {
+                        // Cargamos relaciones necesarias
+                        $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+                        
+                        $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.xlsx';
+                        
+                        return Excel::download(
+                            new CursosMatriculaExport($record),
+                            $fileName
+                        );
+                    }),
                     
+                Action::make('anular')
+                    ->label('Anular')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->form([
+                        \Filament\Forms\Components\Textarea::make('motivo_anulacion')
+                            ->label('Motivo de anulación')
+                            ->required(),
+                    ])
+                    ->action(function (Matricula $record, array $data) {
+                        $record->update([
+                            'estado' => \App\Enums\EstadoMatricula::ANULADO,
+                            'motivo_anulacion' => $data['motivo_anulacion'],
+                            'fecha_anulacion' => now(),
+                        ]);
+                    })
+                    ->visible(fn (Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
+
                 DeleteAction::make(),
             ])
             ->toolbarActions([

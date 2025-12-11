@@ -80,7 +80,12 @@ class ProgramaResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return static::canViewAny();
+        if (!static::canViewAny()) {
+            return false;
+        }
+        
+        // No permitir eliminación si el programa tiene horarios
+        return !$record->horarios()->exists();
     }
 
     public static function canDeleteAny(): bool

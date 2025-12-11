@@ -85,11 +85,22 @@ class CronogramaResource extends Resource
 
     public static function canDelete($record): bool
     {
+        // ⚠️ CRÍTICO: Los cronogramas NUNCA deben eliminarse
+        // Razones:
+        // 1. Integridad financiera: Contienen historial de pagos
+        // 2. Auditoría: Son evidencia de transacciones
+        // 3. Legal: Requeridos para comprobantes y reportes oficiales
+        
+        // Si necesitas "eliminar" un cronograma, mejor:
+        // - Marca la matrícula como ANULADA
+        // - Los pagos quedarán registrados para auditoría
+        
         return false;
     }
 
     public static function canDeleteAny(): bool
     {
+        // No permitir eliminación masiva bajo ninguna circunstancia
         return false;
     }
 

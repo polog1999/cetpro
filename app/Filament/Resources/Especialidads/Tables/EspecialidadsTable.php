@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Especialidads\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,6 +16,7 @@ class EspecialidadsTable
         return $table
             ->columns([
                 TextColumn::make('nombre_especialidad')
+                    ->label('Modulo')
                     ->searchable(),
                 TextColumn::make('costo_mensual')
                     ->numeric()
@@ -43,10 +45,11 @@ class EspecialidadsTable
             ->filters([
                 //
             ])
-            ->recordActions([
+            ->actions([
                 EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->toolbarActions([
+            ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

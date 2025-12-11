@@ -30,6 +30,8 @@ class Matricula extends Model
         'estado',
         'tipo_matricula',
         'id_curso',
+        'motivo_anulacion',
+        'fecha_anulacion',
     ];
 
     protected $casts = [
@@ -277,18 +279,64 @@ class Matricula extends Model
      */
     protected static function booted()
     {
-        // ANTES de guardar: generar código de inscripción
+        // ANTES de guardar: generar código de inscripción y validar
         static::creating(function (Matricula $matricula) {
+            // 1. Validar vacantes
+            $horario = Horario::find($matricula->horario_id);
+            if ($horario) {
+                $matriculados = Matricula::where('horario_id', $matricula->horario_id)
+                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                    ->count();
+                
+                if ($matriculados >= $horario->vacantes) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'horario_id' => 'No hay vacantes disponibles en este horario.',
+                    ]);
+                }
+            }
+
+            // 2. Validar duplicado
+            if ($matricula->estudiante_id && $matricula->horario_id) {
+                $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
+                    ->where('horario_id', $matricula->horario_id)
+                    ->where('estado', '!=', EstadoMatricula::ANULADO)
+                    ->exists();
+                
+                if ($exists) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'horario_id' => 'El estudiante ya está matriculado en este horario.',
+                    ]);
+                }
+            }
+
             if (empty($matricula->codigo_inscripcion)) {
-                // Obtener DNI del estudiante
-                $estudiante = Estudiante::find($matricula->estudiante_id);
-                $dni = $estudiante?->nro_documento ?? 'SINDNI';
+                // Obtener el horario y su programa asociado
+                // $horario ya obtenido arriba
                 
-                // Obtener ID de horario (si existe)
-                $horarioId = $matricula->horario_id ?? 'SIN';
-                
-                // Generar código: {dni_alumno}{id_horario}
-                $matricula->codigo_inscripcion = $dni . $horarioId;
+                if ($horario && $horario->id_programa) {
+                    // Obtener el año actual
+                    $year = now()->format('Y');
+                    
+                    // Formatear el ID del programa a 3 dígitos
+                    $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+                    
+                    // Contar cuántas matrículas ya existen para este programa en este año
+                    $prefijo = "{$year}-{$programaId}";
+                    $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")
+                        ->count();
+                    
+                    // Número secuencial (siguiente después del último)
+                    $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+                    
+                    // Generar código: YYYY-XXX-NNN
+                    $matricula->codigo_inscripcion = "{$year}-{$programaId}-{$secuencial}";
+                } else {
+                    // Fallback si no hay horario o programa
+                    $prefijo = now()->format('Y') . '-000';
+                    $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")->count();
+                    $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+                    $matricula->codigo_inscripcion = "{$prefijo}-{$secuencial}";
+                }
             }
         });
         

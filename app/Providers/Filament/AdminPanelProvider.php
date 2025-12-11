@@ -84,8 +84,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->brandName('Plataforma de gestión documentaria')
             ->brandLogo(asset('imagen/cetpro.png'))
-            // ->topbar(false)
-            ;
+            ->userMenuItems([
+                \Filament\Navigation\MenuItem::make()
+                    ->label('Cambiar Contraseña')
+                    ->url(fn (): string => \App\Filament\Pages\Auth\ChangePassword::getUrl())
+                    ->icon('heroicon-o-key'),
+            ]);
             // ->spa(hasPrefetching: true);
     }
 }

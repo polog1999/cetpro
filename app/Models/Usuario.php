@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Rol;
 use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;   // << implementarlo
@@ -12,19 +11,21 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Importar HasFactory
+
 class Usuario extends Authenticatable implements FilamentUser, HasName
 {
-    use Notifiable;
+    use Notifiable, HasFactory; // Usar HasFactory
 
     protected $table = 'usuarios';
 
     protected $fillable = [
         'empleado_id',
+        'role_id',      // << Nuevo campo
         'usuario',      // campo “username”
         'password',
-        'rol',
-        'email',        // opcional si luego quieres recuperación por correo
         'remember_token',
+        'activo',       // << Nuevo campo
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -38,8 +39,8 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         );
     }
     protected $casts = [
-        'rol' => Rol::class,
-        'password' => 'hashed',   // << Laravel hashea automáticamente al setear
+        'password' => 'hashed',
+        'activo' => 'boolean',  // << Casteo a booleano
     ];
 
     public function empleado(): BelongsTo
@@ -70,15 +71,20 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
             return true; // Cualquier rol puede acceder al panel (los permisos se verifican en cada recurso)
         }
 
-        // Fallback para compatibilidad temporal durante migración
-        return in_array($this->rol?->value, ['admin', 'secretaria'], true);
+        return false;
     }
 
     // Requerido por HasName para mostrar el nombre en el topbar de Filament
     public function getFilamentName(): string
     {
-        return $this->empleado?->nombres
-            ? ($this->empleado->nombres . ' ' . ($this->empleado->apellidos ?? ''))
-            : ($this->usuario ?? 'Usuario');
+        if ($this->empleado) {
+            return trim(
+                $this->empleado->nombre . ' ' . 
+                $this->empleado->apellido_paterno . ' ' . 
+                ($this->empleado->apellido_materno ?? '')
+            );
+        }
+        
+        return $this->usuario ?? 'Usuario';
     }
 }

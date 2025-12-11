@@ -1,0 +1,8 @@
+{
+    "The password is incorrect.": "La contraseña es incorrecta.",
+    "The :attribute field is required.": "El campo :attribute es obligatorio.",
+    "The :attribute must be at least :min characters.": "El campo :attribute debe tener al menos :min caracteres.",
+    "The :attribute confirmation does not match.": "La confirmación de :attribute no coincide.",
+    "The given data was invalid.": "Los datos proporcionados no son válidos.",
+    "current_password": "La contraseña es incorrecta."
+}

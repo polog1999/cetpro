@@ -5,9 +5,10 @@ namespace App\Filament\Resources\Roles\Tables;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
 
 class RolesTable
 {
@@ -35,17 +36,17 @@ class RolesTable
                     ->badge()
                     ->color('info'),
 
-                TextColumn::make('permisos')
+                TextColumn::make('permisos.nombre')
                     ->label('Permisos')
-                    ->formatStateUsing(function ($record) {
+                    ->badge()
+                    ->formatStateUsing(function ($state, $record) {
                         if ($record->es_admin) {
                             return 'Acceso Total';
                         }
-                        $count = $record->permisos()->count();
-                        return $count . ' ' . ($count === 1 ? 'permiso' : 'permisos');
+                        return $state;
                     })
-                    ->badge()
-                    ->color(fn ($record) => $record->es_admin ? 'success' : 'warning'),
+                    ->color(fn ($record) => $record->es_admin ? 'success' : 'warning')
+                    ->wrap(),
 
                 TextColumn::make('descripcion')
                     ->label('Descripción')
@@ -62,12 +63,53 @@ class RolesTable
             ->filters([
                 //
             ])
-            ->recordActions([
+            ->actions([
                 EditAction::make(),
+                DeleteAction::make()
+                    ->before(function (DeleteAction $action, $record) {
+                        // Verificar si el rol tiene usuarios
+                        $cantidadUsuarios = $record->usuarios()->count();
+                        
+                        if ($cantidadUsuarios > 0) {
+                            // Cancelar la acción y mostrar notificación
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('No se puede eliminar el rol')
+                                ->body("Este rol tiene {$cantidadUsuarios} usuario(s) asignado(s). Para eliminarlo, primero debe reasignar o eliminar estos usuarios.")
+                                ->persistent()
+                                ->send();
+                            
+                            // Cancelar la eliminación
+                            $action->cancel();
+                        }
+                    }),
             ])
-            ->toolbarActions([
+            ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function (DeleteBulkAction $action, $records) {
+                            // Verificar si alguno de los roles seleccionados tiene usuarios
+                            $rolesConUsuarios = [];
+                            
+                            foreach ($records as $record) {
+                                $cantidadUsuarios = $record->usuarios()->count();
+                                if ($cantidadUsuarios > 0) {
+                                    $rolesConUsuarios[] = "{$record->nombre} ({$cantidadUsuarios} usuarios)";
+                                }
+                            }
+                            
+                            if (!empty($rolesConUsuarios)) {
+                                \Filament\Notifications\Notification::make()
+                                    ->warning()
+                                    ->title('No se pueden eliminar algunos roles')
+                                    ->body('Los siguientes roles tienen usuarios asignados: ' . implode(', ', $rolesConUsuarios))
+                                    ->persistent()
+                                    ->send();
+                                
+                                // Cancelar la eliminación
+                                $action->cancel();
+                            }
+                        }),
                 ]),
             ]);
     }

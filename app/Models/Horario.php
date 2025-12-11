@@ -21,16 +21,20 @@ class Horario extends Model
         'id_programa',
         'turno',
         'dias',
-        'horario',
+        'hora_inicio',
+        'hora_fin',
         'modalidad',
         'id_docente',
         'aula',
+        'vacantes',
+        'activo',
     ];
 
     protected $casts = [
         'turno'     => Turno::class,
         'modalidad' => Modalidad::class,
         'dias'      => 'array',
+        'activo'    => 'boolean',
     ];
 
     public function programa()

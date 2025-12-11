@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Estudiantes\Tables;
 
+use App\Filament\Traits\PreventDeleteWithDependencies;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class EstudiantesTable
 {
+    use PreventDeleteWithDependencies;
     public static function configure(Table $table): Table
     {
         return $table
@@ -38,6 +41,15 @@ class EstudiantesTable
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
+                    
+                // Columna de matrículas
+                TextColumn::make('matriculas_count')
+                    ->label('Matrículas')
+                    ->counts('matriculas')
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+                    
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -137,12 +149,30 @@ class EstudiantesTable
                             ->placeholder('Ingrese apellido materno'),
                     ]),
             ])
-            ->recordActions([
+            ->actions([
                 EditAction::make(),
+                DeleteAction::make()
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'matriculas',
+                            'matrícula(s)'
+                        )
+                    ),
             ])
-            ->toolbarActions([
+            ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(fn (DeleteBulkAction $action, $records) => 
+                            self::preventBulkDeleteWithDependencies(
+                                $action,
+                                $records,
+                                'matriculas',
+                                'matrícula(s)',
+                                'nombres'
+                            )
+                        ),
                 ]),
             ]);
     }
