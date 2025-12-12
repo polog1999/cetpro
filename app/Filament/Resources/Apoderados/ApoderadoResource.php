@@ -60,7 +60,7 @@ class ApoderadoResource extends Resource
     public static function canViewAny(): bool
     {
         $user = \Filament\Facades\Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('ApoderadoResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('apoderados') || false;
     }
 
     public static function canCreate(): bool

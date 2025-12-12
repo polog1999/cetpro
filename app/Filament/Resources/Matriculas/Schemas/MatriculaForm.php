@@ -174,49 +174,37 @@ class MatriculaForm
                         ])->skippable(),
                     ])
                     ->createOptionUsing(function (array $data): int {
-                        // 1) Verificar si se proporcionaron datos del apoderado
-                        $apoderadoId = null;
+                        $service = app(\App\Services\EstudianteService::class);
                         
-                        // Solo crear apoderado si al menos uno de los campos principales tiene valor
-                        if (
-                            !empty($data['apoderado_tipo_documento']) || 
-                            !empty($data['apoderado_nro_documento']) || 
-                            !empty($data['apoderado_nombres'])
-                        ) {
-                            $apoderado = Apoderado::create([
-                                'tipo_documento'   => $data['apoderado_tipo_documento'] ?? null,
-                                'nro_documento'    => $data['apoderado_nro_documento'] ?? null,
-                                'nombres'          => $data['apoderado_nombres'] ?? null,
-                                'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
-                                'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
-                                'telefono'         => $data['apoderado_telefono'] ?? null,
-                            ]);
-                            
-                            $apoderadoId = $apoderado->id;
-                        }
-
-                        // 2) Datos del estudiante
+                        // Separar datos de estudiante y apoderado
+                        $apoderadoData = array_filter([
+                            'tipo_documento' => $data['apoderado_tipo_documento'] ?? null,
+                            'nro_documento' => $data['apoderado_nro_documento'] ?? null,
+                            'nombres' => $data['apoderado_nombres'] ?? null,
+                            'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
+                            'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
+                            'telefono' => $data['apoderado_telefono'] ?? null,
+                        ]);
+                        
                         $estudianteData = [
-                            'tipo_documento'    => $data['tipo_documento'] ?? null,
-                            'nro_documento'     => $data['nro_documento'] ?? null,
-                            'nombres'           => $data['nombres'] ?? null,
-                            'apellido_paterno'  => $data['apellido_paterno'] ?? null,
-                            'apellido_materno'  => $data['apellido_materno'] ?? null,
-                            'genero'            => $data['genero'] ?? null,
-                            'estado_civil'      => $data['estado_civil'] ?? null,
-                            'fecha_nacimiento'  => $data['fecha_nacimiento'] ?? null,
-                            'telefono'          => $data['telefono'] ?? null,
-                            'direccion'         => $data['direccion'] ?? null,
-                            'email'             => $data['email'] ?? null,
+                            'tipo_documento' => $data['tipo_documento'],
+                            'nro_documento' => $data['nro_documento'],
+                            'nombres' => $data['nombres'],
+                            'apellido_paterno' => $data['apellido_paterno'],
+                            'apellido_materno' => $data['apellido_materno'],
+                            'genero' => $data['genero'] ?? null,
+                            'estado_civil' => $data['estado_civil'] ?? null,
+                            'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
+                            'telefono' => $data['telefono'] ?? null,
+                            'direccion' => $data['direccion'] ?? null,
+                            'email' => $data['email'] ?? null,
                             'grado_instruccion' => $data['grado_instruccion'] ?? null,
-                            'provincia'         => $data['provincia'] ?? null,
-                            'distrito'          => $data['distrito'] ?? null,
-                            'apoderado_id'      => $apoderadoId, // Será null si no se creó apoderado
+                            'provincia' => $data['provincia'] ?? null,
+                            'distrito' => $data['distrito'] ?? null,
                         ];
-
-                        // 3) Crear estudiante
-                        $estudiante = Estudiante::create($estudianteData);
-
+                        
+                        $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
+                        
                         return $estudiante->getKey();
                     })
                     ->createOptionAction(
@@ -400,28 +388,21 @@ class MatriculaForm
                     })
                     ->rule(function (Get $get) {
                         return function (string $attribute, $value, \Closure $fail) use ($get) {
-                            // 1. Validar vacantes
-                            $horario = Horario::find($value);
-                            if ($horario) {
-                                $matriculados = Matricula::where('horario_id', $value)
-                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
-                                    ->count();
-                                
-                                if ($matriculados >= $horario->vacantes) {
-                                    $fail('No hay vacantes disponibles en este horario.');
-                                }
+                            $service = app(\App\Services\MatriculaService::class);
+                            
+                            // 1. Validar vacantes disponibles
+                            $validacion = $service->validarVacantesDisponibles($value);
+                            if (!$validacion['valido']) {
+                                $fail($validacion['mensaje']);
+                                return;
                             }
-
-                            // 2. Validar duplicado
+                            
+                            // 2. Validar matrícula no duplicada
                             $estudianteId = $get('estudiante_id');
                             if ($estudianteId) {
-                                $exists = Matricula::where('estudiante_id', $estudianteId)
-                                    ->where('horario_id', $value)
-                                    ->where('estado', '!=', EstadoMatricula::ANULADO)
-                                    ->exists();
-                                
-                                if ($exists) {
-                                    $fail('El estudiante ya está matriculado en este horario.');
+                                $validacion = $service->validarDuplicado($estudianteId, $value);
+                                if (!$validacion['valido']) {
+                                    $fail($validacion['mensaje']);
                                 }
                             }
                         };
@@ -508,48 +489,12 @@ class MatriculaForm
             return;
         }
 
-        $horario = Horario::find($horarioId);
-
-        if (! $horario) {
-            $set('cursos_matriculados', 'Horario no encontrado.');
-            return;
-        }
-
-        $cursos = Curso::query()
-            ->where('id_programa', $horario->id_programa)
-            ->orderBy('nombre_curso')
-            ->get();
-
-        if ($cursos->isEmpty()) {
-            // Determinar el mensaje según el tipo de matrícula
-            $tipoMatricula = $get('tipo_matricula');
-            $mensaje = ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO)
-                ? 'Este programa no tiene módulos registrados.'
-                : 'Esta formación continua no tiene cursos registrados.';
-            $set('cursos_matriculados', $mensaje);
-            return;
-        }
-
-        $texto = $cursos
-            ->values()
-            ->map(function ($curso, $index) {
-                $n = $index + 1;
-                $nombre = $curso->nombre_curso;
-                
-                // Formatear las fechas si existen
-                $fechaInicio = $curso->fecha_inicio 
-                    ? \Carbon\Carbon::parse($curso->fecha_inicio)->format('d/m/Y')
-                    : 'Sin fecha';
-                    
-                $fechaFin = $curso->fecha_termino 
-                    ? \Carbon\Carbon::parse($curso->fecha_termino)->format('d/m/Y')
-                    : 'Sin fecha';
-                
-                return "{$n}. {$nombre} | Inicio: {$fechaInicio} | Fin: {$fechaFin}";
-            })
-            ->implode(PHP_EOL);
-
-        $set('cursos_matriculados', $texto);
+        $service = app(\App\Services\HorarioService::class);
+        $tipoMatricula = $get('tipo_matricula') ?? TipoMatricula::PROGRAMA;
+        
+        $resultado = $service->obtenerCursosFormateados($horarioId, $tipoMatricula);
+        
+        $set('cursos_matriculados', $resultado['texto']);
     }
 
     /**
@@ -566,30 +511,8 @@ class MatriculaForm
             return;
         }
 
-        // Obtener el horario y su programa asociado
-        $horario = Horario::find($horarioId);
-        
-        if (! $horario || ! $horario->id_programa) {
-            $set('codigo_inscripcion', null);
-            return;
-        }
-
-        // Obtener el año actual
-        $year = now()->format('Y');
-        
-        // Formatear el ID del programa a 3 dígitos
-        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
-        
-        // Contar cuántas matrículas ya existen para este programa en este año
-        $prefijo = "{$year}-{$programaId}";
-        $count = \App\Models\Matricula::where('codigo_inscripcion', 'like', "{$prefijo}-%")
-            ->count();
-        
-        // Número secuencial (siguiente después del último)
-        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-        
-        // Generar código: YYYY-XXX-NNN
-        $codigo = "{$year}-{$programaId}-{$secuencial}";
+        $service = app(\App\Services\MatriculaService::class);
+        $codigo = $service->generarCodigoInscripcion($horarioId);
 
         $set('codigo_inscripcion', $codigo);
     }

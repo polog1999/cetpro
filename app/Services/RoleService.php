@@ -19,7 +19,8 @@ class RoleService
      * Constructor con inyección de dependencias.
      */
     public function __construct(
-        private RoleRepositoryInterface $roles
+        private RoleRepositoryInterface $roles,
+        private \App\Repositories\PermisoRepositoryInterface $permisos
     ) {}
 
     /**
@@ -162,5 +163,141 @@ class RoleService
             'puede_eliminar' => true,
             'mensaje' => 'El rol puede ser eliminado.',
         ];
+    }
+    
+    /**
+     * Crea un rol con sus permisos.
+     *
+     * @param array $roleData
+     * @param array $permisosIds
+     * @return Role
+     * @throws ValidationException
+     */
+    public function crearConPermisos(array $roleData, array $permisosIds): Role
+    {
+        // Validar nombre único
+        if ($this->roles->findByNombre($roleData['nombre'])) {
+            throw ValidationException::withMessages([
+                'nombre' => 'Ya existe un rol con este nombre.',
+            ]);
+        }
+        
+        // Crear rol
+        $role = $this->roles->create($roleData);
+        
+        // Asignar permisos solo si NO es admin
+        if (!$role->es_admin && !empty($permisosIds)) {
+            $this->validarYAsignarPermisos($role->id, $permisosIds);
+        }
+        
+        return $role->fresh('permisos');
+    }
+    
+    /**
+     * Actualiza un rol y sus permisos.
+     *
+     * @param int $roleId
+     * @param array $roleData
+     * @param array $permisosIds
+     * @return Role
+     * @throws ValidationException
+     */
+    public function actualizarConPermisos(int $roleId, array $roleData, array $permisosIds): Role
+    {
+        $role = $this->roles->find($roleId);
+        
+        if (!$role) {
+            throw ValidationException::withMessages([
+                'role' => 'El rol no existe.',
+            ]);
+        }
+        
+        // Validar nombre único (ignorando el rol actual)
+        $existente = $this->roles->findByNombre($roleData['nombre']);
+        if ($existente && $existente->id !== $roleId) {
+            throw ValidationException::withMessages([
+                'nombre' => 'Ya existe otro rol con este nombre.',
+            ]);
+        }
+        
+        // Actualizar rol
+        $role = $this->roles->update($role, $roleData);
+        
+        // Sincronizar permisos
+        if ($role->es_admin) {
+            // Si es admin, quitar todos los permisos
+            $role->permisos()->sync([]);
+        } else {
+            $this->validarYAsignarPermisos($role->id, $permisosIds);
+        }
+        
+        return $role->fresh('permisos');
+    }
+    
+    /**
+     * Extrae IDs de permisos desde toggles del formulario.
+     *
+     * @param array $formData
+     * @return array
+     */
+    public function extraerPermisosDeToggles(array $formData): array
+    {
+        $permisosIds = [];
+        
+        foreach ($formData as $key => $value) {
+            if (str_starts_with($key, 'permiso_') && $value === true) {
+                $permisoId = (int) str_replace('permiso_', '', $key);
+                $permisosIds[] = $permisoId;
+            }
+        }
+        
+        return $permisosIds;
+    }
+    
+    /**
+     * Prepara datos de toggles para cargar en formulario.
+     *
+     * @param Role $role
+     * @return array
+     */
+    public function prepararTogglesPermisos(Role $role): array
+    {
+        $data = [];
+        
+        if ($role->permisos) {
+            foreach ($role->permisos as $permiso) {
+                $data["permiso_{$permiso->id}"] = true;
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Valida y asigna permisos a un rol (método privado auxiliar).
+     *
+     * @param int $roleId
+     * @param array $permisosIds
+     * @return void
+     * @throws ValidationException
+     */
+    private function validarYAsignarPermisos(int $roleId, array $permisosIds): void
+    {
+        if (empty($permisosIds)) {
+            $this->roles->syncPermisos($this->roles->find($roleId), []);
+            return;
+        }
+        
+        // Validar que todos los permisos existen
+        $permisosExistentes = $this->permisos->findByIds($permisosIds);
+        
+        if ($permisosExistentes->count() !== count($permisosIds)) {
+            throw ValidationException::withMessages([
+                'permisos' => 'Algunos permisos seleccionados no existen.',
+            ]);
+        }
+        
+        $role = $this->roles->find($roleId);
+        $this->roles->syncPermisos($role, $permisosIds);
     }
 }

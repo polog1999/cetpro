@@ -49,4 +49,62 @@ class HorarioRepository implements HorarioRepositoryInterface
         $horario = Horario::withCount('matriculas')->find($id);
         return $horario && $horario->matriculas_count > 0;
     }
+    
+    public function findConflictosHorario(
+        int $docenteId,
+        array $dias,
+        string $horaInicio,
+        string $horaFin,
+        ?int $ignorarId = null
+    ): Collection {
+        $query = Horario::where('id_docente', $docenteId);
+        
+        if ($ignorarId) {
+            $query->where('id_horario', '!=', $ignorarId);
+        }
+        
+        // Verificar superposición de días
+        $query->where(function ($q) use ($dias) {
+            foreach ($dias as $dia) {
+                $q->orWhereJsonContains('dias', $dia);
+            }
+        });
+        
+        // Verificar superposición de horas
+        $query->where(function ($q) use ($horaInicio, $horaFin) {
+            $q->where('hora_inicio', '<', $horaFin)
+              ->where('hora_fin', '>', $horaInicio);
+        });
+        
+        return $query->get();
+    }
+    
+    public function findConflictosAula(
+        string $aula,
+        array $dias,
+        string $horaInicio,
+        string $horaFin,
+        ?int $ignorarId = null
+    ): Collection {
+        $query = Horario::where('aula', $aula);
+        
+        if ($ignorarId) {
+            $query->where('id_horario', '!=', $ignorarId);
+        }
+        
+        // Verificar superposición de días
+        $query->where(function ($q) use ($dias) {
+            foreach ($dias as $dia) {
+                $q->orWhereJsonContains('dias', $dia);
+            }
+        });
+        
+        // Verificar superposición de horas
+        $query->where(function ($q) use ($horaInicio, $horaFin) {
+            $q->where('hora_inicio', '<', $horaFin)
+              ->where('hora_fin', '>', $horaInicio);
+        });
+        
+        return $query->get();
+    }
 }

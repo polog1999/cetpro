@@ -71,13 +71,39 @@ class CursosRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->label('Agregar curso'),
+                    ->label('Agregar curso')
+                    ->disabled(function () {
+                        $programa = $this->getOwnerRecord();
+                        $cursosActuales = $programa->cursos()->count();
+                        $numeroMaximoCursos = $programa->num_cursos;
+                        
+                        return $cursosActuales >= $numeroMaximoCursos;
+                    })
+                    ->tooltip(function () {
+                        $programa = $this->getOwnerRecord();
+                        $cursosActuales = $programa->cursos()->count();
+                        $numeroMaximoCursos = $programa->num_cursos;
+                        
+                        if ($cursosActuales >= $numeroMaximoCursos) {
+                            return "Límite alcanzado: {$cursosActuales}/{$numeroMaximoCursos} cursos";
+                        }
+                        
+                        return "Cursos: {$cursosActuales}/{$numeroMaximoCursos}";
+                    })
+                    ->after(function () {
+                        // Refrescar después de crear
+                        $this->dispatch('$refresh');
+                    }),
             ])
             ->actions([
                 EditAction::make()
                     ->label('Editar'),
                 DeleteAction::make()
-                    ->label('Eliminar'),
+                    ->label('Eliminar')
+                    ->after(function () {
+                        // Disparar evento para refrescar el componente
+                        $this->dispatch('$refresh');
+                    }),
             ])
             ->bulkActions([
                 DeleteBulkAction::make(),

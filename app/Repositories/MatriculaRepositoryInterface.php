@@ -54,5 +54,15 @@ interface MatriculaRepositoryInterface
     /**
      * Verifica si existe matrícula activa.
      */
-    public function existsMatriculaActiva(int $estudianteId, int $horarioId): bool;
+    public function existsMatriculaActiva(int $estudianteId, int $horarioId,?int $ignorar = null): bool;
+    
+    /**
+     * Cuenta matrículas por prefijo de código (para generar códigos secuenciales).
+     */
+    public function contarPorPrefijoCodigo(string $prefijo): int;
+    
+    /**
+     * Cuenta matrículas activas en un horario (excluye anuladas).
+     */
+    public function contarActivos(int $horarioId): int;
 }

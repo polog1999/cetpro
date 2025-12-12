@@ -56,11 +56,11 @@ class RoleResource extends Resource
         ];
     }
 
-    // Solo los administradores pueden ver y gestionar roles
+    // Administradores o usuarios con permiso de 'roles' pueden ver y gestionar roles
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin ?? false;
+        return $user?->role?->es_admin || $user?->canAccessResource('roles') || false;
     }
 
     public static function canCreate(): bool

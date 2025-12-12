@@ -28,7 +28,7 @@ class ProgramasTable
                     ->searchable(),
 
                 TextColumn::make('tipo_programa')
-                    ->label('Tipo de programa')
+                    ->label('Tipo')
                     ->badge()
                     ->formatStateUsing(
                         fn (?TipoPrograma $state) => $state?->getLabel()
@@ -38,12 +38,12 @@ class ProgramasTable
                     ),
 
                 TextColumn::make('duracion')
-                    ->label('Duración (meses)')
+                    ->label('Meses')
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('num_cursos')
-                    ->label('Número de cursos')
+                    ->label('N° cursos')
                     ->numeric()
                     ->sortable(),
 
@@ -87,6 +87,14 @@ class ProgramasTable
                 //
             ])
             ->recordActions([
+                Action::make('agregarCursos')
+                    ->label('Cursos')
+                    ->icon('heroicon-m-academic-cap')
+                    ->color('success')
+                    ->button()
+                    ->url(fn (Programa $record): string =>
+                        ProgramaResource::getUrl('view', ['record' => $record])
+                    ),
                 EditAction::make(),
                 DeleteAction::make()
                     ->before(fn (DeleteAction $action, $record) => 
@@ -96,14 +104,6 @@ class ProgramasTable
                             'horarios',
                             'horario(s)'
                         )
-                    ),
-
-                Action::make('agregarCursos')
-                    ->label('Agregar cursos')
-                    ->icon('heroicon-m-plus')
-                    ->button()
-                    ->url(fn (Programa $record): string =>
-                        ProgramaResource::getUrl('view', ['record' => $record])
                     ),
             ])
             ->toolbarActions([

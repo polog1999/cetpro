@@ -74,7 +74,7 @@ class HorarioResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('HorarioResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('horarios') || false;
     }
 
     public static function canCreate(): bool

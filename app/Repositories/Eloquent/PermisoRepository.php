@@ -34,4 +34,12 @@ class PermisoRepository implements PermisoRepositoryInterface
     {
         return Permiso::where('recurso', $recurso)->first();
     }
+    
+    /**
+     * @inheritDoc
+     */
+    public function findByIds(array $ids): Collection
+    {
+        return Permiso::whereIn('id', $ids)->get();
+    }
 }

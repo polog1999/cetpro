@@ -62,7 +62,7 @@ class MatriculaResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('MatriculaResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('matriculas') || false;
     }
 
     public static function canCreate(): bool

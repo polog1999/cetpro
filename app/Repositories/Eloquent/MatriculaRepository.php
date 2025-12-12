@@ -85,11 +85,29 @@ class MatriculaRepository implements MatriculaRepositoryInterface
             ->get();
     }
 
-    public function existsMatriculaActiva(int $estudianteId, int $horarioId): bool
+    public function existsMatriculaActiva(int $estudianteId, int $horarioId, ?int $ignorar = null): bool
     {
-        return Matricula::where('estudiante_id', $estudianteId)
+        $query = Matricula::where('estudiante_id', $estudianteId)
             ->where('horario_id', $horarioId)
+            ->where('estado', '!=', EstadoMatricula::ANULADO);
+        
+        if ($ignorar) {
+            $query->where('id', '!=', $ignorar);
+        }
+        
+        return $query->exists();
+    }
+    
+    public function contarPorPrefijoCodigo(string $prefijo): int
+    {
+        return Matricula::where('codigo_inscripcion', 'like', "{$prefijo}-%")
+            ->count();
+    }
+    
+    public function contarActivos(int $horarioId): int
+    {
+        return Matricula::where('horario_id', $horarioId)
             ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->exists();
+            ->count();
     }
 }

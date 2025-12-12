@@ -34,4 +34,12 @@ interface PermisoRepositoryInterface
      * @return Permiso|null
      */
     public function findByRecurso(string $recurso): ?Permiso;
+    
+    /**
+     * Busca permisos por sus IDs.
+     *
+     * @param array $ids
+     * @return Collection
+     */
+    public function findByIds(array $ids): Collection;
 }

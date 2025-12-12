@@ -57,7 +57,7 @@ class EstudianteResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('EstudianteResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('estudiantes') || false;
     }
 
     public static function canCreate(): bool

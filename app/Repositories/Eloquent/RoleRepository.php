@@ -77,4 +77,12 @@ class RoleRepository implements RoleRepositoryInterface
         
         return $role && $role->usuarios_count > 0;
     }
+    
+    /**
+     * @inheritDoc
+     */
+    public function findByNombre(string $nombre): ?Role
+    {
+        return Role::where('nombre', $nombre)->first();
+    }
 }

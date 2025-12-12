@@ -65,7 +65,7 @@ class ProgramaResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('ProgramaResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('programas') || false;
     }
 
     public static function canCreate(): bool

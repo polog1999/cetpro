@@ -15,4 +15,26 @@ interface HorarioRepositoryInterface
     public function findByPrograma(int $programaId): Collection;
     public function findActivos(): Collection;
     public function hasDependencies(int $id): bool;
+    
+    /**
+     * Busca conflictos de horario para un docente.
+     */
+    public function findConflictosHorario(
+        int $docenteId,
+        array $dias,
+        string $horaInicio,
+        string $horaFin,
+        ?int $ignorarId = null
+    ): Collection;
+    
+    /**
+     * Busca conflictos de horario para un aula.
+     */
+    public function findConflictosAula(
+        string $aula,
+        array $dias,
+        string $horaInicio,
+        string $horaFin,
+        ?int $ignorarId = null
+    ): Collection;
 }

@@ -77,4 +77,12 @@ interface RoleRepositoryInterface
      * @return bool
      */
     public function hasDependencies(int $id): bool;
+    
+    /**
+     * Busca un role por su nombre.
+     *
+     * @param string $nombre
+     * @return Role|null
+     */
+    public function findByNombre(string $nombre): ?Role;
 }
