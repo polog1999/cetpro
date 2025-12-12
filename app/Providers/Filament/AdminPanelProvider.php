@@ -67,11 +67,12 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->plugins([
-                AuthUIEnhancerPlugin::make()
-                    ->formPanelPosition('left')
-                    ->emptyPanelBackgroundImageUrl(asset('imagen/mdlm.png')),
-            ])
+            // Plugin deshabilitado - removido panel lateral verde
+            // ->plugins([
+            //     AuthUIEnhancerPlugin::make()
+            //         ->formPanelPosition('left'),
+            //         // ->emptyPanelBackgroundImageUrl(asset('imagen/mdlm.png')),
+            // ])
             ->navigationGroups([
                 'Gestión estudiantil',
                 'Gestión académica',
