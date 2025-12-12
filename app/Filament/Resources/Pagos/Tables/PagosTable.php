@@ -237,7 +237,7 @@ class PagosTable
     ->icon('heroicon-o-eye')
     ->color('gray')
     ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
-    ->url(fn (Pago $record): string => route('pagos.evidencia.show', $record))
+    ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
     ->openUrlInNewTab(),
 
         Action::make('subir_evidencia')
