@@ -100,4 +100,25 @@ class EstudianteResource extends Resource
     {
         return static::getModel()::count();
     }
+
+    /**
+     * Habilita la búsqueda global para Estudiantes.
+     * Permite buscar por documento, nombres o apellidos desde la barra superior.
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['nro_documento', 'nombres', 'apellido_paterno', 'apellido_materno'];
+    }
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->nombres . ' ' . $record->apellido_paterno . ' ' . $record->apellido_materno;
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Documento' => $record->nro_documento,
+        ];
+    }
 }

@@ -28,6 +28,10 @@ class DocenteForm
                 TextInput::make('nro_documento')
                     ->key('nro_documento_component')
                     ->required()
+                    ->unique(ignoreRecord: true)
+                    ->validationMessages([
+                        'unique' => 'Este número de documento ya está registrado para otro docente.',
+                    ])
                     ->maxLength(function ($get) {
                         $tipo = $get('tipo_documento');
                         if (! $tipo instanceof TipoDocumento) {
