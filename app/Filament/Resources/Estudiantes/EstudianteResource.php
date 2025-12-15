@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Estudiantes;
 use App\Filament\Resources\Estudiantes\Pages\CreateEstudiante;
 use App\Filament\Resources\Estudiantes\Pages\EditEstudiante;
 use App\Filament\Resources\Estudiantes\Pages\ListEstudiantes;
+use App\Filament\Resources\Estudiantes\Pages\ViewEstudiante;
 use App\Filament\Resources\Estudiantes\Schemas\EstudianteForm;
 use App\Filament\Resources\Estudiantes\Tables\EstudiantesTable;
 use App\Models\Estudiante;
@@ -13,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Filament\Resources\Estudiantes\RelationManagers;
 
 use Filament\Facades\Filament;
 use App\Enums\Rol;
@@ -37,10 +39,11 @@ class EstudianteResource extends Resource
         return EstudiantesTable::configure($table);
     }
 
+
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\MatriculasRelationManager::class,
         ];
     }
 
@@ -49,6 +52,7 @@ class EstudianteResource extends Resource
         return [
             'index' => ListEstudiantes::route('/'),
             'create' => CreateEstudiante::route('/create'),
+            'view' => ViewEstudiante::route('/{record}'),
             'edit' => EditEstudiante::route('/{record}/edit'),
         ];
     }

@@ -150,6 +150,7 @@ class EstudiantesTable
                     ]),
             ])
             ->actions([
+                \Filament\Actions\ViewAction::make(),
                 EditAction::make(),
                 
                 \Filament\Actions\Action::make('ver_pagos')
