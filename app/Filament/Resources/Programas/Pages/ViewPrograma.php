@@ -26,7 +26,7 @@ class ViewPrograma extends ViewRecord
         $record = $this->getRecord();
         $isPrograma = $record->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO;
         
-        return $isPrograma ? 'Agregar Módulos' : 'Agregar Cursos';
+        return $isPrograma ? 'Ver Módulos' : 'Ver Cursos';
     }
 }
 
