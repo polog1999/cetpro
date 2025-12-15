@@ -88,7 +88,9 @@ class ProgramasTable
             ])
             ->recordActions([
                 Action::make('agregarCursos')
-                    ->label('Cursos')
+                    ->label(fn (Programa $record): string => 
+                        $record->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO ? 'Módulos' : 'Cursos'
+                    )
                     ->icon('heroicon-m-academic-cap')
                     ->color('success')
                     ->button()

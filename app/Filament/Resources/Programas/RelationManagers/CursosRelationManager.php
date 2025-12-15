@@ -12,12 +12,11 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use App\Enums\TipoPrograma;
 
 class CursosRelationManager extends RelationManager
 {
     protected static string $relationship = 'cursos';
-
-    protected static ?string $title = 'Cursos';
 
     protected static ?string $recordTitleAttribute = 'nombre_curso';
 
@@ -26,11 +25,29 @@ class CursosRelationManager extends RelationManager
         return false;
     }
 
+    /**
+     * Obtiene el label dinámico según el tipo de programa.
+     * Programa = Módulo(s), Formación Continua = Curso(s)
+     */
+    protected function getItemLabel(bool $plural = false): string
+    {
+        $programa = $this->getOwnerRecord();
+        $isPrograma = $programa?->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO;
+        
+        if ($plural) {
+            return $isPrograma ? 'Módulos' : 'Cursos';
+        }
+        
+        return $isPrograma ? 'Módulo' : 'Curso';
+    }
+
     public function form(Schema $schema): Schema
     {
+        $label = $this->getItemLabel();
+        
         return $schema->components([
             Forms\Components\TextInput::make('nombre_curso')
-                ->label('Nombre de curso')
+                ->label("Nombre del {$label}")
                 ->required()
                 ->unique(ignoreRecord: true),
 
@@ -52,10 +69,14 @@ class CursosRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        $label = $this->getItemLabel();
+        $labelPlural = $this->getItemLabel(true);
+
         return $table
+            ->heading($labelPlural)
             ->columns([
                 Tables\Columns\TextColumn::make('nombre_curso')
-                    ->label('Nombre de curso')
+                    ->label("Nombre del {$label}")
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('duracion')
@@ -71,7 +92,7 @@ class CursosRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->label('Agregar curso')
+                    ->label("Agregar {$label}")
                     ->disabled(function () {
                         $programa = $this->getOwnerRecord();
                         $cursosActuales = $programa->cursos()->count();
@@ -79,16 +100,16 @@ class CursosRelationManager extends RelationManager
                         
                         return $cursosActuales >= $numeroMaximoCursos;
                     })
-                    ->tooltip(function () {
+                    ->tooltip(function () use ($labelPlural) {
                         $programa = $this->getOwnerRecord();
                         $cursosActuales = $programa->cursos()->count();
                         $numeroMaximoCursos = $programa->num_cursos;
                         
                         if ($cursosActuales >= $numeroMaximoCursos) {
-                            return "Límite alcanzado: {$cursosActuales}/{$numeroMaximoCursos} cursos";
+                            return "Límite alcanzado: {$cursosActuales}/{$numeroMaximoCursos} {$labelPlural}";
                         }
                         
-                        return "Cursos: {$cursosActuales}/{$numeroMaximoCursos}";
+                        return "{$labelPlural}: {$cursosActuales}/{$numeroMaximoCursos}";
                     })
                     ->after(function () {
                         // Refrescar después de crear
@@ -110,3 +131,4 @@ class CursosRelationManager extends RelationManager
             ]);
     }
 }
+
