@@ -34,6 +34,9 @@ class EstudianteForm
                     ->key('nro_documento_component')
                     ->required()
                     ->unique(ignoreRecord: true)
+                    ->validationMessages([
+                        'unique' => 'Este número de documento ya está registrado para otro estudiante.',
+                    ])
                     ->maxLength(function ($get) {
                         $tipo = $get('tipo_documento');
                         if (! $tipo instanceof TipoDocumento) {

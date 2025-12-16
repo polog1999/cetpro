@@ -48,12 +48,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
-                Dashboard::class,
+                \App\Filament\Pages\Dashboard::class, // Custom dashboard con filtros
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                // AccountWidget::class,
-                // FilamentInfoWidget::class,
+                // Widgets se registran en Dashboard.php personalizado
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -67,11 +66,12 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->plugins([
-                AuthUIEnhancerPlugin::make()
-                    ->formPanelPosition('left')
-                    ->emptyPanelBackgroundImageUrl(asset('imagen/mdlm.png')),
-            ])
+            // Plugin deshabilitado - removido panel lateral verde
+            // ->plugins([
+            //     AuthUIEnhancerPlugin::make()
+            //         ->formPanelPosition('left'),
+            //         // ->emptyPanelBackgroundImageUrl(asset('imagen/mdlm.png')),
+            // ])
             ->navigationGroups([
                 'Gestión estudiantil',
                 'Gestión académica',

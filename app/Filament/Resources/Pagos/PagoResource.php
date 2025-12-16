@@ -56,7 +56,7 @@ class PagoResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('PagoResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('pagos') || false;
     }
 
     public static function canCreate(): bool
@@ -90,4 +90,26 @@ class PagoResource extends Resource
     // {
     //     return static::getModel()::count();
     // }
+
+    /**
+     * Habilita la búsqueda global para Pagos.
+     * Permite buscar por código del pago.
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['codigo'];
+    }
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return 'Pago: ' . $record->codigo;
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Monto' => 'S/. ' . number_format($record->monto, 2),
+            'Estado' => $record->estado?->getLabel() ?? 'Sin estado',
+        ];
+    }
 }

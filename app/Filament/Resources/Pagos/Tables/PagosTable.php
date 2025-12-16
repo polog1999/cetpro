@@ -237,7 +237,7 @@ class PagosTable
     ->icon('heroicon-o-eye')
     ->color('gray')
     ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
-    ->url(fn (Pago $record): string => route('pagos.evidencia.show', $record))
+    ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
     ->openUrlInNewTab(),
 
         Action::make('subir_evidencia')
@@ -263,16 +263,25 @@ class PagosTable
             ->required(),
     ])
     ->action(function (Pago $record, array $data): void {
-        $fechaActual = now();
-
-        $record->update([
-            'evidencia_path' => $data['evidencia'],   // 👈 guardar ruta
-            'metodo_pago'    => $data['metodo_pago'], // 👈 nombre correcto
-            'estado'         => EstadoPago::PAGADO,
-            'fecha_pago'     => $fechaActual,
-        ]);
-
-        Notification::make()->title('Evidencia subida')->success()->send();
+        $service = app(\App\Services\PagoService::class);
+        
+        try {
+            // Delegar toda la lógica al servicio
+            $service->registrarPago(
+                pago: $record,
+                metodoPago: $data['metodo_pago'],
+                evidenciaPath: $data['evidencia'],
+                usuarioId: auth()->id()
+            );
+            
+            Notification::make()->title('Evidencia subida')->success()->send();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Notification::make()
+                ->title('Error al registrar el pago')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }),
 
 Action::make('editar_evidencia')
@@ -298,16 +307,25 @@ Action::make('editar_evidencia')
             ->required(),
     ])
     ->action(function (Pago $record, array $data): void {
-        $fechaActual = now();
-
-        $record->update([
-            'evidencia_path' => $data['evidencia'],
-            'metodo_pago'    => $data['metodo_pago'],
-            'estado'         => EstadoPago::PAGADO,
-            'fecha_pago'     => $fechaActual,
-        ]);
-
-        Notification::make()->title('Evidencia actualizada')->success()->send();
+        $service = app(\App\Services\PagoService::class);
+        
+        try {
+            // Usar el servicio para actualizar el pago
+            $service->registrarPago(
+                pago: $record,
+                metodoPago: $data['metodo_pago'],
+                evidenciaPath: $data['evidencia'],
+                usuarioId: auth()->id()
+            );
+            
+            Notification::make()->title('Evidencia actualizada')->success()->send();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Notification::make()
+                ->title('Error al actualizar')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }),
                 DeleteAction::make(),
             ])

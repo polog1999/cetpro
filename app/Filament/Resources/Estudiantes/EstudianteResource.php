@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Estudiantes;
 use App\Filament\Resources\Estudiantes\Pages\CreateEstudiante;
 use App\Filament\Resources\Estudiantes\Pages\EditEstudiante;
 use App\Filament\Resources\Estudiantes\Pages\ListEstudiantes;
+use App\Filament\Resources\Estudiantes\Pages\ViewEstudiante;
 use App\Filament\Resources\Estudiantes\Schemas\EstudianteForm;
 use App\Filament\Resources\Estudiantes\Tables\EstudiantesTable;
 use App\Models\Estudiante;
@@ -13,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Filament\Resources\Estudiantes\RelationManagers;
 
 use Filament\Facades\Filament;
 use App\Enums\Rol;
@@ -37,10 +39,11 @@ class EstudianteResource extends Resource
         return EstudiantesTable::configure($table);
     }
 
+
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\MatriculasRelationManager::class,
         ];
     }
 
@@ -49,6 +52,7 @@ class EstudianteResource extends Resource
         return [
             'index' => ListEstudiantes::route('/'),
             'create' => CreateEstudiante::route('/create'),
+            'view' => ViewEstudiante::route('/{record}'),
             'edit' => EditEstudiante::route('/{record}/edit'),
         ];
     }
@@ -57,7 +61,7 @@ class EstudianteResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('EstudianteResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('estudiantes') || false;
     }
 
     public static function canCreate(): bool
@@ -95,5 +99,26 @@ class EstudianteResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
+    }
+
+    /**
+     * Habilita la búsqueda global para Estudiantes.
+     * Permite buscar por documento, nombres o apellidos desde la barra superior.
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['nro_documento', 'nombres', 'apellido_paterno', 'apellido_materno'];
+    }
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->nombres . ' ' . $record->apellido_paterno . ' ' . $record->apellido_materno;
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Documento' => $record->nro_documento,
+        ];
     }
 }

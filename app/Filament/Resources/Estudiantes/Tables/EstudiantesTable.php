@@ -150,7 +150,27 @@ class EstudiantesTable
                     ]),
             ])
             ->actions([
+                \Filament\Actions\ViewAction::make(),
                 EditAction::make(),
+                
+                \Filament\Actions\Action::make('ver_pagos')
+                    ->label('Ver Pagos')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->color('info')
+                    ->modalHeading(fn($record) => "Pagos de {$record->nombre_completo}")
+                    ->modalWidth('5xl')
+                    ->modalContent(fn($record) => view('filament.estudiantes.ver-pagos-modal', [
+                        'estudiante' => $record->load([
+                            'matriculas.horario.programa',
+                            'matriculas.curso',
+                            'matriculas.cronograma.pagos' => function($query) {
+                                $query->orderBy('nro_cuota');
+                            }
+                        ])
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar'),
+                
                 DeleteAction::make()
                     ->before(fn (DeleteAction $action, $record) => 
                         self::preventDeleteWithDependencies(

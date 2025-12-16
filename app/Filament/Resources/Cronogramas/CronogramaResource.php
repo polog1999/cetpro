@@ -70,7 +70,7 @@ class CronogramaResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('CronogramaResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('cronogramas') || false;
     }
 
     public static function canCreate(): bool

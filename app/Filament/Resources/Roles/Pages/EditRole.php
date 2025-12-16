@@ -3,9 +3,10 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
-use App\Filament\Resources\Roles\Schemas\RoleForm;
+use App\Services\RoleService;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class EditRole extends EditRecord
 {
@@ -20,38 +21,30 @@ class EditRole extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // Cargar los toggles con los permisos actuales del rol
-        $togglesData = RoleForm::fillPermisosToggles($this->record);
+        $service = app(RoleService::class);
+        
+        // Cargar toggles de permisos usando el service
+        $togglesData = $service->prepararTogglesPermisos($this->record);
         
         return array_merge($data, $togglesData);
     }
 
-    protected array $permisosToSync = [];
-
-    protected function mutateFormDataBeforeSave(array $data): array
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        // Extraer IDs de permisos desde los toggles
-        $this->permisosToSync = RoleForm::extractPermisosFromToggles($data);
-
-        // Limpiar todos los campos de permisos del data
+        $service = app(RoleService::class);
+        
+        // Extraer permisos desde toggles
+        $permisosIds = $service->extraerPermisosDeToggles($data);
+        
+        // Limpiar toggles del data
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'permiso_')) {
                 unset($data[$key]);
             }
         }
-
-        return $data;
-    }
-
-    protected function afterSave(): void
-    {
-        // Sincronizar permisos (elimina antiguos y agrega nuevos)
-        if (!$this->record->es_admin) {
-            $this->record->permisos()->sync($this->permisosToSync);
-        } else {
-            // Si es admin, quitar todos los permisos (no los necesita)
-            $this->record->permisos()->sync([]);
-        }
+        
+        // Actualizar rol con permisos usando el service
+        return $service->actualizarConPermisos($record->id, $data, $permisosIds);
     }
 
     protected function getRedirectUrl(): string

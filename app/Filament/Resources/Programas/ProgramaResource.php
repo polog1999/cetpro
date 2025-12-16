@@ -53,19 +53,17 @@ class ProgramaResource extends Resource
         ];
     }
 
-    // Relaciones (para ver/agregar cursos desde el programa)
+    // Relaciones - vacío porque los cursos solo se muestran en ViewPrograma
     public static function getRelations(): array
     {
-        return [
-            CursosRelationManager::class,
-        ];
+        return [];
     }
 
     // Accesos
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('ProgramaResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('programas') || false;
     }
 
     public static function canCreate(): bool

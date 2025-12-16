@@ -54,8 +54,8 @@ class UsuarioResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        // Solo administradores pueden gestionar usuarios
-        return $user?->role?->es_admin || false;
+        // Administradores o usuarios con permiso de 'usuarios'
+        return $user?->role?->es_admin || $user?->canAccessResource('usuarios') || false;
     }
 
     public static function canCreate(): bool

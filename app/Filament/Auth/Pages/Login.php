@@ -4,11 +4,11 @@ namespace App\Filament\Auth\Pages;
 
 use Filament\Auth\Pages\Login as BaseLogin; // <-- v4
 use Filament\Forms\Components\TextInput;
-use DiogoGPinto\AuthUIEnhancer\Pages\Auth\Concerns\HasCustomLayout;
+// HasCustomLayout trait removido - plugin AuthUIEnhancer deshabilitado
 
 class Login extends BaseLogin
 {
-    use HasCustomLayout;
+    // Trait HasCustomLayout removido
     
     protected function getEmailFormComponent(): TextInput
     {

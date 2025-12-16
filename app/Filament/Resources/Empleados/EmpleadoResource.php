@@ -54,7 +54,7 @@ class EmpleadoResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('EmpleadoResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('empleados') || false;
     }
 
     public static function canCreate(): bool

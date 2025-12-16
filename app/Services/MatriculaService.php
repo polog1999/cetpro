@@ -19,6 +19,187 @@ use Illuminate\Validation\ValidationException;
  */
 class MatriculaService
 {
+    public function __construct(
+        private \App\Repositories\MatriculaRepositoryInterface $matriculas,
+        private \App\Repositories\HorarioRepositoryInterface $horarios
+    ) {}
+    
+    /**
+     * Valida si hay vacantes disponibles en un horario.
+     *
+     * @param int $horarioId
+     * @return array ['valido' => bool, 'mensaje' => string, 'disponibles' => int, 'total' => int]
+     */
+    public function validarVacantesDisponibles(int $horarioId): array
+    {
+        $horario = $this->horarios->find($horarioId);
+        
+        if (!$horario) {
+            return [
+                'valido' => false,
+                'mensaje' => 'El horario no existe.'
+            ];
+        }
+        
+        $matriculados = $this->matriculas->contarActivos($horarioId);
+        
+        if ($matriculados >= $horario->vacantes) {
+            return [
+                'valido' => false,
+                'mensaje' => 'No hay vacantes disponibles en este horario.',
+                'disponibles' => 0,
+                'total' => $horario->vacantes
+            ];
+        }
+        
+        return [
+            'valido' => true,
+            'disponibles' => $horario->vacantes - $matriculados,
+            'total' => $horario->vacantes
+        ];
+    }
+    
+    /**
+     * Valida si ya existe una matrícula activa para el estudiante en el horario.
+     *
+     * @param int $estudianteId
+     * @param int $horarioId
+     * @param int|null $matriculaIdIgnorar ID de matrícula a ignorar (para edición)
+     * @return array ['valido' => bool, 'mensaje' => string]
+     */
+    public function validarDuplicado(int $estudianteId, int $horarioId, ?int $matriculaIdIgnorar = null): array
+    {
+        $existe = $this->matriculas->existsMatriculaActiva(
+            $estudianteId, 
+            $horarioId, 
+            $matriculaIdIgnorar
+        );
+        
+        if ($existe) {
+            return [
+                'valido' => false,
+                'mensaje' => 'El estudiante ya está matriculado en este horario.'
+            ];
+        }
+        
+        return ['valido' => true];
+    }
+    
+    /**
+     * Genera un código de inscripción único para la matrícula.
+     *
+     * @param int $horarioId
+     * @return string|null
+     */
+    public function generarCodigoInscripcion(int $horarioId): ?string
+    {
+        $horario = $this->horarios->find($horarioId);
+        
+        if (!$horario || !$horario->id_programa) {
+            return null;
+        }
+
+        $year = now()->format('Y');
+        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+        $prefijo = "{$year}-{$programaId}";
+        
+        $count = $this->matriculas->contarPorPrefijoCodigo($prefijo);
+        
+        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        
+        return "{$year}-{$programaId}-{$secuencial}";
+    }
+    
+    /**
+     * Crea una nueva matrícula con todas las validaciones.
+     *
+     * @param array $data
+     * @return Matricula
+     * @throws ValidationException
+     */
+    public function crear(array $data): Matricula
+    {
+        // 1. Validar vacantes disponibles
+        $validacionVacantes = $this->validarVacantesDisponibles($data['horario_id']);
+        if (!$validacionVacantes['valido']) {
+            throw ValidationException::withMessages([
+                'horario_id' => $validacionVacantes['mensaje']
+            ]);
+        }
+        
+        // 2. Validar matrícula no duplicada
+        $validacionDuplicado = $this->validarDuplicado(
+            $data['estudiante_id'], 
+            $data['horario_id']
+        );
+        if (!$validacionDuplicado['valido']) {
+            throw ValidationException::withMessages([
+                'estudiante_id' => $validacionDuplicado['mensaje']
+            ]);
+        }
+        
+        // 3. Generar código de inscripción si no existe
+        if (empty($data['codigo_inscripcion'])) {
+            $data['codigo_inscripcion'] = $this->generarCodigoInscripcion($data['horario_id']);
+        }
+        
+        // 4. Establecer valores por defecto
+        $data['estado'] = $data['estado'] ?? EstadoMatricula::ACTIVO;
+        $data['fecha_inscripcion'] = $data['fecha_inscripcion'] ?? now();
+        
+        // 5. Crear matrícula
+        return $this->matriculas->create($data);
+    }
+    
+    /**
+     * Actualiza una matrícula existente con validaciones.
+     *
+     * @param int $matriculaId
+     * @param array $data
+     * @return Matricula
+     * @throws ValidationException
+     */
+    public function actualizar(int $matriculaId, array $data): Matricula
+    {
+        $matricula = $this->matriculas->find($matriculaId);
+        
+        if (!$matricula) {
+            throw ValidationException::withMessages([
+                'matricula' => 'La matrícula no existe.'
+            ]);
+        }
+        
+        // No permitir modificar matrículas anuladas
+        if ($matricula->estado === EstadoMatricula::ANULADO) {
+            throw ValidationException::withMessages([
+                'estado' => 'No se puede modificar una matrícula anulada.'
+            ]);
+        }
+        
+        // Si cambia el horario, validar vacantes y duplicados
+        if (isset($data['horario_id']) && $data['horario_id'] !== $matricula->horario_id) {
+            $validacionVacantes = $this->validarVacantesDisponibles($data['horario_id']);
+            if (!$validacionVacantes['valido']) {
+                throw ValidationException::withMessages([
+                    'horario_id' => $validacionVacantes['mensaje']
+                ]);
+            }
+            
+            $validacionDuplicado = $this->validarDuplicado(
+                $matricula->estudiante_id,
+                $data['horario_id'],
+                $matriculaId
+            );
+            if (!$validacionDuplicado['valido']) {
+                throw ValidationException::withMessages([
+                    'horario_id' => $validacionDuplicado['mensaje']
+                ]);
+            }
+        }
+        
+        return $this->matriculas->update($matricula, $data);
+    }
+    
     /**
      * Valida si un estudiante puede matricularse en un horario específico.
      *

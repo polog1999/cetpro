@@ -62,7 +62,7 @@ class MatriculaResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('MatriculaResource') || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('matriculas') || false;
     }
 
     public static function canCreate(): bool
@@ -88,5 +88,26 @@ class MatriculaResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return static::canViewAny();
+    }
+
+    /**
+     * Habilita la búsqueda global para Matrículas.
+     * Permite buscar por código de inscripción o nombre del estudiante.
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['codigo_inscripcion', 'estudiante.nombres', 'estudiante.apellido_paterno', 'estudiante.nro_documento'];
+    }
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->codigo_inscripcion;
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Estudiante' => $record->estudiante?->nombres . ' ' . $record->estudiante?->apellido_paterno,
+        ];
     }
 }

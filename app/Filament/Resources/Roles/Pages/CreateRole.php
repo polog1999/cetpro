@@ -3,37 +3,30 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
-use App\Filament\Resources\Roles\Schemas\RoleForm;
+use App\Services\RoleService;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class CreateRole extends CreateRecord
 {
     protected static string $resource = RoleResource::class;
 
-    protected array $permisosToSync = [];
-
-    protected function mutateFormDataBeforeCreate(array $data): array
+    protected function handleRecordCreation(array $data): Model
     {
-        // Extraer IDs de permisos desde los toggles
-        $this->permisosToSync = RoleForm::extractPermisosFromToggles($data);
-
-        // Limpiar todos los campos de permisos del data
-        // (para que no intente guardarlos en la tabla roles)
+        $service = app(RoleService::class);
+        
+        // Extraer permisos desde toggles
+        $permisosIds = $service->extraerPermisosDeToggles($data);
+        
+        // Limpiar toggles del data
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'permiso_')) {
                 unset($data[$key]);
             }
         }
-
-        return $data;
-    }
-
-    protected function afterCreate(): void
-    {
-        // Sincronizar permisos después de crear el rol
-        if (!empty($this->permisosToSync) && !$this->record->es_admin) {
-            $this->record->permisos()->sync($this->permisosToSync);
-        }
+        
+        // Crear rol con permisos usando el service
+        return $service->crearConPermisos($data, $permisosIds);
     }
 
     protected function getRedirectUrl(): string

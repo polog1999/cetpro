@@ -217,7 +217,7 @@ class EvidenciaPagoService
         }
 
         // Verificar permisos específicos
-        if ($usuario->can AccessResource('PagoResource')) {
+        if ($usuario->canAccessResource('pagos')) {
             return true;
         }
 

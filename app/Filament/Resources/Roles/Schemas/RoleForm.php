@@ -8,7 +8,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -50,7 +50,7 @@ class RoleForm
                 // Mensaje cuando es admin
                 Placeholder::make('admin_notice')
                     ->label('')
-                    ->content('ℹ️ Los roles de administrador tienen acceso total. No es necesario configurar permisos individuales.')
+                    ->content('Los roles de administrador tienen acceso total. No es necesario configurar permisos individuales.')
                     ->visible(fn (Get $get) => $get('es_admin'))
                     ->columnSpanFull(),
 
@@ -59,57 +59,57 @@ class RoleForm
                     ->description('Active los permisos que tendrá este rol en el sistema')
                     ->schema([
                         // Gestión Estudiantil
-                        Section::make('👥 Gestión Estudiantil')
+                        Section::make('Gestión Estudiantil')
                             ->description('Permisos relacionados con estudiantes y matrículas')
                             ->schema(
                                 self::getPermisosToggles('Gestión Estudiantil')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed(),
 
                         // Gestión Académica
-                        Section::make('📚 Gestión Académica')
+                        Section::make('Gestión Académica')
                             ->description('Permisos para programas, cursos y horarios')
                             ->schema(
                                 self::getPermisosToggles('Gestión Académica')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed(),
 
                         // Gestión Administrativa
-                        Section::make('🏢 Gestión Administrativa')
+                        Section::make('Gestión Administrativa')
                             ->description('Permisos administrativos y de personal')
                             ->schema(
                                 self::getPermisosToggles('Gestión Administrativa')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed(),
 
                         // Gestión Financiera
-                        Section::make('💰 Gestión Financiera')
+                        Section::make('Gestión Financiera')
                             ->description('Permisos para pagos, cronogramas y finanzas')
                             ->schema(
                                 self::getPermisosToggles('Gestión Financiera')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed(),
 
                         // Gestión de Usuarios
-                        Section::make('👤 Gestión de Usuarios')
+                        Section::make('Gestión de Usuarios')
                             ->description('Permisos para usuarios, roles y permisos')
                             ->schema(
                                 self::getPermisosToggles('Gestión de Usuarios')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed(),
 
                         // Gestión de Pagos (si existe como grupo separado)
-                        Section::make('🔐 Gestión de Pagos')
+                        Section::make('Gestión de Pagos')
                             ->description('Permisos específicos de pagos y evidencias')
                             ->schema(
                                 self::getPermisosToggles('Gestión de Pagos')
                             )
-                            ->columns(2)
+                            ->columns(3)
                             ->collapsed()
                             ->visible(fn () => Permiso::where('grupo', 'Gestión de Pagos')->exists()),
                     ])
@@ -120,7 +120,7 @@ class RoleForm
     }
 
     /**
-     * Genera los toggles para un grupo de permisos
+     * Genera los toggles para un grupo de permisos con selector masivo
      *
      * @param string $grupo
      * @return array
@@ -134,14 +134,42 @@ class RoleForm
         if ($permisos->isEmpty()) {
             return [
                 Placeholder::make("no_permisos_{$grupo}")
-                    ->label('')
+                    ->hiddenLabel()
                     ->content('No hay permisos configurados para este grupo.')
                     ->columnSpanFull(),
             ];
         }
 
         $toggles = [];
+        $grupoSlug = str_replace(' ', '_', strtolower($grupo));
+        
+        // Crear array de IDs de permisos de este grupo
+        $permisosIds = $permisos->pluck('id')->toArray();
+        
+        // Toggle Buttons para selección masiva
+        $toggles[] = \Filament\Forms\Components\ToggleButtons::make("selector_{$grupoSlug}")
+            ->hiddenLabel()
+            ->options([
+                'ninguno' => 'Ninguno',
+                'todos' => 'Todos',
+            ])
+            ->inline()
+            ->live()
+            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) use ($permisosIds) {
+                if ($state === 'todos') {
+                    foreach ($permisosIds as $permisoId) {
+                        $set("permiso_{$permisoId}", true);
+                    }
+                } elseif ($state === 'ninguno') {
+                    foreach ($permisosIds as $permisoId) {
+                        $set("permiso_{$permisoId}", false);
+                    }
+                }
+            })
+            ->dehydrated(false)
+            ->columnSpanFull();
 
+        // Toggles simples en 3 columnas (ya no hay sub-módulos)
         foreach ($permisos as $permiso) {
             $fieldName = "permiso_{$permiso->id}";
             
@@ -150,7 +178,8 @@ class RoleForm
                 ->helperText($permiso->descripcion ?? '')
                 ->inline(false)
                 ->default(false)
-                ->live();
+                ->live()
+                ->columnSpan(1);
         }
 
         return $toggles;
