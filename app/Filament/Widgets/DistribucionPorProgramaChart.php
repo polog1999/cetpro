@@ -7,7 +7,7 @@ use App\Services\DashboardService;
 
 class DistribucionPorProgramaChart extends ChartWidget
 {
-    protected ?string $heading = 'Top 10 Programas por Matrícula';
+    protected ?string $heading = 'Programas por Matrícula';
     protected static ?int $sort = 4;
     protected ?string $maxHeight = '300px';
 

@@ -41,7 +41,7 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Emerald,
                 'warning' => Color::Orange,
             ])
-
+             ->sidebarCollapsibleOnDesktop()
             #Fuente tipográfica
             ->font('Lato')
 

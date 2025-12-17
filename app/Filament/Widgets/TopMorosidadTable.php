@@ -27,7 +27,7 @@ class TopMorosidadTable extends BaseWidget
         }
         
         return $table
-            ->heading('Top 10 Morosidad')
+            ->heading('Morosidad')
             ->description('Estudiantes con mayor deuda vencida')
             ->query(
                 fn () => Estudiante::query()

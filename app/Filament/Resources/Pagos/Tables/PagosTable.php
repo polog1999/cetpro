@@ -327,12 +327,10 @@ Action::make('editar_evidencia')
                 ->send();
         }
     }),
-                DeleteAction::make(),
+                
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                
             ]);
     }
 }
