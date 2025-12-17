@@ -8,7 +8,6 @@ use App\Models\Matricula;
 use App\Models\Horario;
 use App\Enums\TipoMatricula;
 use App\Enums\EstadoMatricula;
-use App\Enums\Tip;
 use Filament\Resources\Pages\Page;
 
 use Filament\Schemas\Schema;
@@ -150,10 +149,9 @@ class MatriculaMasiva extends Page implements HasSchemas, HasTable
                         }
 
                         // Determinar tipo de matrícula según el programa
-                        $tipoPrograma = $horario->programa->tipo_programa;
-                        $tipoMatricula = match($tipoPrograma) {
-                            Tip::PROGRAMA           => TipoMatricula::PROGRAMA,
-                            Tip::FORMACION_CONTINUA => TipoMatricula::FORMACION_CONTINUA,
+                        $tipoMatricula = match($horario->programa->tipo_programa) {
+                            'PROGRAMA'           => TipoMatricula::PROGRAMA,
+                            'FORMACION_CONTINUA' => TipoMatricula::FORMACION_CONTINUA,
                             default                 => TipoMatricula::PROGRAMA,
                         };
 
