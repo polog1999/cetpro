@@ -1,0 +1,725 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "CETPRO MDLM API",
+        "description": "API REST para el Sistema de Gestión del Centro de Educación Técnico Productiva María de Lourdes Muñoz.\n\n## Módulos Disponibles\n- **Estudiantes**: Gestión de estudiantes y apoderados\n- **Matrículas**: Inscripciones, cronogramas de pago y pagos\n- **Académico**: Programas, cursos, especialidades y horarios\n- **RRHH**: Docentes y empleados\n- **Sistema**: Usuarios, roles y permisos\n\n## Autenticación\nEsta API no requiere autenticación para fines de desarrollo. En producción, se recomienda implementar autenticación via Sanctum o Passport.",
+        "contact": {
+            "name": "Soporte CETPRO",
+            "email": "soporte@cetpro-mdlm.edu.pe"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://cetpro-mdlm.test/api/v1",
+            "description": "Servidor Laravel Herd"
+        }
+    ],
+    "paths": {
+        "/matriculas": {
+            "get": {
+                "tags": [
+                    "Matrículas"
+                ],
+                "summary": "Listar todas las matrículas",
+                "description": "Retorna un listado completo de todas las matrículas registradas con información del estudiante, horario y cronograma.",
+                "operationId": "2242bb7551c1fa455384899e69b1fc47",
+                "responses": {
+                    "200": {
+                        "description": "Lista de matrículas obtenida exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "codigo_inscripcion": {
+                                                        "type": "string",
+                                                        "example": "MAT-2024-00001"
+                                                    },
+                                                    "tipo_matricula": {
+                                                        "type": "string",
+                                                        "example": "Programa"
+                                                    },
+                                                    "estado": {
+                                                        "type": "string",
+                                                        "example": "activa"
+                                                    },
+                                                    "fecha_registro": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2024-01-15"
+                                                    },
+                                                    "estudiante": {
+                                                        "type": "object"
+                                                    },
+                                                    "horario": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Matrículas"
+                ],
+                "summary": "Crear nueva matrícula",
+                "description": "Registra una nueva matrícula para un estudiante. El sistema genera automáticamente el cronograma de pagos.",
+                "operationId": "11edb22251359bbbc3e6b97bab3dfc3f",
+                "requestBody": {
+                    "description": "Datos de la matrícula",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "estudiante_id",
+                                    "horario_id",
+                                    "tipo_matricula",
+                                    "turno"
+                                ],
+                                "properties": {
+                                    "estudiante_id": {
+                                        "description": "ID del estudiante a matricular",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "horario_id": {
+                                        "description": "ID del horario seleccionado",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "tipo_matricula": {
+                                        "description": "Tipo de matrícula",
+                                        "type": "string",
+                                        "enum": [
+                                            "Programa",
+                                            "Formación Continua",
+                                            "Curso",
+                                            "Módulo"
+                                        ],
+                                        "example": "Programa"
+                                    },
+                                    "turno": {
+                                        "description": "Turno de la matrícula",
+                                        "type": "string",
+                                        "enum": [
+                                            "Mañana",
+                                            "Tarde",
+                                            "Noche"
+                                        ],
+                                        "example": "Mañana"
+                                    },
+                                    "costo_total": {
+                                        "description": "Costo total de la matrícula",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200,
+                                        "nullable": true
+                                    },
+                                    "observaciones": {
+                                        "description": "Observaciones adicionales",
+                                        "type": "string",
+                                        "example": "Estudiante becado al 50%",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Matrícula creada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/matriculas/{id}": {
+            "get": {
+                "tags": [
+                    "Matrículas"
+                ],
+                "summary": "Obtener detalle de una matrícula",
+                "description": "Retorna la información completa de una matrícula específica incluyendo estudiante, horario, cronograma y pagos.",
+                "operationId": "003c7fce99e116601e3b85d961bebf9a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la matrícula",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matrícula encontrada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "codigo_inscripcion": {
+                                                    "type": "string",
+                                                    "example": "MAT-2024-00001"
+                                                },
+                                                "tipo_matricula": {
+                                                    "type": "string",
+                                                    "example": "Programa"
+                                                },
+                                                "estado": {
+                                                    "type": "string",
+                                                    "example": "activa"
+                                                },
+                                                "fecha_registro": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "estudiante": {
+                                                    "type": "object"
+                                                },
+                                                "horario": {
+                                                    "type": "object"
+                                                },
+                                                "cronograma": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Matrícula no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/matriculas/{id}/anular": {
+            "post": {
+                "tags": [
+                    "Matrículas"
+                ],
+                "summary": "Anular una matrícula",
+                "description": "Anula una matrícula existente. El estado de la matrícula y sus pagos asociados serán actualizados.",
+                "operationId": "f8f533d5a2922d65e265537c8038f71f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la matrícula a anular",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matrícula anulada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Matrícula anulada exitosamente"
+                                                },
+                                                "matricula": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error al anular la matrícula",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error interno del servidor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pagos/{id}": {
+            "get": {
+                "tags": [
+                    "Pagos"
+                ],
+                "summary": "Obtener detalle de un pago",
+                "description": "Retorna la información detallada de un pago específico incluyendo datos del cronograma, matrícula y estudiante.",
+                "operationId": "31c15295bca2631483c5c9c15e881ac3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del pago",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pago encontrado exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "monto": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 150
+                                                },
+                                                "fecha_vencimiento": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-12-31"
+                                                },
+                                                "fecha_pago": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-12-15",
+                                                    "nullable": true
+                                                },
+                                                "estado": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "pendiente",
+                                                        "pagado",
+                                                        "vencido",
+                                                        "anulado"
+                                                    ],
+                                                    "example": "pagado"
+                                                },
+                                                "metodo_pago": {
+                                                    "type": "string",
+                                                    "example": "efectivo",
+                                                    "nullable": true
+                                                },
+                                                "numero_cuota": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pago no encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pagos/{id}/registrar": {
+            "post": {
+                "tags": [
+                    "Pagos"
+                ],
+                "summary": "Registrar pago de una cuota",
+                "description": "Marca una cuota como pagada registrando el método de pago y opcionalmente la evidencia del pago.",
+                "operationId": "248e073ace8593d54c4adc05d9bca6e7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del pago a registrar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Datos del pago",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "metodo_pago"
+                                ],
+                                "properties": {
+                                    "metodo_pago": {
+                                        "description": "Método de pago utilizado",
+                                        "type": "string",
+                                        "enum": [
+                                            "efectivo",
+                                            "transferencia",
+                                            "yape",
+                                            "plin",
+                                            "deposito"
+                                        ],
+                                        "example": "efectivo"
+                                    },
+                                    "evidencia_path": {
+                                        "description": "Ruta del archivo de evidencia del pago (voucher, captura, etc.)",
+                                        "type": "string",
+                                        "example": "pagos/voucher_001.pdf",
+                                        "nullable": true
+                                    },
+                                    "usuario_id": {
+                                        "description": "ID del usuario que registra el pago (opcional, por defecto el usuario autenticado)",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pago registrado exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Pago registrado exitosamente"
+                                                },
+                                                "pago": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pago no encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pagos/{id}/anular": {
+            "post": {
+                "tags": [
+                    "Pagos"
+                ],
+                "summary": "Anular un pago",
+                "description": "Marca un pago como anulado, revirtiendo su estado a pendiente.",
+                "operationId": "58e8bfa1e3ae029abc46dc8735d45d39",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del pago a anular",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pago anulado exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Pago anulado exitosamente"
+                                                },
+                                                "pago": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pago no encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error al anular el pago",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pagos/{id}/revertir": {
+            "post": {
+                "tags": [
+                    "Pagos"
+                ],
+                "summary": "Revertir un pago",
+                "description": "Revierte completamente un pago registrado, devolviendo el estado a pendiente. Requiere permisos especiales y un motivo justificado.",
+                "operationId": "4da1f8da07df15cc0f866cbf42a9c4b1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del pago a revertir",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Motivo de la reversión",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "motivo"
+                                ],
+                                "properties": {
+                                    "motivo": {
+                                        "description": "Motivo por el cual se revierte el pago",
+                                        "type": "string",
+                                        "example": "Error en el monto registrado"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pago revertido exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Pago revertido exitosamente"
+                                                },
+                                                "pago": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pago no encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error al revertir el pago",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "SuccessResponse": {
+                "properties": {
+                    "data": {
+                        "description": "Datos de la respuesta",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Error al procesar la solicitud"
+                    },
+                    "errors": {
+                        "description": "Detalles de los errores de validación",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "NotFoundResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Recurso no encontrado"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Pagos",
+            "description": "Gestión de pagos de cuotas"
+        },
+        {
+            "name": "Matrículas",
+            "description": "Gestión de matrículas de estudiantes"
+        }
+    ]
+}

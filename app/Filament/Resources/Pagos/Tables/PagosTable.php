@@ -244,7 +244,7 @@ class PagosTable
     ->label('Subir Evidencia')
     ->icon('heroicon-o-arrow-up-on-square')
     ->color('success')
-    ->visible(fn (Pago $record): bool => $record->estado === EstadoPago::PENDIENTE)
+    ->visible(fn (Pago $record): bool => empty($record->evidencia_path))
     ->form([
         Select::make('metodo_pago')
             ->options([
@@ -288,7 +288,7 @@ Action::make('editar_evidencia')
     ->label('Editar evidencia')
     ->icon('heroicon-o-pencil')
     ->color('info')
-    ->visible(fn (Pago $record): bool => $record->estado === EstadoPago::PAGADO)
+    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
     ->form([
         Select::make('metodo_pago')
             ->options([
