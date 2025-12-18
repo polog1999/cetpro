@@ -12,6 +12,10 @@ return [
             'driver' => 'session',
             'provider' => 'usuarios', // << debe existir abajo
         ],
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'usuarios',
+        ],
     ],
 
     'providers' => [

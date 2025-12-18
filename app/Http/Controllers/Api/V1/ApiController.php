@@ -24,7 +24,18 @@ use OpenApi\Attributes as OA;
 - **Sistema**: Usuarios, roles y permisos
 
 ## Autenticación
-Esta API no requiere autenticación para fines de desarrollo. En producción, se recomienda implementar autenticación via Sanctum o Passport.",
+Esta API utiliza **Laravel Sanctum** para autenticación mediante Bearer Token.
+
+### Pasos para autenticarse:
+1. **Obtener token:** `POST /api/v1/auth/login` con `usuario` y `password`
+2. **Usar token:** Incluir header `Authorization: Bearer {token}` en cada petición
+3. **Cerrar sesión:** `POST /api/v1/auth/logout`
+
+### Endpoint público (sin autenticación):
+- `POST /api/v1/auth/login`
+
+### Endpoints protegidos (requieren token):
+- Todos los demás endpoints",
     contact: new OA\Contact(
         name: "Soporte CETPRO",
         email: "soporte@cetpro-mdlm.edu.pe"
@@ -34,6 +45,14 @@ Esta API no requiere autenticación para fines de desarrollo. En producción, se
     url: "http://cetpro-mdlm.test/api/v1",
     description: "Servidor Laravel Herd"
 )]
+#[OA\SecurityScheme(
+    securityScheme: "bearerAuth",
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+    description: "Token de autenticación Sanctum. Obtener via POST /auth/login"
+)]
+#[OA\Tag(name: "Autenticación", description: "Login, logout y gestión de sesión")]
 #[OA\Tag(name: "Pagos", description: "Gestión de pagos de cuotas")]
 #[OA\Tag(name: "Matrículas", description: "Gestión de matrículas de estudiantes")]
 #[OA\Tag(name: "Estudiantes", description: "Gestión de estudiantes")]

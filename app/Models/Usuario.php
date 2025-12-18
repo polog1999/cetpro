@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Laravel\Sanctum\HasApiTokens;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory; // Importar HasFactory
 
 class Usuario extends Authenticatable implements FilamentUser, HasName
 {
-    use Notifiable, HasFactory; // Usar HasFactory
+    use Notifiable, HasFactory, HasApiTokens;
 
     protected $table = 'usuarios';
 
