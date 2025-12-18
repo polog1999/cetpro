@@ -89,7 +89,7 @@ class AdminPanelProvider extends PanelProvider
                     ->label('Cambiar Contraseña')
                     ->url(fn (): string => \App\Filament\Pages\Auth\ChangePassword::getUrl())
                     ->icon('heroicon-o-key'),
-            ]);
-            // ->spa(hasPrefetching: true);
+            ])
+            ->spa(); // Navegación fluida tipo app
     }
 }

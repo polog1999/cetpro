@@ -47,7 +47,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => 60 * 24, // 24 horas - tokens expiran para mayor seguridad
 
     /*
     |--------------------------------------------------------------------------

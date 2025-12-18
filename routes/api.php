@@ -39,8 +39,8 @@ Route::prefix('v1')->group(function () {
     // RUTAS PÚBLICAS (sin autenticación)
     // ============================================
     
-    // Autenticación
-    Route::post('auth/login', [AuthController::class, 'login']);
+    // Autenticación con rate limiting (5 intentos/minuto por IP)
+    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
     
     // Consultas públicas (opcional - para landing page, catálogos, etc.)
     // Descomenta las siguientes líneas si necesitas acceso público:
@@ -53,7 +53,7 @@ Route::prefix('v1')->group(function () {
     // RUTAS PROTEGIDAS (requieren token Bearer)
     // ============================================
     
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
         // --------------------------------------------
         // Autenticación (rutas protegidas)
