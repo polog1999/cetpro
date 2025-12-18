@@ -58,9 +58,7 @@ class EstudiantesTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('apoderado.id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('apoderado.nombre_completo'),
                 TextColumn::make('grado_instruccion')
                     ->searchable(),
                 TextColumn::make('provincia')

@@ -162,7 +162,7 @@ class MatriculasTable
 
                 // 👉 Botón para visualizar/descargar PDF de la ficha
                 Action::make('visualizar_ficha_pdf')
-                    ->label('Visualizar Ficha PDF')
+                    ->label('Ficha matrícula PDF')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading('Vista previa - Ficha de Matrícula')
@@ -211,7 +211,7 @@ class MatriculasTable
 
                 // 👉 Botón para visualizar/descargar PDF de cursos/módulos
                 Action::make('visualizar_cursos_pdf')
-                    ->label('Visualizar Cursos/Módulos PDF')
+                    ->label('Cursos/Módulos PDF')
                     ->icon('heroicon-o-academic-cap')
                     ->color('success')
                     ->modalHeading('Vista previa - Cursos/Módulos del Programa')
@@ -260,7 +260,7 @@ class MatriculasTable
 
                 // 👉 Botón para exportar directamente a Excel (sin modal)
                 Action::make('exportar_excel')
-                    ->label('Exportar excel (cursos)')
+                    ->label('Exportar cursos (excel)')
                     ->icon('heroicon-o-table-cells')
                     ->color('success')
                     ->action(function (Matricula $record) {
