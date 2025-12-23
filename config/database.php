@@ -113,6 +113,30 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Oracle Connection (External TUSNE Database)
+        |--------------------------------------------------------------------------
+        |
+        | Conexión a base de datos Oracle externa para consultas TUSNE.
+        | Configura las variables ORACLE_* en tu archivo .env
+        |
+        | IMPORTANTE: Requiere la extensión PHP oci8:
+        | 1. Descarga Oracle Instant Client
+        | 2. Habilita extension=oci8 en php.ini
+        |
+        */
+        'oracle' => [
+            'driver'       => 'pdo',
+            'host'         => env('ORACLE_HOST', ''),
+            'port'         => env('ORACLE_PORT', '1521'),
+            'database'     => env('ORACLE_DATABASE', ''),
+            'service_name' => env('ORACLE_SERVICE_NAME', ''),
+            'username'     => env('ORACLE_USERNAME', ''),
+            'password'     => env('ORACLE_PASSWORD', ''),
+            'charset'      => env('ORACLE_CHARSET', 'AL32UTF8'),
+        ],
+
     ],
 
     /*
