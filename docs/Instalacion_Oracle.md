@@ -58,7 +58,7 @@
 
 2. Busca la versión que diga:
    - **8.4**
-   - **Thread Safe (TS)**
+   - **N.. Thread Safe (NTS)**
    - **x64**
    
    El archivo se llama algo como: `php_oci8-3.4.0-8.4-ts-vs17-x64.zip`

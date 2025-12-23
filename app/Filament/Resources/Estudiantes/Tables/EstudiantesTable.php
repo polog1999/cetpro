@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Estudiantes\Tables;
 
 use App\Filament\Traits\PreventDeleteWithDependencies;
+use App\Services\OracleTusneService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -11,6 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 
 class EstudiantesTable
 {
@@ -21,6 +23,51 @@ class EstudiantesTable
             ->columns([
                 TextColumn::make('nro_documento')
                     ->searchable(),
+                
+                // Columna virtual - Código de Contribuyente desde Oracle
+                TextColumn::make('codigo_contribuyente')
+                    ->label('Cód. Contribuyente')
+                    ->getStateUsing(function ($record): string {
+                        // Cache por 1 hora para evitar consultas repetidas
+                        return Cache::remember(
+                            "contribuyente_dni_{$record->nro_documento}",
+                            3600,
+                            function () use ($record) {
+                                try {
+                                    $oracle = app(OracleTusneService::class);
+                                    $personas = $oracle->buscarPersona(numDoc: $record->nro_documento);
+                                    
+                                    if ($personas->isNotEmpty()) {
+                                        // Obtener todos los códigos únicos
+                                        $codigos = $personas
+                                            ->pluck('CODIGO')
+                                            ->filter()
+                                            ->map(fn($codigo) => trim($codigo))
+                                            ->unique()
+                                            ->values()
+                                            ->toArray();
+                                        
+                                        if (!empty($codigos)) {
+                                            return implode(', ', $codigos);
+                                        }
+                                    }
+                                    
+                                    return 'Sin número';
+                                } catch (\Exception $e) {
+                                    return 'Error';
+                                }
+                            }
+                        );
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Sin número' => 'warning',
+                        'Error' => 'danger',
+                        default => 'success',
+                    })
+                    ->copyable()
+                    ->copyMessage('Código copiado'),
+                    
                 TextColumn::make('nombres')
                     ->searchable(),
                 TextColumn::make('apellido_paterno')
