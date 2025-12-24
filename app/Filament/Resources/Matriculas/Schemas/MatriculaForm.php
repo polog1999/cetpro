@@ -18,11 +18,16 @@ use App\Models\Horario;
 use App\Models\Curso;
 use App\Models\Apoderado;
 
+use App\Services\OracleTusneService;
+
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
+
+use Filament\Notifications\Notification;
 
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
@@ -80,6 +85,63 @@ class MatriculaForm
                     ->required()
                     ->live()
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                        // Limpiar estado de validación previo
+                        $set('codigo_contribuyente_status', null);
+                        
+                        if (!$state) {
+                            return;
+                        }
+                        
+                        // Obtener el estudiante seleccionado
+                        $estudiante = Estudiante::find($state);
+                        
+                        if (!$estudiante || !$estudiante->nro_documento) {
+                            return;
+                        }
+                        
+                        // Validar código de contribuyente
+                        try {
+                            $oracle = app(OracleTusneService::class);
+                            $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($estudiante->nro_documento);
+                            
+                            if (!$codigoReciente || empty($codigoReciente->CODIGO)) {
+                                // NO tiene código - mostrar modal y limpiar formulario
+                                Notification::make()
+                                    ->title('⚠️ Estudiante sin código de contribuyente')
+                                    ->body("El estudiante {$estudiante->nombres} {$estudiante->apellido_paterno} {$estudiante->apellido_materno} no posee un código de contribuyente vigente. No es posible proseguir con la matrícula.")
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+                                
+                                // Limpiar todos los campos del formulario
+                                $set('estudiante_id', null);
+                                $set('codigo_inscripcion', null);
+                                $set('tipo_matricula', null);
+                                $set('programa_intermediario', null);
+                                $set('formacion_continua_intermediaria', null);
+                                $set('horario_id', null);
+                                $set('id_curso', null);
+                                $set('cursos_matriculados', null);
+                                $set('codigo_contribuyente_status', null);
+                                
+                                return;
+                            }
+                            
+                            // SÍ tiene código - mostrar mensaje de éxito
+                            $set('codigo_contribuyente_status', 'success');
+                            
+                        } catch (\Exception $e) {
+                            // Error en conexión Oracle
+                            Notification::make()
+                                ->title('Error de conexión')
+                                ->body('No se pudo verificar el código de contribuyente. Por favor, intente nuevamente.')
+                                ->warning()
+                                ->send();
+                            
+                            $set('codigo_contribuyente_status', 'error');
+                        }
+                        
+                        // Generar código de inscripción si todo está bien
                         static::generarCodigoInscripcion($set, $get);
                     })
                     ->createOptionForm([
@@ -214,7 +276,25 @@ class MatriculaForm
                             ->icon('heroicon-m-plus')
                     ),
 
-
+                // ----------------------------------------
+                // MENSAJE DE VALIDACIÓN DE CÓDIGO CONTRIBUYENTE
+                // ----------------------------------------
+                Placeholder::make('codigo_contribuyente_validacion')
+                    ->label('')
+                    ->content(function (Get $get): string {
+                        $status = $get('codigo_contribuyente_status');
+                        
+                        if ($status === 'success') {
+                            return '✓ Apto para matricular';
+                        }
+                        
+                        return '';
+                    })
+                    ->visible(fn (Get $get) => $get('codigo_contribuyente_status') === 'success')
+                    ->extraAttributes([
+                        'class' => 'text-success-600 font-semibold',
+                        'style' => 'color: #10b981; font-weight: 600; margin-top: -0.5rem;'
+                    ]),
 
                 // ----------------------------------------
                 // TIPO DE MATRÍCULA (ENUM REAL)
