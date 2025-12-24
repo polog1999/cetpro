@@ -259,6 +259,48 @@ class OracleTusneService
     }
 
     /**
+     * Genera un código de liquidación usando la función Oracle fu_digito_generar.
+     * 
+     * Esta función Oracle genera códigos únicos de liquidación para los pagos
+     * de estudiantes matriculados.
+     *
+     * @param string $codigoEspecialidad Código B000X según especialidad (B0001, B0002, B0003)
+     * @param string $codigoContribuyente Código de contribuyente del estudiante
+     * @return string|null Código de liquidación generado o null si falla
+     * @throws Exception Si hay error en la consulta
+     */
+    public function generarCodigoLiquidacion(
+        string $codigoEspecialidad,
+        string $codigoContribuyente
+    ): ?string {
+        try {
+            $sql = "
+                SELECT ds_valores.fu_digito_generar(
+                    '1312',
+                    '23',
+                    :codigo_especialidad,
+                    :codigo_contribuyente,
+                    'CETPRO'
+                ) AS LIQUIDACION
+                FROM DUAL
+            ";
+            
+            $resultado = $this->executeQuery($sql, [
+                ':codigo_especialidad' => $codigoEspecialidad,
+                ':codigo_contribuyente' => $codigoContribuyente,
+            ]);
+            
+            return $resultado->first()?->LIQUIDACION;
+        } catch (Exception $e) {
+            Log::error('Error generando código de liquidación Oracle: ' . $e->getMessage(), [
+                'codigo_especialidad' => $codigoEspecialidad,
+                'codigo_contribuyente' => $codigoContribuyente,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Busca una persona por su número de documento.
      *
      * @param string $numDoc Número de documento
