@@ -35,21 +35,11 @@ class EstudiantesTable
                             function () use ($record) {
                                 try {
                                     $oracle = app(OracleTusneService::class);
-                                    $personas = $oracle->buscarPersona(numDoc: $record->nro_documento);
+                                    // Usar el nuevo método que retorna solo el código más reciente
+                                    $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($record->nro_documento);
                                     
-                                    if ($personas->isNotEmpty()) {
-                                        // Obtener todos los códigos únicos
-                                        $codigos = $personas
-                                            ->pluck('CODIGO')
-                                            ->filter()
-                                            ->map(fn($codigo) => trim($codigo))
-                                            ->unique()
-                                            ->values()
-                                            ->toArray();
-                                        
-                                        if (!empty($codigos)) {
-                                            return implode(', ', $codigos);
-                                        }
+                                    if ($codigoReciente && !empty($codigoReciente->CODIGO)) {
+                                        return trim($codigoReciente->CODIGO);
                                     }
                                     
                                     return 'Sin número';

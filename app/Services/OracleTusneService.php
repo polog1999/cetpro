@@ -220,6 +220,45 @@ class OracleTusneService
     }
 
     /**
+     * Obtiene el código de contribuyente más reciente por número de documento.
+     * 
+     * Retorna únicamente el código con la fecha de emisión (EMITIDO) más reciente,
+     * realizando un JOIN entre VU_BUSCA_TUSNE_PER y VU_BUSCA_TUSNE_PER_Pen.
+     *
+     * @param string $numDoc Número de documento
+     * @return object|null Objeto con CODIGO, EMITIDO y CONCEPTO, o null si no existe
+     * @throws Exception Si hay error en la consulta
+     */
+    public function obtenerCodigoContribuyenteMasReciente(string $numDoc): ?object
+    {
+        try {
+            $sql = "
+                SELECT 
+                    l.CODIGO,
+                    l.EMITIDO,
+                    l.CONCEPTO
+                FROM 
+                    {$this->schema}.VU_BUSCA_TUSNE_PER p
+                JOIN 
+                    {$this->schema}.VU_BUSCA_TUSNE_PER_Pen l ON p.CODIGO = l.CODIGO
+                WHERE 
+                    p.NUMDOC = :numdoc
+                ORDER BY 
+                    TO_DATE(l.EMITIDO, 'DD/MM/YYYY') DESC
+                FETCH FIRST 1 ROWS ONLY
+            ";
+            
+            $resultados = $this->executeQuery($sql, [':numdoc' => $numDoc]);
+            return $resultados->first();
+        } catch (Exception $e) {
+            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: ' . $e->getMessage(), [
+                'numDoc' => $numDoc,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Busca una persona por su número de documento.
      *
      * @param string $numDoc Número de documento
