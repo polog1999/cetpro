@@ -153,21 +153,67 @@ class MatriculaForm
                                     ->schema([
                                         Select::make('tipo_documento')
                                             ->options(TipoDocumento::class)
-                                            ->required(),
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(fn (Select $component) => $component
+                                                ->getContainer()
+                                                ->getComponent('modal_nro_documento')
+                                                ?->state(null)
+                                            ),
     
                                         TextInput::make('nro_documento')
+                                            ->key('modal_nro_documento')
                                             ->required()
-                                            ->unique(Estudiante::class, 'nro_documento'),
+                                            ->unique(Estudiante::class, 'nro_documento')
+                                            ->validationMessages([
+                                                'unique' => 'Este número de documento ya está registrado para otro estudiante.',
+                                            ])
+                                            ->maxLength(function (Get $get) {
+                                                $tipo = $get('tipo_documento');
+                                                if (! $tipo instanceof TipoDocumento) {
+                                                    $tipo = TipoDocumento::tryFrom($tipo);
+                                                }
+                                                return $tipo?->getMaxLength() ?? 8;
+                                            })
+                                            ->extraInputAttributes(function (Get $get) {
+                                                $tipo = $get('tipo_documento');
+                                                if (! $tipo instanceof TipoDocumento) {
+                                                    $tipo = TipoDocumento::tryFrom($tipo);
+                                                }
+                                                $isNumeric = $tipo?->isNumeric() ?? true;
+                                                $maxLength = $tipo?->getMaxLength() ?? 8;
+                                                
+                                                $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
+                                                
+                                                return [
+                                                    'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
+                                                ];
+                                            }),
     
                                         TextInput::make('nombres')
                                             ->required()
-                                            ->columnSpanFull(),
+                                            ->columnSpanFull()
+                                            ->regex('/^[\pL\s]+$/u')
+                                            ->validationMessages([
+                                                'regex' => 'Solo se permiten letras y espacios.',
+                                            ])
+                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
     
                                         TextInput::make('apellido_paterno')
-                                            ->required(),
+                                            ->required()
+                                            ->regex('/^[\pL\s]+$/u')
+                                            ->validationMessages([
+                                                'regex' => 'Solo se permiten letras y espacios.',
+                                            ])
+                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
     
                                         TextInput::make('apellido_materno')
-                                            ->required(),
+                                            ->required()
+                                            ->regex('/^[\pL\s]+$/u')
+                                            ->validationMessages([
+                                                'regex' => 'Solo se permiten letras y espacios.',
+                                            ])
+                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
                                     ]),
 
                                     Section::make('Datos adicionales')
@@ -182,7 +228,10 @@ class MatriculaForm
                                         DatePicker::make('fecha_nacimiento'),
     
                                         TextInput::make('telefono')
-                                            ->tel(),
+                                            ->tel()
+                                            ->numeric()
+                                            ->maxLength(9)
+                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"]),
     
                                         TextInput::make('email')
                                             ->label('Email')
@@ -211,63 +260,108 @@ class MatriculaForm
                                     Select::make('apoderado_tipo_documento')
                                         ->label('Tipo de documento del apoderado')
                                         ->options(TipoDocumento::class)
+                                        ->live()
                                         ->nullable(),
 
                                     TextInput::make('apoderado_nro_documento')
                                         ->label('N° documento del apoderado')
-                                        ->unique(Apoderado::class, 'nro_documento'),
+                                        ->unique(Apoderado::class, 'nro_documento')
+                                        ->validationMessages([
+                                            'unique' => 'Este número de documento ya está registrado para otro apoderado.',
+                                        ])
+                                        ->maxLength(function (Get $get) {
+                                            $tipo = $get('apoderado_tipo_documento');
+                                            if (! $tipo instanceof TipoDocumento) {
+                                                $tipo = TipoDocumento::tryFrom($tipo);
+                                            }
+                                            return $tipo?->getMaxLength() ?? 8;
+                                        })
+                                        ->extraInputAttributes(function (Get $get) {
+                                            $tipo = $get('apoderado_tipo_documento');
+                                            if (! $tipo instanceof TipoDocumento) {
+                                                $tipo = TipoDocumento::tryFrom($tipo);
+                                            }
+                                            $isNumeric = $tipo?->isNumeric() ?? true;
+                                            $maxLength = $tipo?->getMaxLength() ?? 8;
+                                            
+                                            $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
+                                            
+                                            return [
+                                                'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
+                                            ];
+                                        }),
 
                                     TextInput::make('apoderado_nombres')
                                         ->label('Nombres del apoderado')
-                                        ->columnSpanFull(),
+                                        ->columnSpanFull()
+                                        ->regex('/^[\pL\s]*$/u')
+                                        ->validationMessages([
+                                            'regex' => 'Solo se permiten letras y espacios.',
+                                        ])
+                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
                                     TextInput::make('apoderado_apellido_paterno')
-                                        ->label('Apellido paterno del apoderado'),
+                                        ->label('Apellido paterno del apoderado')
+                                        ->regex('/^[\pL\s]*$/u')
+                                        ->validationMessages([
+                                            'regex' => 'Solo se permiten letras y espacios.',
+                                        ])
+                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
                                     TextInput::make('apoderado_apellido_materno')
-                                        ->label('Apellido materno del apoderado'),
+                                        ->label('Apellido materno del apoderado')
+                                        ->regex('/^[\pL\s]*$/u')
+                                        ->validationMessages([
+                                            'regex' => 'Solo se permiten letras y espacios.',
+                                        ])
+                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
                                     TextInput::make('apoderado_telefono')
                                         ->label('Teléfono del apoderado')
                                         ->tel()
+                                        ->numeric()
+                                        ->maxLength(9)
+                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"])
                                         ->nullable(),
                                 ])
                                 ->columns(2),
                         ])->skippable(),
                     ])
                     ->createOptionUsing(function (array $data): int {
-                        $service = app(\App\Services\EstudianteService::class);
-                        
-                        // Separar datos de estudiante y apoderado
-                        $apoderadoData = array_filter([
-                            'tipo_documento' => $data['apoderado_tipo_documento'] ?? null,
-                            'nro_documento' => $data['apoderado_nro_documento'] ?? null,
-                            'nombres' => $data['apoderado_nombres'] ?? null,
-                            'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
-                            'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
-                            'telefono' => $data['apoderado_telefono'] ?? null,
-                        ]);
-                        
-                        $estudianteData = [
-                            'tipo_documento' => $data['tipo_documento'],
-                            'nro_documento' => $data['nro_documento'],
-                            'nombres' => $data['nombres'],
-                            'apellido_paterno' => $data['apellido_paterno'],
-                            'apellido_materno' => $data['apellido_materno'],
-                            'genero' => $data['genero'] ?? null,
-                            'estado_civil' => $data['estado_civil'] ?? null,
-                            'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
-                            'telefono' => $data['telefono'] ?? null,
-                            'direccion' => $data['direccion'] ?? null,
-                            'email' => $data['email'] ?? null,
-                            'grado_instruccion' => $data['grado_instruccion'] ?? null,
-                            'provincia' => $data['provincia'] ?? null,
-                            'distrito' => $data['distrito'] ?? null,
-                        ];
-                        
-                        $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
-                        
-                        return $estudiante->getKey();
+                        return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+                            $service = app(\App\Services\EstudianteService::class);
+                            
+                            // Separar datos de estudiante y apoderado
+                            $apoderadoData = array_filter([
+                                'tipo_documento' => $data['apoderado_tipo_documento'] ?? null,
+                                'nro_documento' => $data['apoderado_nro_documento'] ?? null,
+                                'nombres' => $data['apoderado_nombres'] ?? null,
+                                'apellido_paterno' => $data['apoderado_apellido_paterno'] ?? null,
+                                'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
+                                'telefono' => $data['apoderado_telefono'] ?? null,
+                            ]);
+                            
+                            $estudianteData = [
+                                'tipo_documento' => $data['tipo_documento'],
+                                'nro_documento' => $data['nro_documento'],
+                                'nombres' => $data['nombres'],
+                                'apellido_paterno' => $data['apellido_paterno'],
+                                'apellido_materno' => $data['apellido_materno'],
+                                'genero' => $data['genero'] ?? null,
+                                'estado_civil' => $data['estado_civil'] ?? null,
+                                'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
+                                'telefono' => $data['telefono'] ?? null,
+                                'direccion' => $data['direccion'] ?? null,
+                                'email' => $data['email'] ?? null,
+                                'grado_instruccion' => $data['grado_instruccion'] ?? null,
+                                'provincia' => $data['provincia'] ?? null,
+                                'distrito' => $data['distrito'] ?? null,
+                            ];
+                            
+                            $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
+                            
+                            return (int) $estudiante->id;
+                        });
                     })
                     ->createOptionAction(
                         fn (Action $action) => $action
