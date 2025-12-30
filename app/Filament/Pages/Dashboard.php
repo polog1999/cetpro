@@ -58,6 +58,7 @@ class Dashboard extends BaseDashboard
             // 3. Tablas
             \App\Filament\Widgets\ActividadRecienteTable::class,
             \App\Filament\Widgets\TopMorosidadTable::class,
+            \App\Filament\Widgets\NotasSummaryWidget::class,
         ];
     }
     

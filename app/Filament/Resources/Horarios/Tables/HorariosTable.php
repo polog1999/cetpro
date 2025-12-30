@@ -19,6 +19,9 @@ use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\Usuario;
 
 class HorariosTable
 {
@@ -176,6 +179,17 @@ class HorariosTable
                             )
                         ),
                 ]),
-            ]);
+            ])
+            ->modifyQueryUsing(function (Builder $query) {
+                /** @var Usuario|null $user */
+                $user = Auth::user();
+                
+                // Si es profesor, mostrar solo sus horarios
+                if ($user instanceof Usuario && $user->esProfesor() && $user->docente_id) {
+                    $query->where('id_docente', $user->docente_id);
+                }
+                
+                return $query;
+            });
     }
 }

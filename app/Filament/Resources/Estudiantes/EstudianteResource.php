@@ -44,6 +44,7 @@ class EstudianteResource extends Resource
     {
         return [
             RelationManagers\MatriculasRelationManager::class,
+            RelationManagers\NotasRelationManager::class,
         ];
     }
 

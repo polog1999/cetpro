@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 use App\Models\Apoderado;
+use App\Models\Nota;
+use App\Models\Matricula;
 use App\Enums\EstadoCivil;
 use App\Enums\TipoGenero;
 use App\Enums\TipoDocumento;
@@ -73,6 +75,18 @@ class Estudiante extends Model
 
     public function matriculas()
     {
-        return $this->hasMany(\App\Models\Matricula::class, 'estudiante_id', 'id');
+        return $this->hasMany(Matricula::class, 'estudiante_id', 'id');
+    }
+
+    public function notas()
+    {
+        return $this->hasManyThrough(
+            Nota::class,
+            Matricula::class,
+            'estudiante_id', // FK en matriculas
+            'matricula_id', // FK en notas
+            'id', // PK en estudiantes
+            'id' // PK en matriculas
+        );
     }
 }
