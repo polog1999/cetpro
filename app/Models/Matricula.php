@@ -60,6 +60,30 @@ class Matricula extends Model
     }
 
     /**
+     * Relación con Notas
+     */
+    public function notas()
+    {
+        return $this->hasMany(Nota::class);
+    }
+
+    /**
+     * Obtener el promedio general de todas las notas
+     */
+    public function obtenerPromedioGeneral(): float
+    {
+        return $this->notas()->avg('nota') ?? 0;
+    }
+
+    /**
+     * Obtener notas agrupadas por curso
+     */
+    public function obtenerNotasPorCurso($cursoId)
+    {
+        return $this->notas()->where('curso_id', $cursoId)->get();
+    }
+
+    /**
      * Genera y guarda el cronograma de pagos de esta matrícula
      * y sus cuotas (pagos) correspondientes.
      */

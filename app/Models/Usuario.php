@@ -22,6 +22,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     protected $fillable = [
         'empleado_id',
+        'docente_id',   // << Vinculación con docentes
         'role_id',      // << Nuevo campo
         'usuario',      // campo “username”
         'password',
@@ -55,6 +56,22 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Relación con Docente
+     */
+    public function docente(): BelongsTo
+    {
+        return $this->belongsTo(Docente::class);
+    }
+
+    /**
+     * Verificar si el usuario es profesor
+     */
+    public function esProfesor(): bool
+    {
+        return $this->role?->nombre === 'Profesor' || $this->docente_id !== null;
     }
 
     /**

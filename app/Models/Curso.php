@@ -29,4 +29,12 @@ class Curso extends Model
     {
         return $this->hasMany(Matricula::class, 'id_curso', 'id_curso');
     }
+
+    /**
+     * Relación con Notas
+     */
+    public function notas()
+    {
+        return $this->hasMany(Nota::class, 'curso_id', 'id_curso');
+    }
 }
