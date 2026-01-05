@@ -28,7 +28,7 @@ class MatriculasTable
         return $table
             ->columns([
                 TextColumn::make('codigo_inscripcion')
-                    ->label('Código de matrícula')
+                    ->label('Código')
                     ->searchable()
                     ->sortable(),
 
@@ -43,7 +43,7 @@ class MatriculasTable
                     ->searchable(),
 
                 TextColumn::make('tipo_matricula')
-                    ->label('Tipo de matrícula')
+                    ->label('Tipo')
                     ->sortable()
                     ->searchable(),
 
@@ -162,7 +162,8 @@ class MatriculasTable
 
                 // 👉 Botón para visualizar/descargar PDF de la ficha
                 Action::make('visualizar_ficha_pdf')
-                    ->label('Ficha matrícula PDF')
+                    ->label('')
+                    ->tooltip('Visualizar ficha matrícula PDF')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading('Vista previa - Ficha de Matrícula')
@@ -187,7 +188,7 @@ class MatriculasTable
                     ->modalFooterActions(function (Matricula $record) {
                         return [
                             Action::make('descargar_ficha')
-                                ->label('Descargar archivo PDF')
+                                ->tooltip('Descargar ficha matrícula PDF')
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('primary')
                                 ->action(function () use ($record) {
@@ -211,7 +212,8 @@ class MatriculasTable
 
                 // 👉 Botón para visualizar/descargar PDF de cursos/módulos
                 Action::make('visualizar_cursos_pdf')
-                    ->label('Cursos/Módulos PDF')
+                    ->label('')
+                    ->tooltip('Cursos/Módulos PDF')
                     ->icon('heroicon-o-academic-cap')
                     ->color('success')
                     ->modalHeading('Vista previa - Cursos/Módulos del Programa')
@@ -260,7 +262,8 @@ class MatriculasTable
 
                 // 👉 Botón para exportar directamente a Excel (sin modal)
                 Action::make('exportar_excel')
-                    ->label('Exportar cursos (excel)')
+                    ->label('')
+                    ->tooltip('Exportar cursos (excel)')
                     ->icon('heroicon-o-table-cells')
                     ->color('success')
                     ->action(function (Matricula $record) {
@@ -294,7 +297,7 @@ class MatriculasTable
                     })
                     ->visible(fn (Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
 
-                DeleteAction::make(),
+                // DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

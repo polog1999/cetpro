@@ -28,7 +28,6 @@ class NotasSummaryWidget extends BaseWidget
             $query->where('id_docente', $user->docente_id);
         })->count();
         $totalNotas = Nota::where('docente_id', $user->docente_id)->count();
-        $promedioGeneral = Nota::where('docente_id', $user->docente_id)->avg('nota');
         $horariosAsignados = Horario::where('id_docente', $user->docente_id)->count();
         return [
             Stat::make('Total de Estudiantes', $totalEstudiantes)
@@ -43,10 +42,6 @@ class NotasSummaryWidget extends BaseWidget
                 ->description('Total de evaluaciones')
                 ->descriptionIcon('heroicon-m-document-text')
                 ->color('info'),
-            Stat::make('Promedio General', $promedioGeneral ? number_format($promedioGeneral, 2) : '0.00')
-                ->description('De todas mis notas')
-                ->descriptionIcon('heroicon-m-chart-bar')
-                ->color($promedioGeneral >= 14 ? 'success' : ($promedioGeneral >= 11 ? 'warning' : 'danger')),
         ];
     }
 }

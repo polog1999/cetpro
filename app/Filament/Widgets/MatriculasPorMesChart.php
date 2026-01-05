@@ -46,4 +46,12 @@ class MatriculasPorMesChart extends ChartWidget
             ],
         ];
     }
+    
+    /**
+     * No visible para profesores
+     */
+    public static function canView(): bool
+    {
+        return !auth()->user()?->esProfesor();
+    }
 }

@@ -339,7 +339,7 @@ class DashboardService
                 'pagos.id',
                 'pagos.created_at as fecha',
                 DB::raw("'Pago registrado' as tipo"),
-                DB::raw("CONCAT('Pago ', pagos.codigo, ' - ', pagos.monto, ' Soles.') as descripcion"),
+                DB::raw("CONCAT('Pago ', ' - ', pagos.monto, ' Soles.') as descripcion"),
                 'usuarios.usuario as usuario'
             )
             ->join('usuarios', 'usuarios.id', '=', 'pagos.usuario_id')

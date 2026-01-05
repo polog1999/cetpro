@@ -62,15 +62,12 @@ class HorariosTable
                         return $state;
                     }),
 
-                TextColumn::make('horario')
-                    ->label('Horas'),
-
                 TextColumn::make('aula')
                     ->label('Aula')
                     ->toggleable(),
 
                 TextColumn::make('matriculas_count')
-                    ->label('Alumnos inscritos')
+                    ->label('Inscritos')
                     ->counts('matriculas')
                     ->badge()
                     ->color('success')
@@ -98,18 +95,10 @@ class HorariosTable
                     ->button()
                     ->color('info')
                     ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
-                EditAction::make(),
-                DeleteAction::make()
-                    ->before(fn (DeleteAction $action, $record) => 
-                        self::preventDeleteWithDependencies(
-                            $action,
-                            $record,
-                            'matriculas',
-                            'matrícula(s) activa(s)'
-                        )
-                    ),
+                
                 Action::make('visualizar_pdf')
-                    ->label('Visualizar PDF')
+                    ->label('')
+                    ->tooltip('Visualizar PDF')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading('Vista previa del PDF')
@@ -165,10 +154,22 @@ class HorariosTable
                         ];
                     })
                     ->modalWidth('7xl'),
+                DeleteAction::make()
+                    ->label('')
+                    ->visible(fn () => !auth()->user()?->esProfesor())
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'matriculas',
+                            'matrícula(s) activa(s)'
+                        )
+                    ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
+                        ->visible(fn () => !auth()->user()?->esProfesor())
                         ->before(fn (DeleteBulkAction $action, $records) => 
                             self::preventBulkDeleteWithDependencies(
                                 $action,

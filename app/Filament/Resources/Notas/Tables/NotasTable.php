@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\ImageColumn;
 
 class NotasTable
 {
@@ -14,27 +15,25 @@ class NotasTable
     {
         return $table
             ->columns([
-                TextColumn::make('matricula.id')
+                TextColumn::make('matricula.codigo_inscripcion')
+                    ->label('Código de matrícula')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('curso.id_curso')
+                TextColumn::make('curso.nombre_curso')
+                    ->label('Curso')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('docente.id')
+                TextColumn::make('docente.nombres')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('tipo_evaluacion')
-                    ->searchable(),
-                TextColumn::make('periodo')
-                    ->searchable(),
-                TextColumn::make('nota')
+                TextColumn::make('nota_numerica')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('nota_letra')
-                    ->searchable(),
-                TextColumn::make('fecha_evaluacion')
-                    ->date()
-                    ->sortable(),
+                TextColumn::make('nota_letra'),
+                ImageColumn::make('pdf_calificacion')
+                    ->label('Calificación')
+                    ->circular()
+                    ->stacked(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -48,11 +47,13 @@ class NotasTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn () => !auth()->user()?->esProfesor()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn () => !auth()->user()?->esProfesor()),
                 ]),
             ]);
     }
