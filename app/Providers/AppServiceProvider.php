@@ -38,8 +38,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip());
         });
 
-        // Registrar Observer para actualizar estado de matrícula automáticamente
+        // Registrar Observers
         \App\Models\Pago::observe(\App\Observers\PagoObserver::class);
+        \App\Models\Usuario::observe(\App\Observers\UsuarioObserver::class);
 
         // Registrar Policies
         \Illuminate\Support\Facades\Gate::policy(\App\Models\Usuario::class, \App\Policies\UsuarioPolicy::class);

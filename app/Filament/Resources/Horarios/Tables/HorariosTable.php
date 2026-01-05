@@ -19,6 +19,9 @@ use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\Usuario;
 
 class HorariosTable
 {
@@ -59,15 +62,12 @@ class HorariosTable
                         return $state;
                     }),
 
-                TextColumn::make('horario')
-                    ->label('Horas'),
-
                 TextColumn::make('aula')
                     ->label('Aula')
                     ->toggleable(),
 
                 TextColumn::make('matriculas_count')
-                    ->label('Alumnos inscritos')
+                    ->label('Inscritos')
                     ->counts('matriculas')
                     ->badge()
                     ->color('success')
@@ -95,18 +95,10 @@ class HorariosTable
                     ->button()
                     ->color('info')
                     ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
-                EditAction::make(),
-                DeleteAction::make()
-                    ->before(fn (DeleteAction $action, $record) => 
-                        self::preventDeleteWithDependencies(
-                            $action,
-                            $record,
-                            'matriculas',
-                            'matrícula(s) activa(s)'
-                        )
-                    ),
+                
                 Action::make('visualizar_pdf')
-                    ->label('Visualizar PDF')
+                    ->label('')
+                    ->tooltip('Visualizar PDF')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading('Vista previa del PDF')
@@ -162,10 +154,22 @@ class HorariosTable
                         ];
                     })
                     ->modalWidth('7xl'),
+                DeleteAction::make()
+                    ->label('')
+                    ->visible(fn () => !auth()->user()?->esProfesor())
+                    ->before(fn (DeleteAction $action, $record) => 
+                        self::preventDeleteWithDependencies(
+                            $action,
+                            $record,
+                            'matriculas',
+                            'matrícula(s) activa(s)'
+                        )
+                    ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
+                        ->visible(fn () => !auth()->user()?->esProfesor())
                         ->before(fn (DeleteBulkAction $action, $records) => 
                             self::preventBulkDeleteWithDependencies(
                                 $action,
@@ -176,6 +180,17 @@ class HorariosTable
                             )
                         ),
                 ]),
-            ]);
+            ])
+            ->modifyQueryUsing(function (Builder $query) {
+                /** @var Usuario|null $user */
+                $user = Auth::user();
+                
+                // Si es profesor, mostrar solo sus horarios
+                if ($user instanceof Usuario && $user->esProfesor() && $user->docente_id) {
+                    $query->where('id_docente', $user->docente_id);
+                }
+                
+                return $query;
+            });
     }
 }

@@ -38,5 +38,28 @@ class Docente extends Model
     {
         return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
     }
-    
+
+    /**
+     * Relación con Usuario (un docente puede tener acceso al sistema)
+     */
+    public function usuario()
+    {
+        return $this->hasOne(Usuario::class, 'docente_id');
+    }
+
+    /**
+     * Relación con Notas registradas por este docente
+     */
+    public function notas(): HasMany
+    {
+        return $this->hasMany(Nota::class);
+    }
+
+    /**
+     * Verificar si el docente tiene acceso al sistema
+     */
+    public function tieneAccesoSistema(): bool
+    {
+        return $this->usuario()->exists();
+    }
 }

@@ -60,25 +60,46 @@ class MatriculaService
     }
     
     /**
-     * Valida si ya existe una matrícula activa para el estudiante en el horario.
+     * Valida si ya existe una matrícula activa para el estudiante.
+     * 
+     * La validación depende del tipo de matrícula:
+     * - PROGRAMA/FORMACION_CONTINUA: Solo una por horario
+     * - CURSO: Solo una por curso específico (permite múltiples cursos del mismo programa)
      *
      * @param int $estudianteId
      * @param int $horarioId
      * @param int|null $matriculaIdIgnorar ID de matrícula a ignorar (para edición)
+     * @param TipoMatricula|null $tipoMatricula Tipo de matrícula a validar
+     * @param int|null $cursoId ID del curso (requerido para tipo CURSO)
      * @return array ['valido' => bool, 'mensaje' => string]
      */
-    public function validarDuplicado(int $estudianteId, int $horarioId, ?int $matriculaIdIgnorar = null): array
-    {
-        $existe = $this->matriculas->existsMatriculaActiva(
+    public function validarDuplicado(
+        int $estudianteId, 
+        int $horarioId, 
+        ?int $matriculaIdIgnorar = null,
+        ?TipoMatricula $tipoMatricula = null,
+        ?int $cursoId = null
+    ): array {
+        $existe = $this->tieneMatriculaDuplicada(
             $estudianteId, 
-            $horarioId, 
+            $horarioId,
+            $tipoMatricula,
+            $cursoId,
             $matriculaIdIgnorar
         );
         
         if ($existe) {
+            // Mensaje diferenciado según tipo de matrícula
+            if ($tipoMatricula === TipoMatricula::CURSO) {
+                return [
+                    'valido' => false,
+                    'mensaje' => 'El estudiante ya está matriculado en este curso.'
+                ];
+            }
+            
             return [
                 'valido' => false,
-                'mensaje' => 'El estudiante ya está matriculado en este horario.'
+                'mensaje' => 'El estudiante ya está matriculado en este programa o formación continua.'
             ];
         }
         
@@ -236,9 +257,13 @@ class MatriculaService
             $errores[] = 'No hay vacantes disponibles en este horario.';
         }
 
-        // 4. Validar matrícula duplicada
-        if ($this->tieneMatriculaDuplicada($estudianteId, $horarioId)) {
-            $errores[] = 'El estudiante ya está matriculado en este horario.';
+        // 4. Validar matrícula duplicada según tipo
+        if ($this->tieneMatriculaDuplicada($estudianteId, $horarioId, $tipoMatricula, $cursoId)) {
+            if ($tipoMatricula === TipoMatricula::CURSO) {
+                $errores[] = 'El estudiante ya está matriculado en este curso.';
+            } else {
+                $errores[] = 'El estudiante ya está matriculado en este programa o formación continua.';
+            }
         }
 
         // 5. Validar requisitos de módulos (si es tipo MODULO)
@@ -277,17 +302,54 @@ class MatriculaService
     }
 
     /**
-     * Verifica si un estudiante ya tiene una matrícula activa en un horario.
+     * Verifica si un estudiante ya tiene una matrícula activa.
+     * 
+     * La lógica de duplicado varía según el tipo:
+     * - PROGRAMA/FORMACION_CONTINUA: Duplicado si existe una del mismo tipo en el mismo horario
+     * - CURSO: Duplicado solo si existe una para el mismo curso específico
      *
      * @param int $estudianteId
      * @param int $horarioId
+     * @param TipoMatricula|null $tipoMatricula
+     * @param int|null $cursoId
+     * @param int|null $matriculaIdIgnorar ID de matrícula a ignorar (para edición)
      * @return bool
      */
-    public function tieneMatriculaDuplicada(int $estudianteId, int $horarioId): bool
-    {
-        return Matricula::where('estudiante_id', $estudianteId)
+    public function tieneMatriculaDuplicada(
+        int $estudianteId, 
+        int $horarioId,
+        ?TipoMatricula $tipoMatricula = null,
+        ?int $cursoId = null,
+        ?int $matriculaIdIgnorar = null
+    ): bool {
+        $query = Matricula::where('estudiante_id', $estudianteId)
+            ->where('estado', '!=', EstadoMatricula::ANULADO);
+        
+        // Ignorar matrícula específica (para edición)
+        if ($matriculaIdIgnorar) {
+            $query->where('id', '!=', $matriculaIdIgnorar);
+        }
+        
+        // Lógica diferenciada según tipo de matrícula
+        if ($tipoMatricula === TipoMatricula::CURSO && $cursoId) {
+            // Para CURSO: solo es duplicado si es el mismo curso exacto
+            return $query
+                ->where('id_curso', $cursoId)
+                ->where('tipo_matricula', TipoMatricula::CURSO->value)
+                ->exists();
+        }
+        
+        if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::FORMACION_CONTINUA) {
+            // Para PROGRAMA/FORMACION_CONTINUA: solo una por horario del mismo tipo
+            return $query
+                ->where('horario_id', $horarioId)
+                ->whereIn('tipo_matricula', [TipoMatricula::PROGRAMA->value, TipoMatricula::FORMACION_CONTINUA->value])
+                ->exists();
+        }
+        
+        // Fallback: comportamiento original (para compatibilidad)
+        return $query
             ->where('horario_id', $horarioId)
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
             ->exists();
     }
 

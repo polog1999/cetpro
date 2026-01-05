@@ -100,19 +100,17 @@ class KPIsGenerales extends BaseWidget
     }
     
     /**
-     * Control de visibilidad por rol
+     * Control de visibilidad por rol - No visible para profesores
      */
     public static function canView(): bool
     {
         $user = auth()->user();
         
-        // Admin ve todo
-        if ($user?->role?->es_admin) {
-            return true;
+        // Profesores no ven widgets administrativos
+        if ($user?->esProfesor()) {
+            return false;
         }
         
-        // Usuarios con permiso específico (si existe el permiso 'dashboard')
-        // Por ahora permitimos a todos los usuarios autenticados
         return true;
     }
 }

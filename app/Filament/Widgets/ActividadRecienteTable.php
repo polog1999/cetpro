@@ -17,4 +17,12 @@ class ActividadRecienteTable extends Widget
         $dashboardService = app(DashboardService::class);
         $this->actividades = $dashboardService->getActividadReciente([], 20);
     }
+    
+    /**
+     * No visible para profesores
+     */
+    public static function canView(): bool
+    {
+        return !auth()->user()?->esProfesor();
+    }
 }

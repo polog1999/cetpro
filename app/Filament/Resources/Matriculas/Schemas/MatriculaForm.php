@@ -571,10 +571,19 @@ class MatriculaForm
                                 return;
                             }
                             
-                            // 2. Validar matrícula no duplicada
+                            // 2. Validar matrícula no duplicada (con tipo y curso)
                             $estudianteId = $get('estudiante_id');
+                            $tipoMatricula = $get('tipo_matricula');
+                            $cursoId = $get('id_curso');
+                            
                             if ($estudianteId) {
-                                $validacion = $service->validarDuplicado($estudianteId, $value);
+                                $validacion = $service->validarDuplicado(
+                                    $estudianteId, 
+                                    $value,
+                                    null, // matriculaIdIgnorar
+                                    $tipoMatricula,
+                                    $cursoId
+                                );
                                 if (!$validacion['valido']) {
                                     $fail($validacion['mensaje']);
                                 }

@@ -93,4 +93,12 @@ class TopMorosidadTable extends BaseWidget
             ])
             ->paginated(false);
     }
+    
+    /**
+     * No visible para profesores
+     */
+    public static function canView(): bool
+    {
+        return !auth()->user()?->esProfesor();
+    }
 }

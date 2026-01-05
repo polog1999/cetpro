@@ -13,7 +13,8 @@ class ListDocentes extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            // No permite crear docentes manualmente
+            // CreateAction::make(),
         ];
     }
 }

@@ -55,16 +55,9 @@ class DocentesTable
                 //
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make()
-                    ->before(fn (DeleteAction $action, $record) => 
-                        self::preventDeleteWithDependencies(
-                            $action,
-                            $record,
-                            'horarios',
-                            'horario(s) asignado(s)'
-                        )
-                    ),
+                // Sin acciones disponibles
+                // Los docentes se crean automáticamente desde usuarios
+                // Para editar, actualizar el empleado relacionado
             ])
             ->bulkActions([
                 BulkActionGroup::make([
