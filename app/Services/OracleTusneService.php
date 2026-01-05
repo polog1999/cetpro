@@ -220,6 +220,87 @@ class OracleTusneService
     }
 
     /**
+     * Obtiene el código de contribuyente más reciente por número de documento.
+     * 
+     * Retorna únicamente el código con la fecha de emisión (EMITIDO) más reciente,
+     * realizando un JOIN entre VU_BUSCA_TUSNE_PER y VU_BUSCA_TUSNE_PER_Pen.
+     *
+     * @param string $numDoc Número de documento
+     * @return object|null Objeto con CODIGO, EMITIDO y CONCEPTO, o null si no existe
+     * @throws Exception Si hay error en la consulta
+     */
+    public function obtenerCodigoContribuyenteMasReciente(string $numDoc): ?object
+    {
+        try {
+            $sql = "
+                SELECT 
+                    l.CODIGO,
+                    l.EMITIDO,
+                    l.CONCEPTO
+                FROM 
+                    {$this->schema}.VU_BUSCA_TUSNE_PER p
+                JOIN 
+                    {$this->schema}.VU_BUSCA_TUSNE_PER_Pen l ON p.CODIGO = l.CODIGO
+                WHERE 
+                    p.NUMDOC = :numdoc
+                ORDER BY 
+                    TO_DATE(l.EMITIDO, 'DD/MM/YYYY') DESC
+                FETCH FIRST 1 ROWS ONLY
+            ";
+            
+            $resultados = $this->executeQuery($sql, [':numdoc' => $numDoc]);
+            return $resultados->first();
+        } catch (Exception $e) {
+            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: ' . $e->getMessage(), [
+                'numDoc' => $numDoc,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Genera un código de liquidación usando la función Oracle fu_digito_generar.
+     * 
+     * Esta función Oracle genera códigos únicos de liquidación para los pagos
+     * de estudiantes matriculados.
+     *
+     * @param string $codigoEspecialidad Código B000X según especialidad (B0001, B0002, B0003)
+     * @param string $codigoContribuyente Código de contribuyente del estudiante
+     * @return string|null Código de liquidación generado o null si falla
+     * @throws Exception Si hay error en la consulta
+     */
+    public function generarCodigoLiquidacion(
+        string $codigoEspecialidad,
+        string $codigoContribuyente
+    ): ?string {
+        try {
+            $sql = "
+                SELECT ds_valores.fu_digito_generar(
+                    '1312',
+                    '23',
+                    :codigo_especialidad,
+                    :codigo_contribuyente,
+                    'CETPRO'
+                ) AS LIQUIDACION
+                FROM DUAL
+            ";
+            
+            $resultado = $this->executeQuery($sql, [
+                ':codigo_especialidad' => $codigoEspecialidad,
+                ':codigo_contribuyente' => $codigoContribuyente,
+            ]);
+            
+            return $resultado->first()?->LIQUIDACION;
+        } catch (Exception $e) {
+            Log::error('Error generando código de liquidación Oracle: ' . $e->getMessage(), [
+                'codigo_especialidad' => $codigoEspecialidad,
+                'codigo_contribuyente' => $codigoContribuyente,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Busca una persona por su número de documento.
      *
      * @param string $numDoc Número de documento

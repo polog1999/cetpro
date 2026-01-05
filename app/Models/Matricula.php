@@ -120,6 +120,7 @@ class Matricula extends Model
      * - monto: monto_total / num_cuotas (ajustando el último por redondeo)
      * - estado: pendiente
      * - fecha_vencimiento: fin de cada mes según la lógica de cursos/programa
+     * - num_liquidacion: código generado desde Oracle (si aplica)
      */
     protected function generarPagosParaCronograma(Cronograma $cronograma): void
     {
@@ -145,10 +146,77 @@ class Matricula extends Model
             $montos[$numCuotas - 1] += $diff;
         }
 
+        // ========================================
+        // NUEVO: Preparar datos para liquidación Oracle
+        // ========================================
+        $codigoContribuyente = null;
+        $codigoEspecialidad = null;
+        $oracleService = null;
+        
+        try {
+            // 1. Obtener código de contribuyente del estudiante
+            $oracleService = app(\App\Services\OracleTusneService::class);
+            $estudiante = $this->estudiante;
+            
+            if ($estudiante && $estudiante->nro_documento) {
+                $codigoData = $oracleService->obtenerCodigoContribuyenteMasReciente($estudiante->nro_documento);
+                // Limpiar espacios en blanco del código para evitar errores de Oracle
+                $codigoContribuyente = $codigoData?->CODIGO ? trim($codigoData->CODIGO) : null;
+            }
+            
+            // 2. Obtener especialidad y mapear a código B000X
+            $especialidad = null;
+            
+            if ($this->tipo_matricula === TipoMatricula::CURSO) {
+                $especialidad = $this->curso?->programa?->especialidad;
+            } else {
+                $especialidad = $this->horario?->programa?->especialidad;
+            }
+            
+            if ($especialidad && $especialidad->nombre_especialidad) {
+                $codigoEspecialidad = $this->obtenerCodigoEspecialidad($especialidad->nombre_especialidad);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::warning('No se pudo obtener datos para liquidación Oracle: ' . $e->getMessage(), [
+                'matricula_id' => $this->id,
+                'estudiante_id' => $this->estudiante_id,
+            ]);
+            // Continuar sin códigos de liquidación
+        }
+
         // Fechas de vencimiento para cada cuota
         $fechasVencimiento = $this->calcularFechasVencimientoCuotas($numCuotas);
 
+        // ========================================
+        // Crear pagos con códigos de liquidación
+        // ========================================
         for ($i = 1; $i <= $numCuotas; $i++) {
+            $numLiquidacion = null;
+            $fechaLiquidacion = null;
+            
+            // Generar código de liquidación si tenemos todos los datos necesarios
+            if ($codigoContribuyente && $codigoEspecialidad && $oracleService) {
+                try {
+                    $numLiquidacion = $oracleService->generarCodigoLiquidacion(
+                        $codigoEspecialidad,
+                        $codigoContribuyente
+                    );
+                    
+                    if ($numLiquidacion) {
+                        $fechaLiquidacion = now();
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Error generando código de liquidación para cuota {$i}: " . $e->getMessage(), [
+                        'matricula_id' => $this->id,
+                        'cronograma_id' => $cronograma->id,
+                        'nro_cuota' => $i,
+                    ]);
+                    // Continuar sin código de liquidación para esta cuota
+                }
+            }
+            
+            // Crear el pago con o sin código de liquidación
             $cronograma->pagos()->create([
                 'nro_cuota'         => $i,
                 // 'codigo' se genera en el modelo Pago::creating si se deja null
@@ -158,10 +226,41 @@ class Matricula extends Model
                 'metodo_pago'       => null,
                 'fecha_pago'        => null,
                 'evidencia_path'    => null,
-                'num_liquidacion'   => null,
-                'fecha_liquidacion' => null,
+                'num_liquidacion'   => $numLiquidacion,      // ← Código generado desde Oracle
+                'fecha_liquidacion' => $fechaLiquidacion,    // ← Fecha de generación
             ]);
         }
+    }
+
+    /**
+     * Obtiene el código de especialidad para Oracle según el nombre.
+     * 
+     * Mapea nombres de especialidades a códigos B000X requeridos por
+     * la función Oracle fu_digito_generar.
+     *
+     * @param string|null $nombreEspecialidad Nombre de la especialidad
+     * @return string|null Código B000X o null si no coincide
+     */
+    protected function obtenerCodigoEspecialidad(?string $nombreEspecialidad): ?string
+    {
+        if (!$nombreEspecialidad) {
+            return null;
+        }
+        
+        // Normalizar nombre (quitar espacios, convertir a minúsculas)
+        $nombreNormalizado = strtolower(trim($nombreEspecialidad));
+        
+        // Mapeo de nombres a códigos Oracle
+        $mapeo = [
+            'estética personal' => 'B0001',
+            'estetica personal' => 'B0001',
+            'confección textil' => 'B0002',
+            'confeccion textil' => 'B0002',
+            'ofimática' => 'B0003',
+            'ofimatica' => 'B0003',
+        ];
+        
+        return $mapeo[$nombreNormalizado] ?? null;
     }
 
     /**

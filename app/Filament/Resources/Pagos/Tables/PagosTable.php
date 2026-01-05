@@ -46,36 +46,45 @@ class PagosTable
                     ->label('Estudiante')
                     ->sortable()
                     ->searchable(
-        // Búsqueda personalizada sobre columnas reales
-        query: function (Builder $query, string $search): Builder {
-            return $query->whereHas(
-                'cronograma.matricula.estudiante',
-                function (Builder $q) use ($search) {
-                    $q->where(function (Builder $q2) use ($search) {
-                        $q2->where('nombres', 'ilike', "%{$search}%")
-                            ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
-                            ->orWhere('apellido_materno', 'ilike', "%{$search}%");
-                    });
-                }
-            );
-        },
-    ),
+                        // Búsqueda personalizada sobre columnas reales
+                        query: function (Builder $query, string $search): Builder {
+                            return $query->whereHas(
+                                'cronograma.matricula.estudiante',
+                                function (Builder $q) use ($search) {
+                                    $q->where(function (Builder $q2) use ($search) {
+                                        $q2->where('nombres', 'ilike', "%{$search}%")
+                                            ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                            ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                                    });
+                                }
+                            );
+                        },
+                    ),
 
                 TextColumn::make('codigo')
                     ->label('Código')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('monto')
                     ->label('Monto')
                     ->numeric()
                     ->sortable(),
-
+                    
+                TextColumn::make('num_liquidacion')
+                    ->searchable(),
                 TextColumn::make('estado')
                     ->label('Estado')
                     ->searchable(),
 
                 TextColumn::make('fecha_vencimiento')
                     ->label('Fecha de vencimiento')
+                    ->date()
+                    ->sortable(),
+                    
+                    
+                TextColumn::make('fecha_liquidacion')
+                    ->label('Fecha emisión')
                     ->date()
                     ->sortable(),
 
@@ -85,252 +94,245 @@ class PagosTable
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->dateTime()
+                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
+    
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('num_liquidacion')
-                    ->searchable(),
-
-                TextColumn::make('fecha_liquidacion')
-                    ->date()
-                    ->sortable(),
             ])
             ->filters([
                 // ------------------ PROGRAMA ------------------
-    Filter::make('estructura')
-        ->label('Programa / Horario / Curso')
-        ->form([
-            // ---------------- PROGRAMA ----------------
-            Select::make('programa_id')
-                ->label('Programa')
-                ->options(fn () =>
-                    Programa::query()
-                        ->whereNotNull('nombre_programa')
-                        ->orderBy('nombre_programa')
-                        ->pluck('nombre_programa', 'id_programa')
-                        ->toArray()
-                )
-                ->searchable()
-                ->preload()
-                ->reactive()
-                ->afterStateUpdated(function ($state, callable $set) {
-                    if ($state) {
-                        // Si elijo un programa, limpio horario y curso
-                        $set('horario_id', null);
-                        $set('curso_id', null);
+            Filter::make('estructura')
+                ->label('Programa / Horario / Curso')
+                ->form([
+                    // ---------------- PROGRAMA ----------------
+                    Select::make('programa_id')
+                        ->label('Programa')
+                        ->options(fn () =>
+                            Programa::query()
+                                ->whereNotNull('nombre_programa')
+                                ->orderBy('nombre_programa')
+                                ->pluck('nombre_programa', 'id_programa')
+                                ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                // Si elijo un programa, limpio horario y curso
+                                $set('horario_id', null);
+                                $set('curso_id', null);
+                            }
+                        }),
+
+                    // ---------------- HORARIO -----------------
+                    Select::make('horario_id')
+                        ->label('Horario')
+                        ->options(fn () =>
+                            Horario::query()
+                                ->with('programa')
+                                ->get()
+                                ->mapWithKeys(function (Horario $horario) {
+                                    $programa = $horario->programa->nombre_programa ?? 'Sin programa';
+
+                                    $texto = $programa
+                                        .' | Hor. '.$horario->id_horario
+                                        .' | Aula '.$horario->aula;
+
+                                    return [
+                                        $horario->id_horario => $texto,
+                                    ];
+                                })
+                                ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                // Si elijo horario, limpio programa y curso
+                                $set('programa_id', null);
+                                $set('curso_id', null);
+                            }
+                        }),
+
+                    // ---------------- CURSO -------------------
+                    Select::make('curso_id')
+                        ->label('Curso')
+                        ->options(fn () =>
+                            Curso::query()
+                                ->whereNotNull('nombre_curso')
+                                ->orderBy('nombre_curso')
+                                ->pluck('nombre_curso', 'id_curso')
+                                ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                // Si elijo curso, limpio programa y horario
+                                $set('programa_id', null);
+                                $set('horario_id', null);
+                            }
+                        }),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+
+                    if (! empty($data['programa_id'])) {
+                        return $query->whereHas(
+                            'cronograma.matricula.horario',
+                            fn (Builder $q) => $q->where('id_programa', $data['programa_id'])
+                        );
                     }
-                }),
 
-            // ---------------- HORARIO -----------------
-            Select::make('horario_id')
-                ->label('Horario')
-                ->options(fn () =>
-                    Horario::query()
-                        ->with('programa')
-                        ->get()
-                        ->mapWithKeys(function (Horario $horario) {
-                            $programa = $horario->programa->nombre_programa ?? 'Sin programa';
-
-                            $texto = $programa
-                                .' | Hor. '.$horario->id_horario
-                                .' | Aula '.$horario->aula;
-
-                            return [
-                                $horario->id_horario => $texto,
-                            ];
-                        })
-                        ->toArray()
-                )
-                ->searchable()
-                ->preload()
-                ->reactive()
-                ->afterStateUpdated(function ($state, callable $set) {
-                    if ($state) {
-                        // Si elijo horario, limpio programa y curso
-                        $set('programa_id', null);
-                        $set('curso_id', null);
+                    if (! empty($data['horario_id'])) {
+                        return $query->whereHas(
+                            'cronograma.matricula',
+                            fn (Builder $q) => $q->where('horario_id', $data['horario_id'])
+                        );
                     }
-                }),
 
-            // ---------------- CURSO -------------------
-            Select::make('curso_id')
-                ->label('Curso')
-                ->options(fn () =>
-                    Curso::query()
-                        ->whereNotNull('nombre_curso')
-                        ->orderBy('nombre_curso')
-                        ->pluck('nombre_curso', 'id_curso')
-                        ->toArray()
-                )
-                ->searchable()
-                ->preload()
-                ->reactive()
-                ->afterStateUpdated(function ($state, callable $set) {
-                    if ($state) {
-                        // Si elijo curso, limpio programa y horario
-                        $set('programa_id', null);
-                        $set('horario_id', null);
+                    if (! empty($data['curso_id'])) {
+                        return $query->whereHas(
+                            'cronograma.matricula',
+                            fn (Builder $q) => $q->where('id_curso', $data['curso_id'])
+                        );
                     }
-                }),
-        ])
-        ->query(function (Builder $query, array $data): Builder {
 
-            if (! empty($data['programa_id'])) {
-                return $query->whereHas(
-                    'cronograma.matricula.horario',
-                    fn (Builder $q) => $q->where('id_programa', $data['programa_id'])
-                );
-            }
+                    return $query;
+                })
+                ->indicateUsing(function (array $data): ?string {
+                    if (! empty($data['programa_id'])) {
+                        $prog = Programa::find($data['programa_id']);
+                        return $prog ? 'Programa: '.$prog->nombre_programa : null;
+                    }
 
-            if (! empty($data['horario_id'])) {
-                return $query->whereHas(
-                    'cronograma.matricula',
-                    fn (Builder $q) => $q->where('horario_id', $data['horario_id'])
-                );
-            }
+                    if (! empty($data['horario_id'])) {
+                        $hor = Horario::find($data['horario_id']);
+                        if (! $hor) {
+                            return null;
+                        }
 
-            if (! empty($data['curso_id'])) {
-                return $query->whereHas(
-                    'cronograma.matricula',
-                    fn (Builder $q) => $q->where('id_curso', $data['curso_id'])
-                );
-            }
+                        $programa = $hor->programa->nombre_programa ?? 'Sin programa';
 
-            return $query;
-        })
-        ->indicateUsing(function (array $data): ?string {
-            if (! empty($data['programa_id'])) {
-                $prog = Programa::find($data['programa_id']);
-                return $prog ? 'Programa: '.$prog->nombre_programa : null;
-            }
+                        return 'Horario: '.$programa.' - Hor. '.$hor->id_horario;
+                    }
 
-            if (! empty($data['horario_id'])) {
-                $hor = Horario::find($data['horario_id']);
-                if (! $hor) {
+                    if (! empty($data['curso_id'])) {
+                        $curso = Curso::find($data['curso_id']);
+                        return $curso ? 'Curso: '.$curso->nombre_curso : null;
+                    }
+
                     return null;
-                }
-
-                $programa = $hor->programa->nombre_programa ?? 'Sin programa';
-
-                return 'Horario: '.$programa.' - Hor. '.$hor->id_horario;
-            }
-
-            if (! empty($data['curso_id'])) {
-                $curso = Curso::find($data['curso_id']);
-                return $curso ? 'Curso: '.$curso->nombre_curso : null;
-            }
-
-            return null;
-        }),
-    ])
+                }),
+            ])
 
 
         ->recordActions([
                 Action::make('ver_evidencia')
-    ->label('Ver evidencia')
-    ->icon('heroicon-o-eye')
-    ->color('gray')
-    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
-    ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
-    ->openUrlInNewTab(),
+                    ->label('Ver evidencia')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
+                    ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
+                    ->openUrlInNewTab(),
 
-        Action::make('subir_evidencia')
-    ->label('Subir Evidencia')
-    ->icon('heroicon-o-arrow-up-on-square')
-    ->color('success')
-    ->visible(fn (Pago $record): bool => empty($record->evidencia_path))
-    ->form([
-        Select::make('metodo_pago')
-            ->options([
-                'efectivo'      => 'Efectivo',
-                'yape'          => 'Yape',
-                'plin'          => 'Plin',
-                'transferencia' => 'Transferencia',
-            ])
-            ->required()
-            ->label('Método de Pago'),
-        FileUpload::make('evidencia')
-            ->label('Archivo de Evidencia')
-            ->acceptedFileTypes(['application/pdf', 'image/*'])
-            ->disk('public')                      // 👈 importante
-            ->directory('pagos/evidencias')      // 👈 carpeta donde se guarda
-            ->required(),
-    ])
-    ->action(function (Pago $record, array $data): void {
-        $service = app(\App\Services\PagoService::class);
-        
-        try {
-            // Delegar toda la lógica al servicio
-            $service->registrarPago(
-                pago: $record,
-                metodoPago: $data['metodo_pago'],
-                evidenciaPath: $data['evidencia'],
-                usuarioId: auth()->id()
-            );
-            
-            Notification::make()->title('Evidencia subida')->success()->send();
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Notification::make()
-                ->title('Error al registrar el pago')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-    }),
+                        Action::make('subir_evidencia')
+                    ->label('Subir Evidencia')
+                    ->icon('heroicon-o-arrow-up-on-square')
+                    ->color('success')
+                    ->visible(fn (Pago $record): bool => empty($record->evidencia_path))
+                    ->form([
+                        Select::make('metodo_pago')
+                            ->options([
+                                'efectivo'      => 'Efectivo',
+                                'yape'          => 'Yape',
+                                'plin'          => 'Plin',
+                                'transferencia' => 'Transferencia',
+                            ])
+                            ->required()
+                            ->label('Método de Pago'),
+                        FileUpload::make('evidencia')
+                            ->label('Archivo de Evidencia')
+                            ->acceptedFileTypes(['application/pdf', 'image/*'])
+                            ->disk('public')                      // 👈 importante
+                            ->directory('pagos/evidencias')      // 👈 carpeta donde se guarda
+                            ->required(),
+                    ])
+                    ->action(function (Pago $record, array $data): void {
+                        $service = app(\App\Services\PagoService::class);
+                        
+                        try {
+                            // Delegar toda la lógica al servicio
+                            $service->registrarPago(
+                                pago: $record,
+                                metodoPago: $data['metodo_pago'],
+                                evidenciaPath: $data['evidencia'],
+                                usuarioId: auth()->id()
+                            );
+                            
+                            Notification::make()->title('Evidencia subida')->success()->send();
+                        } catch (\Illuminate\Validation\ValidationException $e) {
+                            Notification::make()
+                                ->title('Error al registrar el pago')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
 
-Action::make('editar_evidencia')
-    ->label('Editar evidencia')
-    ->icon('heroicon-o-pencil')
-    ->color('info')
-    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
-    ->form([
-        Select::make('metodo_pago')
-            ->options([
-                'efectivo'      => 'Efectivo',
-                'yape'          => 'Yape',
-                'plin'          => 'Plin',
-                'transferencia' => 'Transferencia',
-            ])
-            ->required()
-            ->label('Método de Pago'),
-        FileUpload::make('evidencia')
-            ->label('Archivo de Evidencia')
-            ->acceptedFileTypes(['application/pdf', 'image/*'])
-            ->disk('public')
-            ->directory('pagos/evidencias')
-            ->required(),
-    ])
-    ->action(function (Pago $record, array $data): void {
-        $service = app(\App\Services\PagoService::class);
-        
-        try {
-            // Usar el servicio para actualizar el pago
-            $service->registrarPago(
-                pago: $record,
-                metodoPago: $data['metodo_pago'],
-                evidenciaPath: $data['evidencia'],
-                usuarioId: auth()->id()
-            );
-            
-            Notification::make()->title('Evidencia actualizada')->success()->send();
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Notification::make()
-                ->title('Error al actualizar')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-    }),
+                Action::make('editar_evidencia')
+                    ->label('Editar evidencia')
+                    ->icon('heroicon-o-pencil')
+                    ->color('info')
+                    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
+                    ->form([
+                        Select::make('metodo_pago')
+                            ->options([
+                                'efectivo'      => 'Efectivo',
+                                'yape'          => 'Yape',
+                                'plin'          => 'Plin',
+                                'transferencia' => 'Transferencia',
+                            ])
+                            ->required()
+                            ->label('Método de Pago'),
+                        FileUpload::make('evidencia')
+                            ->label('Archivo de Evidencia')
+                            ->acceptedFileTypes(['application/pdf', 'image/*'])
+                            ->disk('public')
+                            ->directory('pagos/evidencias')
+                            ->required(),
+                    ])
+                    ->action(function (Pago $record, array $data): void {
+                        $service = app(\App\Services\PagoService::class);
+                        
+                        try {
+                            // Usar el servicio para actualizar el pago
+                            $service->registrarPago(
+                                pago: $record,
+                                metodoPago: $data['metodo_pago'],
+                                evidenciaPath: $data['evidencia'],
+                                usuarioId: auth()->id()
+                            );
+                            
+                            Notification::make()->title('Evidencia actualizada')->success()->send();
+                        } catch (\Illuminate\Validation\ValidationException $e) {
+                            Notification::make()
+                                ->title('Error al actualizar')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 
-            ])
-            ->toolbarActions([
+        ])
+        ->toolbarActions([
                 
-            ]);
+        ]);
     }
 }

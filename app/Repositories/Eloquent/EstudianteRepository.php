@@ -34,9 +34,14 @@ class EstudianteRepository implements EstudianteRepositoryInterface
         $estudiante->delete();
     }
 
-    public function findByDocumento(string $tipoDocumento, string $nroDocumento): ?Estudiante
+    public function findByDocumento(string|\App\Enums\TipoDocumento $tipoDocumento, string $nroDocumento): ?Estudiante
     {
-        return Estudiante::where('tipo_documento', $tipoDocumento)
+        // Convertir enum a string si es necesario
+        $tipoDocumentoValue = $tipoDocumento instanceof \App\Enums\TipoDocumento 
+            ? $tipoDocumento->value 
+            : $tipoDocumento;
+            
+        return Estudiante::where('tipo_documento', $tipoDocumentoValue)
             ->where('nro_documento', $nroDocumento)
             ->first();
     }

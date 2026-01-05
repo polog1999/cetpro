@@ -34,9 +34,14 @@ class ApoderadoRepository implements ApoderadoRepositoryInterface
         $apoderado->delete();
     }
 
-    public function findByDocumento(string $tipoDocumento, string $nroDocumento): ?Apoderado
+    public function findByDocumento(string|\App\Enums\TipoDocumento $tipoDocumento, string $nroDocumento): ?Apoderado
     {
-        return Apoderado::where('tipo_documento', $tipoDocumento)
+        // Convertir enum a string si es necesario
+        $tipoDocumentoValue = $tipoDocumento instanceof \App\Enums\TipoDocumento 
+            ? $tipoDocumento->value 
+            : $tipoDocumento;
+            
+        return Apoderado::where('tipo_documento', $tipoDocumentoValue)
             ->where('nro_documento', $nroDocumento)
             ->first();
     }

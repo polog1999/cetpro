@@ -42,6 +42,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null; // Las API manejan sus propios errores
             }
 
+            // IMPORTANTE: Excluir peticiones de Livewire para evitar
+            // conflictos con el modo SPA de Filament
+            // Livewire usa AJAX y no puede manejar redirects HTTP normales
+            if ($request->hasHeader('X-Livewire') || $request->is('livewire/*')) {
+                // Solo registrar el error y dejar que Livewire lo maneje
+                \Log::error('Error en petición Livewire: ' . $e->getMessage(), [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'url' => $request->fullUrl(),
+                    'user_id' => auth()->id(),
+                ]);
+                return null; // Dejar que Livewire maneje el error
+            }
+
             // Registrar el error para debugging
             \Log::error('Error capturado: ' . $e->getMessage(), [
                 'exception' => get_class($e),
@@ -67,7 +82,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 default => 'Ocurrió un error inesperado. Por favor, intente nuevamente.',
             };
 
-            // Si la petición viene de Filament, usar notificación y redirección
+            // Si la petición viene de Filament (pero NO es Livewire), usar notificación y redirección
             if (str_contains($request->path(), 'admin')) {
                 Notification::make()
                     ->title('¡Oops! Algo salió mal')

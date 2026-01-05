@@ -13,6 +13,6 @@ interface ApoderadoRepositoryInterface
     public function update(Apoderado $apoderado, array $data): Apoderado;
     public function delete(Apoderado $apoderado): void;
     
-    public function findByDocumento(string $tipoDocumento, string $nroDocumento): ?Apoderado;
+    public function findByDocumento(string|\App\Enums\TipoDocumento $tipoDocumento, string $nroDocumento): ?Apoderado;
     public function findWithEstudiantes(int $id): ?Apoderado;
 }

@@ -83,7 +83,7 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->brandName('Plataforma de gestión documentaria')
-            ->brandLogo(asset('imagen/cetpro.png'))
+            ->brandLogo(asset('imagen/login.png'))
             ->userMenuItems([
                 \Filament\Navigation\MenuItem::make()
                     ->label('Cambiar Contraseña')
