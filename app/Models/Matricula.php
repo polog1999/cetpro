@@ -398,69 +398,170 @@ class Matricula extends Model
     }
 
     /**
+     * Valida que existan vacantes disponibles en el horario.
+     *
+     * @throws \Illuminate\Validation\ValidationException Si no hay vacantes disponibles
+     */
+    private static function validarVacantes(Matricula $matricula, ?Horario $horario): void
+    {
+        if (!$horario) {
+            return;
+        }
+
+        $matriculados = Matricula::where('horario_id', $matricula->horario_id)
+            ->where('estado', '!=', EstadoMatricula::ANULADO)
+            ->count();
+        
+        if ($matriculados >= $horario->vacantes) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'horario_id' => 'No hay vacantes disponibles en este horario.',
+            ]);
+        }
+    }
+
+    /**
+     * Valida que no exista una matrícula duplicada para el estudiante.
+     * 
+     * Para PROGRAMA/FORMACION_CONTINUA: no permite otra del mismo tipo en el mismo horario.
+     * Para CURSO: valida que id_curso esté presente y no permite otra matrícula en el mismo curso.
+     *
+     * @throws \Illuminate\Validation\ValidationException Si ya existe una matrícula duplicada
+     */
+    private static function validarDuplicado(Matricula $matricula): void
+    {
+        if (!$matricula->estudiante_id || !$matricula->horario_id) {
+            return;
+        }
+
+        if ($matricula->tipo_matricula === TipoMatricula::PROGRAMA || 
+            $matricula->tipo_matricula === TipoMatricula::FORMACION_CONTINUA) {
+            self::validarDuplicadoPrograma($matricula);
+        } elseif ($matricula->tipo_matricula === TipoMatricula::CURSO) {
+            self::validarIntegridadCurso($matricula);
+            self::validarDuplicadoCurso($matricula);
+        }
+    }
+
+    /**
+     * Valida que no exista una matrícula duplicada para PROGRAMA o FORMACION_CONTINUA.
+     *
+     * @throws \Illuminate\Validation\ValidationException Si el estudiante ya está matriculado
+     */
+    private static function validarDuplicadoPrograma(Matricula $matricula): void
+    {
+        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
+            ->where('horario_id', $matricula->horario_id)
+            ->where('estado', '!=', EstadoMatricula::ANULADO)
+            ->whereIn('tipo_matricula', [TipoMatricula::PROGRAMA->value, TipoMatricula::FORMACION_CONTINUA->value])
+            ->exists();
+        
+        if ($exists) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'horario_id' => 'El estudiante ya está matriculado en este programa o formación continua.',
+            ]);
+        }
+    }
+
+    /**
+     * Valida la integridad de datos para matrículas de tipo CURSO.
+     * Asegura que id_curso siempre exista cuando tipo_matricula es CURSO.
+     *
+     * @throws \Illuminate\Validation\ValidationException Si id_curso no está presente
+     */
+    private static function validarIntegridadCurso(Matricula $matricula): void
+    {
+        if (!$matricula->id_curso) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_curso' => 'Debe seleccionar un curso para matrículas de tipo CURSO.',
+            ]);
+        }
+    }
+
+    /**
+     * Valida que no exista una matrícula duplicada para el mismo curso.
+     * 
+     * Solo bloquea si ya existe una matrícula de tipo CURSO para el mismo curso exacto.
+     * Permite múltiples matrículas de tipo CURSO en diferentes cursos del mismo programa.
+     *
+     * @throws \Illuminate\Validation\ValidationException Si el estudiante ya está matriculado en el curso
+     */
+    private static function validarDuplicadoCurso(Matricula $matricula): void
+    {
+        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
+            ->where('id_curso', $matricula->id_curso)
+            ->where('tipo_matricula', TipoMatricula::CURSO->value)
+            ->where('estado', '!=', EstadoMatricula::ANULADO)
+            ->exists();
+        
+        if ($exists) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_curso' => 'El estudiante ya está matriculado en este curso.',
+            ]);
+        }
+    }
+
+    /**
+     * Genera el código de inscripción para la matrícula.
+     * 
+     * Formato:
+     * - PROGRAMA/FORMACION_CONTINUA: YYYY-PPP-NNN
+     * - CURSO: YYYY-PPP-CCC-NNN
+     */
+    private static function generarCodigoInscripcion(Matricula $matricula, ?Horario $horario): void
+    {
+        if (!empty($matricula->codigo_inscripcion)) {
+            return;
+        }
+
+        if ($horario && $horario->id_programa) {
+            $prefijo = self::construirPrefijoCodigoInscripcion($matricula, $horario);
+        } else {
+            // Fallback si no hay horario o programa
+            $prefijo = now()->format('Y') . '-000';
+        }
+
+        // Contar cuántas matrículas ya existen con este prefijo
+        $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")->count();
+        
+        // Número secuencial (siguiente después del último)
+        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        
+        $matricula->codigo_inscripcion = "{$prefijo}-{$secuencial}";
+    }
+
+    /**
+     * Construye el prefijo del código de inscripción según el tipo de matrícula.
+     */
+    private static function construirPrefijoCodigoInscripcion(Matricula $matricula, Horario $horario): string
+    {
+        $year = now()->format('Y');
+        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
+        $prefijo = "{$year}-{$programaId}";
+        
+        // Para CURSO: incluir el ID del curso en el prefijo
+        if ($matricula->tipo_matricula === TipoMatricula::CURSO && $matricula->id_curso) {
+            $cursoId = str_pad($matricula->id_curso, 3, '0', STR_PAD_LEFT);
+            $prefijo = "{$prefijo}-{$cursoId}";
+        }
+        
+        return $prefijo;
+    }
+
+    /**
      * Generación automática del código de inscripción y cronograma.
      */
     protected static function booted()
     {
-        // ANTES de guardar: generar código de inscripción y validar
+        // ANTES de guardar: validar y generar código de inscripción
         static::creating(function (Matricula $matricula) {
-            // 1. Validar vacantes
             $horario = Horario::find($matricula->horario_id);
-            if ($horario) {
-                $matriculados = Matricula::where('horario_id', $matricula->horario_id)
-                    ->where('estado', '!=', EstadoMatricula::ANULADO)
-                    ->count();
-                
-                if ($matriculados >= $horario->vacantes) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'horario_id' => 'No hay vacantes disponibles en este horario.',
-                    ]);
-                }
-            }
-
-            // 2. Validar duplicado
-            if ($matricula->estudiante_id && $matricula->horario_id) {
-                $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
-                    ->where('horario_id', $matricula->horario_id)
-                    ->where('estado', '!=', EstadoMatricula::ANULADO)
-                    ->exists();
-                
-                if ($exists) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'horario_id' => 'El estudiante ya está matriculado en este horario.',
-                    ]);
-                }
-            }
-
-            if (empty($matricula->codigo_inscripcion)) {
-                // Obtener el horario y su programa asociado
-                // $horario ya obtenido arriba
-                
-                if ($horario && $horario->id_programa) {
-                    // Obtener el año actual
-                    $year = now()->format('Y');
-                    
-                    // Formatear el ID del programa a 3 dígitos
-                    $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
-                    
-                    // Contar cuántas matrículas ya existen para este programa en este año
-                    $prefijo = "{$year}-{$programaId}";
-                    $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")
-                        ->count();
-                    
-                    // Número secuencial (siguiente después del último)
-                    $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-                    
-                    // Generar código: YYYY-XXX-NNN
-                    $matricula->codigo_inscripcion = "{$year}-{$programaId}-{$secuencial}";
-                } else {
-                    // Fallback si no hay horario o programa
-                    $prefijo = now()->format('Y') . '-000';
-                    $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")->count();
-                    $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-                    $matricula->codigo_inscripcion = "{$prefijo}-{$secuencial}";
-                }
-            }
+            
+            // Paso 4: Validaciones de integridad
+            self::validarVacantes($matricula, $horario);
+            self::validarDuplicado($matricula);
+            
+            // Generar código de inscripción
+            self::generarCodigoInscripcion($matricula, $horario);
         });
         
         // DESPUÉS de guardar: generar cronograma

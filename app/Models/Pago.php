@@ -16,7 +16,6 @@ class Pago extends Model
         'cronograma_id',
         'usuario_id',
         'nro_cuota',
-        'codigo',
         'monto',
         'estado',
         'fecha_vencimiento',
@@ -199,35 +198,20 @@ class Pago extends Model
     }
 
     /**
-     * Generación automática del código del pago y el número de cuota.
-     * Formato: {dni_alumno}-{id_horario}-{numero Pago}
+     * Generación automática del número de cuota.
      */
     protected static function booted(): void
     {
         static::creating(function (Pago $pago) {
             // Asegurarnos de tener el cronograma cargado
             $cronograma = $pago->cronograma ?? Cronograma::findOrFail($pago->cronograma_id);
-            $matricula  = $cronograma->matricula;
-            
-            // Obtener DNI del alumno
-            $dniAlumno = $matricula->estudiante->nro_documento ?? 'SIN-DNI';
-            
-            // Obtener ID de horario (puede ser null si es curso libre)
-            $idHorario = $matricula->horario_id ?? $matricula->id_curso ?? 'SIN-HORARIO';
             
             // Contar pagos existentes para ese cronograma
             $conteoPagos = Pago::where('cronograma_id', $pago->cronograma_id)->count();
-            $numeroPago  = str_pad($conteoPagos + 1, 2, '0', STR_PAD_LEFT); // 01, 02, 03...
 
             // Si no viene seteado, asignamos correlativo de cuota
             if (is_null($pago->nro_cuota)) {
                 $pago->nro_cuota = $conteoPagos + 1;
-            }
-
-            // Si no viene un código ya definido, lo generamos
-            // Formato: {dni_alumno}-{id_horario}-{numero Pago}
-            if (empty($pago->codigo)) {
-                $pago->codigo = "{$dniAlumno}-{$idHorario}-{$numeroPago}";
             }
         });
 

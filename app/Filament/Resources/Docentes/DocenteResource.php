@@ -48,8 +48,8 @@ class DocenteResource extends Resource
     {
         return [
             'index' => ListDocentes::route('/'),
-            'create' => CreateDocente::route('/create'),
-            'edit' => EditDocente::route('/{record}/edit'),
+            // 'create' => CreateDocente::route('/create'),  // Deshabilitado: Docentes se crean automáticamente
+            // 'edit' => EditDocente::route('/{record}/edit'),  // Deshabilitado: Editar desde Empleado
         ];
     }
 
@@ -62,12 +62,15 @@ class DocenteResource extends Resource
 
     public static function canCreate(): bool
     {
-        return static::canViewAny();
+        // Los docentes se crean automáticamente cuando se crea un usuario de tipo Profesor
+        return false;
     }
 
     public static function canEdit($record): bool
     {
-        return static::canViewAny();
+        // Los docentes no se pueden editar desde aquí
+        // Editar empleado relacionado para sincronizar cambios
+        return false;
     }
 
     public static function canDelete($record): bool
