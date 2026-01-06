@@ -62,17 +62,25 @@ class EstudianteResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
+        
+        // Profesores no pueden acceder a estudiantes
+        if ($user?->esProfesor()) {
+            return false;
+        }
+        
         return $user?->role?->es_admin || $user?->canAccessResource('estudiantes') || false;
     }
 
     public static function canCreate(): bool
     {
-        return static::canViewAny();
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || false;
     }
 
     public static function canEdit($record): bool
     {
-        return static::canViewAny();
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || false;
     }
 
     public static function canDelete($record): bool

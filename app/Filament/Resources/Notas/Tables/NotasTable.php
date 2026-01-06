@@ -30,10 +30,10 @@ class NotasTable
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('nota_letra'),
-                ImageColumn::make('pdf_calificacion')
-                    ->label('Calificación')
-                    ->circular()
-                    ->stacked(),
+                // ImageColumn::make('pdf_calificacion')
+                //     ->label('Calificación')
+                //     ->circular()
+                //     ->stacked(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

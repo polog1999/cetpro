@@ -14,6 +14,9 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
+use Filament\Facades\Filament;
+use App\Enums\Rol;
+
 class NotaResource extends Resource
 {
     protected static ?string $model = Nota::class;
@@ -46,5 +49,24 @@ class NotaResource extends Resource
             'create' => CreateNota::route('/create'),
             'edit' => EditNota::route('/{record}/edit'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        $user = Filament::auth()->user();
+        
+        return $user?->role?->es_admin || $user?->canAccessResource('estudiantes') || false;
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || false;
     }
 }

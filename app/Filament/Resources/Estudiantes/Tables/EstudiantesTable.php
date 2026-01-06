@@ -24,11 +24,9 @@ class EstudiantesTable
                 TextColumn::make('nro_documento')
                     ->searchable(),
                 
-                // Columna virtual - Código de Contribuyente desde Oracle
                 TextColumn::make('codigo_contribuyente')
                     ->label('Cód. Contribuyente')
                     ->getStateUsing(function ($record): string {
-                        // Cache por 1 hora para evitar consultas repetidas
                         return Cache::remember(
                             "contribuyente_dni_{$record->nro_documento}",
                             3600,
@@ -185,11 +183,15 @@ class EstudiantesTable
                     ]),
             ])
             ->actions([
-                \Filament\Actions\ViewAction::make(),
-                EditAction::make(),
+                \Filament\Actions\ViewAction::make()
+                    ->visible(fn () => !auth()->user()?->esProfesor()),
+                EditAction::make()
+                    ->visible(fn () => !auth()->user()?->esProfesor()),
                 
                 \Filament\Actions\Action::make('ver_pagos')
-                    ->label('Ver Pagos')
+                    ->label('')
+                    ->tooltip('Ver pagos')
+                    ->visible(fn () => !auth()->user()?->esProfesor())
                     ->icon('heroicon-o-currency-dollar')
                     ->color('info')
                     ->modalHeading(fn($record) => "Pagos de {$record->nombre_completo}")
@@ -207,6 +209,7 @@ class EstudiantesTable
                     ->modalCancelActionLabel('Cerrar'),
                 
                 DeleteAction::make()
+                    ->visible(fn () => !auth()->user()?->esProfesor())
                     ->before(fn (DeleteAction $action, $record) => 
                         self::preventDeleteWithDependencies(
                             $action,

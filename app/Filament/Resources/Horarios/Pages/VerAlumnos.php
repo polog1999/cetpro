@@ -197,7 +197,7 @@ class VerAlumnos extends Page implements HasTable
     {
         return [
             Action::make('visualizar_lista_pdf')
-                ->label('Visualizar Lista PDF')
+                ->label('Listado de alumnos')
                 ->icon('heroicon-o-eye')
                 ->color('info')
                 ->modalHeading('Vista previa del PDF - Lista de Alumnos')
