@@ -39,12 +39,13 @@ class Cronograma extends Model
     }
 
     /**
-     * Verifica si el cronograma tiene deudas (pagos pendientes o vencidos).
+     * Verifica si el cronograma tiene deudas (pagos vencidos).
+     * Solo se considera deuda cuando el estado del pago es VENCIDO.
      */
     public function tieneDeuda(): bool
     {
         return $this->pagos()
-            ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            ->where('estado', EstadoPago::VENCIDO)
             ->exists();
     }
 
@@ -64,7 +65,7 @@ class Cronograma extends Model
     public function totalPendiente(): float
     {
         return (float) $this->pagos()
-            ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            ->where('estado', EstadoPago::PENDIENTE)
             ->sum('monto');
     }
 

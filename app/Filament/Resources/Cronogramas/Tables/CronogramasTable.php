@@ -166,9 +166,9 @@ class CronogramasTable
                     ->label('Estado de Deuda')
                     ->badge()
                     ->getStateUsing(function (Cronograma $record): string {
+                        // Solo es deudor si tiene pagos con estado VENCIDO
                         $esDeudor = $record->pagos()
-                            ->where('estado', EstadoPago::PENDIENTE)
-                            ->where('fecha_vencimiento', '<', now())
+                            ->where('estado', EstadoPago::VENCIDO)
                             ->exists();
 
                         return $esDeudor ? 'Deudor' : 'Al día';
@@ -186,8 +186,7 @@ class CronogramasTable
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withExists([
                             'pagos as tiene_deuda' => function ($query) {
-                                $query->where('estado', EstadoPago::PENDIENTE)
-                                    ->where('fecha_vencimiento', '<', now());
+                                $query->where('estado', EstadoPago::VENCIDO);
                             }
                         ])->orderBy('tiene_deuda', $direction);
                     }),
@@ -254,15 +253,13 @@ class CronogramasTable
 
                         if ($data['value'] === 'con_deuda') {
                             return $query->whereHas('pagos', function (Builder $q) {
-                                $q->where('estado', EstadoPago::PENDIENTE)
-                                    ->where('fecha_vencimiento', '<', now());
+                                $q->where('estado', EstadoPago::VENCIDO);
                             });
                         }
 
                         if ($data['value'] === 'al_dia') {
                             return $query->whereDoesntHave('pagos', function (Builder $q) {
-                                $q->where('estado', EstadoPago::PENDIENTE)
-                                    ->where('fecha_vencimiento', '<', now());
+                                $q->where('estado', EstadoPago::VENCIDO);
                             });
                         }
 

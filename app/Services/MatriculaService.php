@@ -97,6 +97,13 @@ class MatriculaService
                 ];
             }
             
+            if ($tipoMatricula === TipoMatricula::MODULO) {
+                return [
+                    'valido' => false,
+                    'mensaje' => 'El estudiante ya está matriculado en este módulo.'
+                ];
+            }
+            
             return [
                 'valido' => false,
                 'mensaje' => 'El estudiante ya está matriculado en este programa o formación continua.'
@@ -336,6 +343,15 @@ class MatriculaService
             return $query
                 ->where('id_curso', $cursoId)
                 ->where('tipo_matricula', TipoMatricula::CURSO->value)
+                ->exists();
+        }
+        
+        // MODULO se comporta igual que CURSO: permite múltiples módulos diferentes
+        if ($tipoMatricula === TipoMatricula::MODULO && $cursoId) {
+            // Para MODULO: solo es duplicado si es el mismo módulo exacto
+            return $query
+                ->where('id_curso', $cursoId)
+                ->where('tipo_matricula', TipoMatricula::MODULO->value)
                 ->exists();
         }
         
