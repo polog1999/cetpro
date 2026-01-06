@@ -93,7 +93,7 @@ class Matricula extends Model
         $especialidad = null;
 
         // 1) CURSO -> duración del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO) {
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO], true)) {
             $curso = $this->curso;
 
             if (! $curso) {
