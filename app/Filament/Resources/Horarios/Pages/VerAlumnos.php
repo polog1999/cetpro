@@ -31,8 +31,6 @@ use App\Models\Matricula;
 use App\Models\Estudiante;
 use App\Models\Horario;
 use App\Models\Nota;
-use App\Filament\Resources\Estudiantes\EstudianteResource;
-use App\Filament\Resources\Matriculas\MatriculaResource;
 use Illuminate\Database\Eloquent\Builder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -82,20 +80,14 @@ class VerAlumnos extends Page implements HasTable
             ->columns([
                 TextColumn::make('estudiante.nombres')
                     ->label('Nombre del Alumno')
-                    ->searchable()
-                    ->url(fn (Matricula $record): string => 
-                        EstudianteResource::getUrl('edit', ['record' => $record->estudiante_id])
-                    ),
+                    ->searchable(),
                 
                 TextColumn::make('estudiante.nro_documento')
                     ->label('Documento'),
 
                 TextColumn::make('codigo_inscripcion')
                     ->label('Cód. Matrícula')
-                    ->searchable()
-                    ->url(fn (Matricula $record): string => 
-                        MatriculaResource::getUrl('edit', ['record' => $record->id])
-                    ),
+                    ->searchable(),
             ])
             ->actions([
                 Action::make('subir_nota')
