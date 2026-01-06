@@ -16,6 +16,7 @@ use App\Models\Cronograma;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\EstadoPago;
+use App\Enums\TipoCertificado;
 
 class Matricula extends Model
 {
@@ -32,11 +33,14 @@ class Matricula extends Model
         'id_curso',
         'motivo_anulacion',
         'fecha_anulacion',
+        'documento_path',
+        'tipo_certificado',
     ];
 
     protected $casts = [
-        'estado'         => EstadoMatricula::class,
-        'tipo_matricula' => TipoMatricula::class,
+        'estado'           => EstadoMatricula::class,
+        'tipo_matricula'   => TipoMatricula::class,
+        'tipo_certificado' => TipoCertificado::class,
     ];
 
     public function estudiante(): BelongsTo

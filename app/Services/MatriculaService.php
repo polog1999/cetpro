@@ -114,6 +114,37 @@ class MatriculaService
     }
     
     /**
+     * Verifica si un estudiante tiene deudas pendientes (pagos vencidos).
+     * 
+     * Un estudiante no puede matricularse en un nuevo curso/módulo si tiene
+     * pagos vencidos en cualquiera de sus matrículas activas.
+     *
+     * @param int $estudianteId
+     * @return array ['tiene_deuda' => bool, 'mensaje' => string|null]
+     */
+    public function estudianteTieneDeudas(int $estudianteId): array
+    {
+        $tieneDeuda = Matricula::where('estudiante_id', $estudianteId)
+            ->where('estado', '!=', EstadoMatricula::ANULADO)
+            ->whereHas('cronograma.pagos', function ($query) {
+                $query->where('estado', \App\Enums\EstadoPago::VENCIDO);
+            })
+            ->exists();
+        
+        if ($tieneDeuda) {
+            return [
+                'tiene_deuda' => true,
+                'mensaje' => 'El estudiante tiene pagos vencidos pendientes. Debe regularizar sus pagos antes de matricularse en un nuevo curso.'
+            ];
+        }
+        
+        return [
+            'tiene_deuda' => false,
+            'mensaje' => null
+        ];
+    }
+    
+    /**
      * Genera un código de inscripción único para la matrícula.
      *
      * @param int $horarioId

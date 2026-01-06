@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Documentos\Tables;
 
+use App\Enums\TipoCertificado;
+use App\Models\Matricula;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -31,123 +34,155 @@ class DocumentosTable
                     ->label('Teléfono')
                     ->searchable(),
 
-                IconColumn::make('tiene_documento')
-                    ->label('Documento')
-                    ->getStateUsing(fn ($record) => self::documentoExiste($record))
-                    ->boolean()
-                    ->trueIcon('heroicon-o-document-check')
-                    ->falseIcon('heroicon-o-document')
-                    ->trueColor('success')
-                    ->falseColor('gray'),
+                TextColumn::make('matriculas_con_documento')
+                    ->label('Documentos')
+                    ->getStateUsing(fn ($record) => self::contarDocumentos($record))
+                    ->badge()
+                    ->color(fn (string $state) => $state === '0' ? 'gray' : 'success'),
             ])
             ->filters([
                 Filter::make('con_documento')
                     ->label('Con documento')
-                    ->query(fn (Builder $query): Builder => $query->whereRaw('1=1'))
+                    ->query(fn (Builder $query): Builder => 
+                        $query->whereHas('matriculas', fn ($q) => $q->whereNotNull('documento_path'))
+                    )
                     ->toggle(),
                     
                 Filter::make('sin_documento')
                     ->label('Sin documento')
-                    ->query(fn (Builder $query): Builder => $query->whereRaw('1=1'))
+                    ->query(fn (Builder $query): Builder => 
+                        $query->whereDoesntHave('matriculas', fn ($q) => $q->whereNotNull('documento_path'))
+                    )
                     ->toggle(),
             ])
             ->actions([
+                // Acción SUBIR: Abre formulario para elegir matrícula y subir documento
                 \Filament\Actions\Action::make('subir_documento')
                     ->label('Subir')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('primary')
-                    ->form([
-                        FileUpload::make('documento')
-                            ->label('Documento PDF')
-                            ->acceptedFileTypes(['application/pdf'])
-                            ->required()
-                            ->disk('public')
-                            ->directory('documentos')
-                            ->preserveFilenames(false)
-                            ->getUploadedFileNameForStorageUsing(fn ($record) => self::generarNombreArchivo($record))
-                            ->maxSize(5120) // 5MB
-                            ->helperText('Formato: PDF. Tamaño máximo: 5MB'),
-                    ])
-                    ->action(function ($record, array $data): void {
-                        // El archivo ya fue subido por FileUpload
-                        // Solo necesitamos renombrarlo si es necesario
-                        $nombreArchivo = self::generarNombreArchivo($record);
-                        $rutaActual = $data['documento'];
-                        $nuevaRuta = 'documentos/' . $nombreArchivo;
+                    ->form(function ($record) {
+                        $matriculas = $record->matriculas()
+                            ->with(['horario.programa', 'curso'])
+                            ->get()
+                            ->mapWithKeys(function ($matricula) {
+                                $descripcion = $matricula->codigo_inscripcion . ' | ';
+                                $descripcion .= $matricula->curso?->nombre_curso 
+                                    ?? $matricula->horario?->programa?->nombre_programa 
+                                    ?? 'Sin programa';
+                                $descripcion .= ' | ' . $matricula->tipo_matricula->value;
+                                return [$matricula->id => $descripcion];
+                            });
                         
-                        // Si el archivo ya existe con otro nombre, eliminarlo primero
-                        if (Storage::disk('public')->exists($nuevaRuta) && $rutaActual !== $nuevaRuta) {
-                            Storage::disk('public')->delete($nuevaRuta);
+                        return [
+                            Select::make('matricula_id')
+                                ->label('Seleccionar Matrícula')
+                                ->options($matriculas)
+                                ->required()
+                                ->searchable()
+                                ->helperText('Seleccione la matrícula a la que pertenece este certificado'),
+                            
+                            Select::make('tipo_certificado')
+                                ->label('Tipo de Certificado')
+                                ->options(collect(TipoCertificado::cases())->mapWithKeys(
+                                    fn ($case) => [$case->value => $case->getLabel()]
+                                ))
+                                ->default(TipoCertificado::CERTIFICADO_ESTUDIOS->value)
+                                ->required(),
+                            
+                            FileUpload::make('documento')
+                                ->label('Documento PDF')
+                                ->acceptedFileTypes(['application/pdf'])
+                                ->required()
+                                ->disk('public')
+                                ->directory('certificados')
+                                ->preserveFilenames(false)
+                                ->maxSize(5120) // 5MB
+                                ->helperText('Formato: PDF. Tamaño máximo: 5MB'),
+                        ];
+                    })
+                    ->action(function ($record, array $data): void {
+                        $matricula = Matricula::find($data['matricula_id']);
+                        
+                        if (!$matricula) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error: Matrícula no encontrada')
+                                ->danger()
+                                ->send();
+                            return;
                         }
                         
-                        // Mover el archivo al nombre correcto
+                        // Generar nombre de archivo único
+                        $nombreArchivo = self::generarNombreArchivo($record, $matricula);
+                        $rutaActual = $data['documento'];
+                        $nuevaRuta = 'certificados/' . $nombreArchivo;
+                        
+                        // Eliminar documento anterior si existe
+                        if ($matricula->documento_path && Storage::disk('public')->exists($matricula->documento_path)) {
+                            Storage::disk('public')->delete($matricula->documento_path);
+                        }
+                        
+                        // Mover archivo con nombre correcto
                         if ($rutaActual !== $nuevaRuta) {
                             Storage::disk('public')->move($rutaActual, $nuevaRuta);
                         }
                         
+                        // Actualizar matrícula
+                        $matricula->update([
+                            'documento_path' => $nuevaRuta,
+                            'tipo_certificado' => $data['tipo_certificado'],
+                        ]);
+                        
                         \Filament\Notifications\Notification::make()
                             ->title('Documento subido correctamente')
+                            ->body("Certificado vinculado a: {$matricula->codigo_inscripcion}")
                             ->success()
                             ->send();
                     })
-                    ->modalHeading(fn ($record) => "Subir documento de {$record->nombre_completo}")
+                    ->modalHeading(fn ($record) => "Subir certificado para {$record->nombre_completo}")
                     ->modalSubmitActionLabel('Subir documento'),
                 
-                \Filament\Actions\Action::make('ver_documento')
+                // Acción VER: Muestra modal con tabla de todas las matrículas
+                \Filament\Actions\Action::make('ver_documentos')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
-                    ->visible(fn ($record) => self::documentoExiste($record))
-                    ->modalHeading(fn ($record) => "Documento de {$record->nombre_completo}")
-                    ->modalContent(fn ($record) => view('filament.documentos.ver-documento-modal', [
-                        'url' => self::getDocumentoUrl($record),
-                        'nombre' => $record->nombre_completo,
+                    ->modalHeading(fn ($record) => "Certificados de {$record->nombre_completo}")
+                    ->modalContent(fn ($record) => view('filament.documentos.ver-matriculas-modal', [
+                        'estudiante' => $record,
+                        'matriculas' => $record->matriculas()
+                            ->with(['horario.programa', 'curso'])
+                            ->get(),
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar')
-                    ->modalWidth('7xl'),
-
-                \Filament\Actions\Action::make('descargar_documento')
-                    ->label('Descargar')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->visible(fn ($record) => self::documentoExiste($record))
-                    ->action(function ($record) {
-                        $nombreArchivo = self::generarNombreArchivo($record);
-                        $ruta = Storage::disk('public')->path('documentos/' . $nombreArchivo);
-                        return response()->download($ruta, $nombreArchivo);
-                    }),
+                    ->modalWidth('5xl'),
             ])
             ->bulkActions([])
             ->defaultSort('apellido_paterno', 'asc');
     }
 
     /**
-     * Genera el nombre del archivo basado en el nombre del estudiante
+     * Genera el nombre del archivo basado en el estudiante y matrícula
      */
-    private static function generarNombreArchivo($record): string
+    private static function generarNombreArchivo($estudiante, $matricula): string
     {
-        $nombre = $record->apellido_paterno . '_' . $record->apellido_materno . '_' . $record->nombres;
-        $nombre = Str::ascii($nombre); // Remover acentos
-        $nombre = Str::slug($nombre, '_'); // Convertir a slug con guiones bajos
+        $nombre = $estudiante->apellido_paterno . '_' . 
+                  $estudiante->apellido_materno . '_' . 
+                  $estudiante->nombres . '_' .
+                  $matricula->codigo_inscripcion;
+        $nombre = Str::ascii($nombre);
+        $nombre = Str::slug($nombre, '_');
         return $nombre . '.pdf';
     }
 
     /**
-     * Verifica si el documento del estudiante existe
+     * Cuenta cuántas matrículas tienen documento
      */
-    private static function documentoExiste($record): bool
+    private static function contarDocumentos($record): string
     {
-        $nombreArchivo = self::generarNombreArchivo($record);
-        return Storage::disk('public')->exists('documentos/' . $nombreArchivo);
-    }
-
-    /**
-     * Obtiene la URL pública del documento
-     */
-    private static function getDocumentoUrl($record): string
-    {
-        $nombreArchivo = self::generarNombreArchivo($record);
-        return Storage::disk('public')->url('documentos/' . $nombreArchivo);
+        $total = $record->matriculas()->count();
+        $conDocumento = $record->matriculas()->whereNotNull('documento_path')->count();
+        return "{$conDocumento}/{$total}";
     }
 }

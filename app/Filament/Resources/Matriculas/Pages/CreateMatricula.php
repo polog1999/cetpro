@@ -23,17 +23,29 @@ class CreateMatricula extends CreateRecord
         $service = app(MatriculaService::class);
 
         try {
+            // Verificar si el estudiante tiene deudas pendientes
+            $validacionDeudas = $service->estudianteTieneDeudas($data['estudiante_id']);
+            
+            if ($validacionDeudas['tiene_deuda']) {
+                Notification::make()
+                    ->title('No es posible crear la matrícula')
+                    ->body($validacionDeudas['mensaje'])
+                    ->danger()
+                    ->persistent()
+                    ->send();
+                    
+                throw ValidationException::withMessages([
+                    'estudiante_id' => $validacionDeudas['mensaje']
+                ]);
+            }
+            
             // El servicio ya maneja:
             // - Validación de vacantes
             // - Validación de duplicados
             // - Generación de código
             // - Creación de cronograma
             // - Generación de cuotas
-            // Por ahora usamos el método existente, pero debería refactorizarse para usar repositorios
             return Matricula::create($data);
-            
-            // TODO: Cuando se refactorice completamente MatriculaService para usar repositorios:
-            // return $service->crear($data);
             
         } catch (ValidationException $e) {
             // Filament maneja ValidationException automáticamente

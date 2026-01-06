@@ -130,6 +130,24 @@ class MatriculaForm
                             // SÍ tiene código - mostrar mensaje de éxito
                             $set('codigo_contribuyente_status', 'success');
                             
+                            // Verificar si el estudiante tiene deudas pendientes
+                            $matriculaService = app(\App\Services\MatriculaService::class);
+                            $validacionDeudas = $matriculaService->estudianteTieneDeudas($state);
+                            
+                            if ($validacionDeudas['tiene_deuda']) {
+                                Notification::make()
+                                    ->title('⚠️ Estudiante con deudas pendientes')
+                                    ->body($validacionDeudas['mensaje'])
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+                                
+                                // Marcar estado de deuda
+                                $set('estudiante_tiene_deuda', true);
+                            } else {
+                                $set('estudiante_tiene_deuda', false);
+                            }
+                            
                         } catch (\Exception $e) {
                             // Error en conexión Oracle
                             Notification::make()
@@ -384,10 +402,22 @@ class MatriculaForm
                         
                         return '';
                     })
-                    ->visible(fn (Get $get) => $get('codigo_contribuyente_status') === 'success')
+                    ->visible(fn (Get $get) => $get('codigo_contribuyente_status') === 'success' && !$get('estudiante_tiene_deuda'))
                     ->extraAttributes([
                         'class' => 'text-success-600 font-semibold',
                         'style' => 'color: #10b981; font-weight: 600; margin-top: -0.5rem;'
+                    ]),
+
+                // ----------------------------------------
+                // MENSAJE DE DEUDA PENDIENTE
+                // ----------------------------------------
+                Placeholder::make('deuda_pendiente_validacion')
+                    ->label('')
+                    ->content('⚠️ El estudiante tiene pagos vencidos. Debe regularizar sus deudas antes de matricularse.')
+                    ->visible(fn (Get $get) => $get('estudiante_tiene_deuda') === true)
+                    ->extraAttributes([
+                        'class' => 'text-danger-600 font-semibold',
+                        'style' => 'color: #ef4444; font-weight: 600; margin-top: -0.5rem;'
                     ]),
 
                 // ----------------------------------------
@@ -639,12 +669,53 @@ class MatriculaForm
                             return [];
                         }
 
+                        $hoy = now()->startOfDay();
+
+                        // Obtener cursos ordenados por fecha de inicio
                         return $horario->programa
                             ->cursos()
-                            ->orderBy('nombre_curso')
-                            ->pluck('nombre_curso', 'id_curso') // key = id_curso, value = nombre_curso
+                            ->orderBy('fecha_inicio', 'asc')
+                            ->get()
+                            ->mapWithKeys(function ($curso) use ($hoy) {
+                                $fechaInicio = $curso->fecha_inicio ? \Carbon\Carbon::parse($curso->fecha_inicio) : null;
+                                $estado = '';
+                                
+                                if ($fechaInicio && $fechaInicio < $hoy) {
+                                    $estado = ' [YA INICIÓ]';
+                                }
+                                
+                                $fechaTexto = $fechaInicio ? $fechaInicio->format('d/m/Y') : 'Sin fecha';
+                                
+                                return [
+                                    $curso->id_curso => $curso->nombre_curso . ' | Inicio: ' . $fechaTexto . $estado
+                                ];
+                            })
                             ->toArray();
                     })
+                    ->disableOptionWhen(function (string $value, Get $get) {
+                        $horarioId = $get('horario_id');
+                        if (!$horarioId) return true;
+
+                        $horario = Horario::with('programa.cursos')->find($horarioId);
+                        if (!$horario || !$horario->programa) return true;
+
+                        $hoy = now()->startOfDay();
+                        
+                        // Obtener el primer curso cuya fecha de inicio sea >= hoy
+                        $primerCursoDisponible = $horario->programa
+                            ->cursos()
+                            ->whereNotNull('fecha_inicio')
+                            ->whereDate('fecha_inicio', '>=', $hoy)
+                            ->orderBy('fecha_inicio', 'asc')
+                            ->first();
+                        
+                        // Si no hay cursos disponibles, deshabilitar todo
+                        if (!$primerCursoDisponible) return true;
+                        
+                        // Solo habilitar el primer curso disponible
+                        return (int) $value !== $primerCursoDisponible->id_curso;
+                    })
+                    ->helperText('Solo puede matricularse en el curso con fecha de inicio más próxima. Los cursos que ya iniciaron están deshabilitados.')
                     ->searchable()
                     ->live()
                     // visible solo para CURSO y MODULO
