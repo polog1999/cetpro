@@ -27,13 +27,18 @@ class EstudiantesTable
                 TextColumn::make('codigo_contribuyente')
                     ->label('Cód. Contribuyente')
                     ->getStateUsing(function ($record): string {
+                        // Primero usar el código guardado localmente
+                        if (!empty($record->codigo_contribuyente)) {
+                            return $record->codigo_contribuyente;
+                        }
+                        
+                        // Si no hay código local, consultar Oracle (con cache)
                         return Cache::remember(
                             "contribuyente_dni_{$record->nro_documento}",
                             3600,
                             function () use ($record) {
                                 try {
                                     $oracle = app(OracleTusneService::class);
-                                    // Usar el nuevo método que retorna solo el código más reciente
                                     $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($record->nro_documento);
                                     
                                     if ($codigoReciente && !empty($codigoReciente->CODIGO)) {
@@ -42,7 +47,7 @@ class EstudiantesTable
                                     
                                     return 'Sin número';
                                 } catch (\Exception $e) {
-                                    return 'Error';
+                                    return 'Sin número';
                                 }
                             }
                         );

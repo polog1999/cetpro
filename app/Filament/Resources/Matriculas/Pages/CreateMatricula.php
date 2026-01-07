@@ -6,9 +6,11 @@ use App\Filament\Resources\Matriculas\MatriculaResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\Matricula;
 use App\Services\MatriculaService;
+use App\Services\OracleTusneService;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class CreateMatricula extends CreateRecord
 {
@@ -54,9 +56,51 @@ class CreateMatricula extends CreateRecord
     }
 
     /**
-     * Nota: beforeCreate() fue removido.
-     * Las validaciones ahora están en el servicio o en el modelo.
-     * Esto cumple con el principio de Single Responsibility.
+     * Después de crear la matrícula, verificar si el estudiante tiene código de contribuyente.
+     * Si no lo tiene, crearlo en Oracle.
      */
+    protected function afterCreate(): void
+    {
+        $estudiante = $this->record->estudiante;
+        
+        // Si el estudiante ya tiene código, no hacer nada
+        if (!empty($estudiante->codigo_contribuyente)) {
+            return;
+        }
+        
+        // Crear contribuyente en Oracle
+        try {
+            $oracle = app(OracleTusneService::class);
+            $codigo = $oracle->crearContribuyente($estudiante);
+            
+            if ($codigo) {
+                $estudiante->codigo_contribuyente = $codigo;
+                $estudiante->save();
+                
+                Notification::make()
+                    ->success()
+                    ->title('Contribuyente creado')
+                    ->body("Código: {$codigo}")
+                    ->send();
+                    
+                Log::info('Contribuyente creado al matricular', [
+                    'estudiante_id' => $estudiante->id,
+                    'matricula_id' => $this->record->id,
+                    'codigo' => $codigo,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al crear contribuyente al matricular', [
+                'estudiante_id' => $estudiante->id,
+                'matricula_id' => $this->record->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            Notification::make()
+                ->warning()
+                ->title('Matrícula creada sin código contribuyente')
+                ->body('No se pudo conectar con Oracle')
+                ->send();
+        }
+    }
 }
-

@@ -34,6 +34,7 @@ class Estudiante extends Model
         'telefono',
         'direccion',           // en el formulario lo puedes mostrar como "Domicilio"
         'email',               // correo electrónico
+        'codigo_contribuyente', // Código Oracle (C0000001)
         'grado_instruccion',   // ENUM (GradoInstruccion)
         'provincia',           // ENUM (Provincia) - solo Lima
         'distrito',            // ENUM (DistritoLima)

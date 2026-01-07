@@ -99,7 +99,15 @@ class MatriculaForm
                             return;
                         }
                         
-                        // Validar código de contribuyente
+                        // 1. Primero verificar si tiene código guardado localmente (nuevo sistema)
+                        if (!empty($estudiante->codigo_contribuyente)) {
+                            // SÍ tiene código local - permitir matrícula
+                            $set('codigo_contribuyente_status', 'success');
+                            static::generarCodigoInscripcion($set, $get);
+                            return;
+                        }
+                        
+                        // 2. Si no tiene código local, consultar Oracle (sistema antiguo)
                         try {
                             $oracle = app(OracleTusneService::class);
                             $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($estudiante->nro_documento);
@@ -127,7 +135,7 @@ class MatriculaForm
                                 return;
                             }
                             
-                            // SÍ tiene código - mostrar mensaje de éxito
+                            // SÍ tiene código en Oracle - mostrar mensaje de éxito
                             $set('codigo_contribuyente_status', 'success');
                             
                             // Verificar si el estudiante tiene deudas pendientes
@@ -149,7 +157,7 @@ class MatriculaForm
                             }
                             
                         } catch (\Exception $e) {
-                            // Error en conexión Oracle
+                            // Error en conexión Oracle - permitir continuar si tiene código local
                             Notification::make()
                                 ->title('Error de conexión')
                                 ->body('No se pudo verificar el código de contribuyente. Por favor, intente nuevamente.')
@@ -267,6 +275,13 @@ class MatriculaForm
                                         Select::make('provincia')
                                             ->options(Provincia::class)
                                             ->default('Lima'),
+<<<<<<< HEAD
+=======
+    
+                                        Select::make('distrito')
+                                            ->options(DistritoLima::class)
+                                            ->required(),
+>>>>>>> 338c1b0 (generacion de codigos y num de liquidacion)
                                     ])
                                     ->collapsed(),
 
@@ -379,6 +394,48 @@ class MatriculaForm
                             
                             $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
                             
+                            // ======================================================
+                            // CREAR CÓDIGO DE CONTRIBUYENTE EN ORACLE
+                            // ======================================================
+                            try {
+                                $oracle = app(OracleTusneService::class);
+                                $codigo = $oracle->crearContribuyente($estudiante);
+                                
+                                if ($codigo) {
+                                    // Guardar el código en el estudiante
+                                    $estudiante->codigo_contribuyente = $codigo;
+                                    $estudiante->save();
+                                    
+                                    Notification::make()
+                                        ->success()
+                                        ->title('Estudiante y contribuyente creados')
+                                        ->body("Código de contribuyente: {$codigo}")
+                                        ->send();
+                                        
+                                    \Log::info('Contribuyente creado desde modal de matrícula', [
+                                        'estudiante_id' => $estudiante->id,
+                                        'codigo' => $codigo,
+                                    ]);
+                                } else {
+                                    Notification::make()
+                                        ->warning()
+                                        ->title('Estudiante creado')
+                                        ->body('No se pudo generar el código de contribuyente.')
+                                        ->send();
+                                }
+                            } catch (\Exception $e) {
+                                \Log::error('Error al crear contribuyente desde modal de matrícula', [
+                                    'estudiante_id' => $estudiante->id,
+                                    'error' => $e->getMessage(),
+                                ]);
+                                
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Estudiante creado sin código de contribuyente')
+                                    ->body('Error: ' . $e->getMessage())
+                                    ->send();
+                            }
+                            
                             return (int) $estudiante->id;
                         });
                     })
@@ -465,6 +522,29 @@ class MatriculaForm
                         $set('horario_id', null);
                         $set('id_curso', null);
                         $set('cursos_matriculados', null);
+                    })
+                    // Validación: no permitir MODULO si el programa tiene solo un módulo
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                            $tipoMatricula = $get('tipo_matricula');
+                            
+                            // Solo validar si es matrícula por MODULO
+                            if ($tipoMatricula !== TipoMatricula::MODULO) {
+                                return;
+                            }
+                            
+                            if (!$value) {
+                                return;
+                            }
+                            
+                            // Contar módulos del programa
+                            $programa = \App\Models\Programa::with('cursos')->find($value);
+                            $cantidadModulos = $programa?->cursos?->count() ?? 0;
+                            
+                            if ($cantidadModulos <= 1) {
+                                $fail('Este programa tiene solo un módulo. Debe matricularse en el programa completo, no por módulo individual.');
+                            }
+                        };
                     }),
 
                 // ----------------------------------------
@@ -493,6 +573,29 @@ class MatriculaForm
                         $set('horario_id', null);
                         $set('id_curso', null);
                         $set('cursos_matriculados', null);
+                    })
+                    // Validación: no permitir CURSO si la formación tiene solo un curso
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                            $tipoMatricula = $get('tipo_matricula');
+                            
+                            // Solo validar si es matrícula por CURSO
+                            if ($tipoMatricula !== TipoMatricula::CURSO) {
+                                return;
+                            }
+                            
+                            if (!$value) {
+                                return;
+                            }
+                            
+                            // Contar cursos de la formación continua
+                            $programa = \App\Models\Programa::with('cursos')->find($value);
+                            $cantidadCursos = $programa?->cursos?->count() ?? 0;
+                            
+                            if ($cantidadCursos <= 1) {
+                                $fail('Esta formación continua tiene solo un curso. Debe matricularse en la formación continua completa, no por curso individual.');
+                            }
+                        };
                     }),
 
                 // ----------------------------------------

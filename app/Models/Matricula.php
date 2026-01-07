@@ -183,13 +183,16 @@ class Matricula extends Model
         
         try {
             // 1. Obtener código de contribuyente del estudiante
+            // IMPORTANTE: Usamos verificarContribuyenteExistente() que busca en VU_CETPRO_BUS
+            // donde sí existen los contribuyentes recién creados, en lugar de
+            // obtenerCodigoContribuyenteMasReciente() que busca en VU_BUSCA_TUSNE_PER_Pen
+            // (vista de liquidaciones pendientes, vacía para nuevos contribuyentes)
             $oracleService = app(\App\Services\OracleTusneService::class);
             $estudiante = $this->estudiante;
             
             if ($estudiante && $estudiante->nro_documento) {
-                $codigoData = $oracleService->obtenerCodigoContribuyenteMasReciente($estudiante->nro_documento);
-                // Limpiar espacios en blanco del código para evitar errores de Oracle
-                $codigoContribuyente = $codigoData?->CODIGO ? trim($codigoData->CODIGO) : null;
+                // Buscar el código de contribuyente en VU_CETPRO_BUS
+                $codigoContribuyente = $oracleService->verificarContribuyenteExistente($estudiante->nro_documento);
             }
             
             // 2. Obtener especialidad y mapear a código B000X
@@ -212,6 +215,19 @@ class Matricula extends Model
             ]);
             // Continuar sin códigos de liquidación
         }
+        
+        // DEBUG: Log para verificar los datos obtenidos para liquidación
+        \Log::info('Datos para generar liquidación', [
+            'matricula_id' => $this->id,
+            'estudiante_id' => $this->estudiante_id,
+            'nro_documento' => $this->estudiante?->nro_documento,
+            'codigo_contribuyente' => $codigoContribuyente,
+            'especialidad_nombre' => $this->tipo_matricula === TipoMatricula::CURSO 
+                ? $this->curso?->programa?->especialidad?->nombre_especialidad
+                : $this->horario?->programa?->especialidad?->nombre_especialidad,
+            'codigo_especialidad' => $codigoEspecialidad,
+            'puede_generar_liquidacion' => $codigoContribuyente && $codigoEspecialidad && $oracleService ? 'SI' : 'NO',
+        ]);
 
         // Fechas de vencimiento para cada cuota
         $fechasVencimiento = $this->calcularFechasVencimientoCuotas($numCuotas);
@@ -279,13 +295,25 @@ class Matricula extends Model
         $nombreNormalizado = strtolower(trim($nombreEspecialidad));
         
         // Mapeo de nombres a códigos Oracle
+        // IMPORTANTE: Agregar todas las especialidades de tu CETPRO con su código B000X correspondiente
         $mapeo = [
+            // Estética Personal
             'estética personal' => 'B0001',
             'estetica personal' => 'B0001',
+            
+            // Confección Textil
             'confección textil' => 'B0002',
             'confeccion textil' => 'B0002',
+            
+            // Ofimática / Computación
             'ofimática' => 'B0003',
             'ofimatica' => 'B0003',
+            'computación e informática' => 'B0003',
+            'computacion e informatica' => 'B0003',
+            'computación' => 'B0003',
+            'computacion' => 'B0003',
+            'informática' => 'B0003',
+            'informatica' => 'B0003',
         ];
         
         return $mapeo[$nombreNormalizado] ?? null;

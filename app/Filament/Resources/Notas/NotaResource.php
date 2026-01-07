@@ -9,6 +9,7 @@ use App\Filament\Resources\Notas\Schemas\NotaForm;
 use App\Filament\Resources\Notas\Tables\NotasTable;
 use App\Models\Nota;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -22,7 +23,7 @@ class NotaResource extends Resource
     protected static ?string $model = Nota::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
+    protected static string|UnitEnum|null $navigationGroup = 'Gestión de Matrícula';
     protected static ?string $recordTitleAttribute = 'nombre';
 
     public static function form(Schema $schema): Schema

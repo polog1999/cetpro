@@ -124,7 +124,9 @@ class OracleTusneService
             oci_bind_by_name($stmt, ":{$bindKey}", $params[$key]);
         }
 
-        $result = @oci_execute($stmt);
+        // Usar OCI_COMMIT_ON_SUCCESS para asegurar commit de operaciones DML internas
+        // Por ejemplo, la función fu_digito_generar puede hacer INSERTs internamente
+        $result = @oci_execute($stmt, OCI_COMMIT_ON_SUCCESS);
 
         if (!$result) {
             $error = oci_error($stmt);
@@ -353,6 +355,248 @@ class OracleTusneService
                 'sql' => $sql,
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Ejecuta un INSERT/UPDATE/DELETE y retorna si fue exitoso.
+     *
+     * @param string $sql Consulta SQL
+     * @param array $params Parámetros nombrados [:param => value]
+     * @return bool
+     * @throws Exception
+     */
+    protected function executeInsert(string $sql, array $params = []): bool
+    {
+        $conn = $this->getConnection();
+        $stmt = oci_parse($conn, $sql);
+
+        if (!$stmt) {
+            $error = oci_error($conn);
+            throw new Exception($error['message'] ?? 'Error al parsear SQL');
+        }
+
+        // Bind de parámetros
+        foreach ($params as $key => $value) {
+            $bindKey = ltrim($key, ':');
+            oci_bind_by_name($stmt, ":{$bindKey}", $params[$key], -1);
+        }
+
+        $result = @oci_execute($stmt, OCI_COMMIT_ON_SUCCESS);
+
+        if (!$result) {
+            $error = oci_error($stmt);
+            oci_free_statement($stmt);
+            throw new Exception($error['message'] ?? 'Error al ejecutar INSERT');
+        }
+
+        oci_free_statement($stmt);
+        return true;
+    }
+
+    /**
+     * Obtiene el siguiente código de contribuyente secuencial.
+     * Formato: C0000001, C0000002, etc.
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function obtenerSiguienteCodigoContribuyente(): string
+    {
+        try {
+            $sql = "
+                SELECT MAX(MCNCONTRIB) AS ULTIMO_CODIGO 
+                FROM SMACARNOM 
+                WHERE MCNCONTRIB LIKE 'C%'
+            ";
+            
+            $resultado = $this->executeQuery($sql, []);
+            $ultimoCodigo = $resultado->first()?->ULTIMO_CODIGO;
+            
+            if (empty($ultimoCodigo)) {
+                return 'C0000001';
+            }
+            
+            $numero = (int) substr($ultimoCodigo, 1);
+            $nuevoNumero = $numero + 1;
+            
+            return 'C' . str_pad($nuevoNumero, 7, '0', STR_PAD_LEFT);
+        } catch (Exception $e) {
+            Log::error('Error obteniendo siguiente código contribuyente: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Mapea el enum DistritoLima al código Oracle.
+     */
+    public function mapearDistritoACodigo(?string $distrito): ?string
+    {
+        if (empty($distrito)) {
+            return null;
+        }
+
+        $mapeo = [
+            'Lima' => '01', 'Ancón' => '02', 'Ate' => '03', 'Barranco' => '04',
+            'Breña' => '05', 'Carabayllo' => '06', 'Comas' => '07', 'Chaclacayo' => '08',
+            'Chorrillos' => '09', 'El Agustino' => '10', 'Jesús María' => '11',
+            'La Molina' => '12', 'La Victoria' => '13', 'Lince' => '14',
+            'Lurigancho' => '15', 'Lurín' => '16', 'Magdalena del Mar' => '17',
+            'Miraflores' => '18', 'Pachacámac' => '19', 'Pucusana' => '20',
+            'Pueblo Libre' => '21', 'Puente Piedra' => '22', 'Punta Negra' => '23',
+            'Punta Hermosa' => '24', 'Rímac' => '25', 'San Bartolo' => '26',
+            'San Isidro' => '27', 'Independencia' => '28', 'San Juan de Miraflores' => '29',
+            'San Luis' => '30', 'San Martín de Porres' => '31', 'San Miguel' => '32',
+            'Santiago de Surco' => '33', 'Surquillo' => '34', 'Villa María del Triunfo' => '35',
+            'San Juan de Lurigancho' => '36', 'Santa María del Mar' => '37', 'Santa Rosa' => '38',
+            'Los Olivos' => '39', 'Cieneguilla' => '40', 'San Borja' => '41',
+            'Villa El Salvador' => '42', 'Santa Anita' => '43',
+        ];
+
+        return $mapeo[$distrito] ?? null;
+    }
+
+    /**
+     * Mapea el tipo de documento al código Oracle.
+     * Catálogo de Oracle:
+     * DOI01=DNI, DOI06=Carnet de extranjeria, DOI11=Pasaporte, DOI19=PTP, DOI03=RUC
+     */
+    public function mapearTipoDocumento(string $tipoDocumento): string
+    {
+        $mapeo = [
+            'DNI' => 'DOI01',
+            'Carnet de extranjeria' => 'DOI06',
+            'Pasaporte' => 'DOI11',
+            'PTP' => 'DOI19',
+            'RUC' => 'DOI03',
+        ];
+
+        return $mapeo[$tipoDocumento] ?? 'DOI01';
+    }
+
+    /**
+     * Mapea el género al código Oracle.
+     */
+    public function mapearGenero(string $genero): string
+    {
+        return match ($genero) {
+            'Masculino' => 'M',
+            'Femenino' => 'F',
+            default => 'M',
+        };
+    }
+
+    /**
+     * Verifica si existe un contribuyente en Oracle por número de documento.
+     * Usa la vista VU_CETPRO_BUS.
+     *
+     * @param string $numDoc Número de documento
+     * @return string|null Código de contribuyente (CODCON) o null si no existe
+     */
+    public function verificarContribuyenteExistente(string $numDoc): ?string
+    {
+        try {
+            $sql = "SELECT CODCON FROM ds_valores.VU_CETPRO_BUS WHERE NUMDOC = :numdoc";
+            $resultado = $this->executeQuery($sql, [':numdoc' => $numDoc]);
+            $codigo = $resultado->first()?->CODCON;
+            
+            if ($codigo) {
+                Log::info('Contribuyente encontrado en Oracle', [
+                    'codigo' => trim($codigo),
+                    'nro_documento' => $numDoc,
+                ]);
+                return trim($codigo);
+            }
+            
+            return null;
+        } catch (Exception $e) {
+            Log::error('Error verificando contribuyente existente: ' . $e->getMessage(), [
+                'nro_documento' => $numDoc,
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Crea un contribuyente en Oracle (tabla SMACARNOM).
+     * 
+     * Primero verifica si ya existe en VU_CETPRO_BUS.
+     * Si existe, retorna el código existente.
+     * Si no existe, crea uno nuevo con prefijo 'C'.
+     *
+     * @param \App\Models\Estudiante $estudiante
+     * @return string|null Código de contribuyente generado/existente o null si falla
+     */
+    public function crearContribuyente(\App\Models\Estudiante $estudiante): ?string
+    {
+        try {
+            // PASO 1: Verificar si ya existe en Oracle
+            $codigoExistente = $this->verificarContribuyenteExistente($estudiante->nro_documento);
+            if ($codigoExistente) {
+                return $codigoExistente;
+            }
+
+            // PASO 2: Si no existe, crear nuevo contribuyente
+            $codigoContribuyente = $this->obtenerSiguienteCodigoContribuyente();
+            
+            $tipoDocumento = $this->mapearTipoDocumento($estudiante->tipo_documento->value ?? 'DNI');
+            $codigoDistrito = $this->mapearDistritoACodigo($estudiante->distrito?->value);
+            $sexo = $this->mapearGenero($estudiante->genero?->value ?? 'Masculino');
+            
+            // Nombre completo para MCNAPENOMB: "APELLIDOS, NOMBRES"
+            $nombreCompleto = trim(strtoupper(
+                $estudiante->apellido_paterno . ' ' . 
+                $estudiante->apellido_materno . ', ' . 
+                $estudiante->nombres
+            ));
+            
+            $fechaNacimiento = $estudiante->fecha_nacimiento?->format('d/m/Y');
+            
+            // Para TPE01 (persona natural): MCNAPEPAT, MCNAPEMAT, MCNNOMBRE van NULL
+            $sql = "
+                INSERT INTO SMACARNOM (
+                    MCNCONTRIB, MCNESTADO, MCNTIPO, MCNAPEPAT, MCNAPEMAT, MCNNOMBRE,
+                    MCNVIAS, MCNDIRE, MCNNUME, MCNDPTO, MCNCODURBA, MCNURBA, MCNMANZ, MCNLOTE,
+                    MCNAPENOMB, MCNTIPODI, MCNNRODI, MCNTIPTELE, MCNROTELE, MCNEMAIL,
+                    MCNDNI, MCNRUC, DISTRICODI, MCNFECNAC, CODCAT, MCNFECHREG, MCNHORA, SEXO
+                ) VALUES (
+                    :codigo, :estado, :tipo, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    :nomcom, :tipodi, :nrodi, NULL, :telefono, :email,
+                    :dni, NULL, :distrito, TO_DATE(:fecnac, 'DD/MM/YYYY'), NULL, SYSDATE,
+                    TO_CHAR(SYSDATE, 'HH24:MI:SS'), :sexo
+                )
+            ";
+            
+            $params = [
+                ':codigo' => $codigoContribuyente,
+                ':estado' => 'ERE04',
+                ':tipo' => 'TPE01',
+                ':nomcom' => $nombreCompleto,
+                ':tipodi' => $tipoDocumento,
+                ':nrodi' => $estudiante->nro_documento,
+                ':telefono' => $estudiante->telefono,
+                ':email' => $estudiante->email,
+                ':dni' => $estudiante->nro_documento,
+                ':distrito' => $codigoDistrito,
+                ':fecnac' => $fechaNacimiento,
+                ':sexo' => $sexo,
+            ];
+            
+            $this->executeInsert($sql, $params);
+            
+            Log::info('Contribuyente creado en Oracle', [
+                'codigo' => $codigoContribuyente,
+                'nro_documento' => $estudiante->nro_documento,
+            ]);
+            
+            return $codigoContribuyente;
+        } catch (Exception $e) {
+            Log::error('Error al crear contribuyente en Oracle: ' . $e->getMessage(), [
+                'estudiante_id' => $estudiante->id,
+                'nro_documento' => $estudiante->nro_documento,
+            ]);
+            return null;
         }
     }
 

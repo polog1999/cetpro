@@ -7,6 +7,8 @@ use Filament\Resources\Pages\CreateRecord;
 use App\Models\Estudiante;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\OracleTusneService;
+use Illuminate\Support\Facades\Log;
 
 class CreateEstudiante extends CreateRecord
 {
@@ -43,4 +45,41 @@ class CreateEstudiante extends CreateRecord
             $this->halt();
         }
     }
+
+    protected function afterCreate(): void
+    {
+        // Crear contribuyente en Oracle
+        try {
+            $oracle = app(OracleTusneService::class);
+            $codigo = $oracle->crearContribuyente($this->record);
+            
+            if ($codigo) {
+                $this->record->codigo_contribuyente = $codigo;
+                $this->record->save();
+                
+                Notification::make()
+                    ->success()
+                    ->title('Contribuyente creado')
+                    ->body("Código: {$codigo}")
+                    ->send();
+                    
+                Log::info('Contribuyente creado desde Filament', [
+                    'estudiante_id' => $this->record->id,
+                    'codigo' => $codigo,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al crear contribuyente desde Filament', [
+                'estudiante_id' => $this->record->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            Notification::make()
+                ->warning()
+                ->title('Estudiante creado sin código de contribuyente')
+                ->body('No se pudo conectar con Oracle')
+                ->send();
+        }
+    }
 }
+

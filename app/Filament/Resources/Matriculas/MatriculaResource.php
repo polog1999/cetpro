@@ -23,7 +23,7 @@ class MatriculaResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Gestión de Matrícula';
+    //protected static string|UnitEnum|null $navigationGroup = 'Gestión de Matrícula';
 
     public static function form(Schema $schema): Schema
     {
