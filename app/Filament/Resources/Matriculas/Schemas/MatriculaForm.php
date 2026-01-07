@@ -275,13 +275,10 @@ class MatriculaForm
                                         Select::make('provincia')
                                             ->options(Provincia::class)
                                             ->default('Lima'),
-<<<<<<< HEAD
-=======
     
                                         Select::make('distrito')
                                             ->options(DistritoLima::class)
                                             ->required(),
->>>>>>> 338c1b0 (generacion de codigos y num de liquidacion)
                                     ])
                                     ->collapsed(),
 
