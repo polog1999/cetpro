@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Validation\ValidationException;
-use App\Enums\EstadoPago;
 
 class Pago extends Model
 {
@@ -29,7 +28,6 @@ class Pago extends Model
     protected $casts = [
         'fecha_vencimiento' => 'date',
         'fecha_pago'        => 'date',
-        'estado'            => EstadoPago::class,
         'monto'             => 'decimal:2',
         'fecha_liquidacion' => 'date',
     ];
@@ -64,8 +62,8 @@ class Pago extends Model
      */
     public function estaVencido(): bool
     {
-        return $this->estado === EstadoPago::PENDIENTE 
-            && $this->fecha_vencimiento < now()->startOfDay();
+        // Verifica si la fecha de vencimiento ya pasó
+        return $this->fecha_vencimiento < now()->startOfDay();
     }
 
     /**
@@ -73,7 +71,8 @@ class Pago extends Model
      */
     public function puedeSerPagado(): bool
     {
-        return $this->estado->puedeSerPagado();
+        // Puede ser pagado si el estado contiene 'Pendiente' (desde Oracle)
+        return str_contains(strtolower($this->estado ?? ''), 'pendiente');
     }
 
     /**
@@ -81,7 +80,9 @@ class Pago extends Model
      */
     public function estadoEsFinal(): bool
     {
-        return $this->estado->esFinal();
+        // Estado final si está cancelado (pagado en Oracle) o anulado
+        $estado = strtolower($this->estado ?? '');
+        return str_contains($estado, 'cancelado') || str_contains($estado, 'anulado');
     }
 
     /**
@@ -98,13 +99,12 @@ class Pago extends Model
         // Validar que se pueda pagar
         if (!$this->puedeSerPagado()) {
             throw ValidationException::withMessages([
-                'estado' => "No se puede pagar una cuota en estado: {$this->estado->getLabel()}",
+                'estado' => "No se puede pagar una cuota con estado: {$this->estado}",
             ]);
         }
 
-        // Actualizar el pago
+        // Actualizar el pago (el estado real se sincroniza desde Oracle)
         $this->update([
-            'estado' => EstadoPago::PAGADO,
             'fecha_pago' => now(),
             'metodo_pago' => $metodoPago,
             'evidencia_path' => $evidenciaPath,
@@ -124,14 +124,14 @@ class Pago extends Model
     public function anular(): void
     {
         // No se puede anular un pago ya anulado
-        if ($this->estado === EstadoPago::ANULADO) {
+        if (str_contains(strtolower($this->estado ?? ''), 'anulado')) {
             throw ValidationException::withMessages([
                 'estado' => 'Esta cuota ya está anulada.',
             ]);
         }
 
         $this->update([
-            'estado' => EstadoPago::ANULADO,
+            'estado' => 'Anulado',
         ]);
     }
 
@@ -144,19 +144,16 @@ class Pago extends Model
      */
     public function revertirPago(string $motivo): void
     {
-        if ($this->estado !== EstadoPago::PAGADO) {
+        $estadoLower = strtolower($this->estado ?? '');
+        if (!str_contains($estadoLower, 'cancelado')) {
             throw ValidationException::withMessages([
-                'estado' => 'Solo se pueden revertir pagos que estén en estado PAGADO.',
+                'estado' => 'Solo se pueden revertir pagos que estén en estado CANCELADO.',
             ]);
         }
 
-        // Cambiar a pendiente o vencido según la fecha
-        $nuevoEstado = $this->fecha_vencimiento < now()->startOfDay() 
-            ? EstadoPago::VENCIDO 
-            : EstadoPago::PENDIENTE;
-
+        // Cambiar a Pendiente (el estado real se sincronizará desde Oracle)
         $this->update([
-            'estado' => $nuevoEstado,
+            'estado' => 'Pendiente',
             'fecha_pago' => null,
             'metodo_pago' => null,
             'evidencia_path' => null,
@@ -173,11 +170,7 @@ class Pago extends Model
      */
     public function actualizarSiVencido(): bool
     {
-        if ($this->estaVencido()) {
-            $this->update(['estado' => EstadoPago::VENCIDO]);
-            return true;
-        }
-
+        // Ya no actualizamos localmente - el estado viene de Oracle
         return false;
     }
 
@@ -215,11 +208,9 @@ class Pago extends Model
             }
         });
 
-        // Actualizar estado a vencido automáticamente al cargar
+        // Ya no actualizamos el estado al cargar - viene de Oracle
         static::retrieved(function (Pago $pago) {
-            if ($pago->estaVencido() && $pago->estado === EstadoPago::PENDIENTE) {
-                $pago->updateQuietly(['estado' => EstadoPago::VENCIDO]);
-            }
+            // El estado se gestiona desde Oracle, no localmente
         });
     }
 }

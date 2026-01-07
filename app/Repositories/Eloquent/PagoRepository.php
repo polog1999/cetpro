@@ -3,7 +3,6 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Pago;
-use App\Enums\EstadoPago;
 use App\Repositories\PagoRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -40,7 +39,10 @@ class PagoRepository implements PagoRepositoryInterface
     public function findPendientesByCronograma(int $cronogramaId): Collection
     {
         return Pago::where('cronograma_id', $cronogramaId)
-            ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            ->where(function ($q) {
+                $q->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                  ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+            })
             ->orderBy('nro_cuota')
             ->get();
     }
@@ -48,7 +50,7 @@ class PagoRepository implements PagoRepositoryInterface
     public function findVencidosByCronograma(int $cronogramaId): Collection
     {
         return Pago::where('cronograma_id', $cronogramaId)
-            ->where('estado', EstadoPago::VENCIDO)
+            ->whereRaw("LOWER(estado) LIKE '%vencido%'")
             ->orderBy('fecha_vencimiento')
             ->get();
     }
@@ -56,7 +58,10 @@ class PagoRepository implements PagoRepositoryInterface
     public function getProximoPago(int $cronogramaId): ?Pago
     {
         return Pago::where('cronograma_id', $cronogramaId)
-            ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            ->where(function ($q) {
+                $q->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                  ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+            })
             ->orderBy('nro_cuota')
             ->first();
     }

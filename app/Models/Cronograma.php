@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Enums\EstadoPago;
 
 class Cronograma extends Model
 {
@@ -40,12 +39,12 @@ class Cronograma extends Model
 
     /**
      * Verifica si el cronograma tiene deudas (pagos vencidos).
-     * Solo se considera deuda cuando el estado del pago es VENCIDO.
+     * Usa comparación de strings ya que el estado viene de Oracle.
      */
     public function tieneDeuda(): bool
     {
         return $this->pagos()
-            ->where('estado', EstadoPago::VENCIDO)
+            ->whereRaw("LOWER(estado) LIKE '%vencido%'")
             ->exists();
     }
 
@@ -55,7 +54,7 @@ class Cronograma extends Model
     public function totalPagado(): float
     {
         return (float) $this->pagos()
-            ->where('estado', EstadoPago::PAGADO)
+            ->whereRaw("LOWER(estado) LIKE '%cancelado%'")
             ->sum('monto');
     }
 
@@ -65,7 +64,7 @@ class Cronograma extends Model
     public function totalPendiente(): float
     {
         return (float) $this->pagos()
-            ->where('estado', EstadoPago::PENDIENTE)
+            ->whereRaw("LOWER(estado) LIKE '%pendiente%'")
             ->sum('monto');
     }
 
@@ -75,7 +74,7 @@ class Cronograma extends Model
     public function cuotasPagadas(): int
     {
         return $this->pagos()
-            ->where('estado', EstadoPago::PAGADO)
+            ->whereRaw("LOWER(estado) LIKE '%cancelado%'")
             ->count();
     }
 
@@ -85,7 +84,7 @@ class Cronograma extends Model
     public function cuotasVencidas(): int
     {
         return $this->pagos()
-            ->where('estado', EstadoPago::VENCIDO)
+            ->whereRaw("LOWER(estado) LIKE '%vencido%'")
             ->count();
     }
 
@@ -110,17 +109,14 @@ class Cronograma extends Model
     }
 
     /**
-     * Actualiza el estado de vencimiento de todas las cuotas del cronograma.
-     * Cambia cuotas PENDIENTE a VENCIDO si ya pasó su fecha de vencimiento.
+     * Actualiza el estado de vencimiento - ya no aplica porque el estado viene de Oracle.
      * 
-     * @return int Número de cuotas actualizadas
+     * @return int Número de cuotas actualizadas (siempre 0 ahora)
      */
     public function actualizarEstadosVencidos(): int
     {
-        return $this->pagos()
-            ->where('estado', EstadoPago::PENDIENTE)
-            ->where('fecha_vencimiento', '<', now()->startOfDay())
-            ->update(['estado' => EstadoPago::VENCIDO]);
+        // El estado se gestiona desde Oracle, no localmente
+        return 0;
     }
 
     /**
@@ -129,7 +125,10 @@ class Cronograma extends Model
     public function proximaCuota(): ?Pago
     {
         return $this->pagos()
-            ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            ->where(function ($query) {
+                $query->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                      ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+            })
             ->orderBy('nro_cuota')
             ->first();
     }
@@ -140,7 +139,7 @@ class Cronograma extends Model
     public function cuotasVencidasDetalle()
     {
         return $this->pagos()
-            ->where('estado', EstadoPago::VENCIDO)
+            ->whereRaw("LOWER(estado) LIKE '%vencido%'")
             ->orderBy('fecha_vencimiento')
             ->get();
     }
@@ -164,7 +163,7 @@ class Cronograma extends Model
             'total_pagado' => $this->totalPagado(),
             'total_pendiente' => $this->totalPendiente(),
             'cuotas_pagadas' => $this->cuotasPagadas(),
-            'cuotas_pendientes' => $this->pagos()->where('estado', EstadoPago::PENDIENTE)->count(),
+            'cuotas_pendientes' => $this->pagos()->whereRaw("LOWER(estado) LIKE '%pendiente%'")->count(),
             'cuotas_vencidas' => $this->cuotasVencidas(),
             'porcentaje_cumplimiento' => $this->porcentajeCumplimiento(),
             'esta_completo' => $this->estaCompletamentePagado(),
@@ -173,4 +172,3 @@ class Cronograma extends Model
         ];
     }
 }
-

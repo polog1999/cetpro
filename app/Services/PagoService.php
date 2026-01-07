@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Pago;
 use App\Models\Cronograma;
-use App\Enums\EstadoPago;
 use App\Repositories\PagoRepositoryInterface;
 use App\Repositories\CronogramaRepositoryInterface;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +14,8 @@ use Illuminate\Validation\ValidationException;
  * 
  * Responsabilidad: Gestión de pagos de cuotas, incluyendo
  * registro, anulación, reversión y actualización de estados.
+ * 
+ * NOTA: El estado de pago ahora viene de Oracle (VU_BUSCA_TUSNE_PER_Pen.ESTADO)
  */
 class PagoService
 {
@@ -25,7 +26,7 @@ class PagoService
 
     /**
      * Registra el pago de una cuota.
-     * Esta lógica fue movida desde Pago::registrarPago()
+     * El estado real se sincroniza desde Oracle.
      */
     public function registrarPago(
         Pago $pago,
@@ -36,14 +37,13 @@ class PagoService
         // Validar que se pueda pagar
         if (!$pago->puedeSerPagado()) {
             throw ValidationException::withMessages([
-                'estado' => "No se puede pagar una cuota en estado: {$pago->estado->getLabel()}",
+                'estado' => "No se puede pagar una cuota con estado: {$pago->estado}",
             ]);
         }
 
         DB::transaction(function () use ($pago, $metodoPago, $evidenciaPath, $usuarioId) {
-            // Actualizar el pago
+            // Actualizar el pago (el estado real se sincroniza desde Oracle)
             $this->pagos->update($pago, [
-                'estado' => EstadoPago::PAGADO,
                 'fecha_pago' => now(),
                 'metodo_pago' => $metodoPago,
                 'evidencia_path' => $evidenciaPath,
@@ -60,41 +60,34 @@ class PagoService
 
     /**
      * Anula un pago.
-     * Lógica movida desde Pago::anular()
      */
     public function anularPago(Pago $pago): void
     {
-        if ($pago->estado === EstadoPago::ANULADO) {
+        if (str_contains(strtolower($pago->estado ?? ''), 'anulado')) {
             throw ValidationException::withMessages([
                 'estado' => 'Esta cuota ya está anulada.',
             ]);
         }
 
         $this->pagos->update($pago, [
-            'estado' => EstadoPago::ANULADO,
+            'estado' => 'Anulado',
         ]);
     }
 
     /**
      * Revierte un pago (requiere permisos especiales).
-     * Lógica movida desde Pago::revertirPago()
      */
     public function revertirPago(Pago $pago, string $motivo): void
     {
-        if ($pago->estado !== EstadoPago::PAGADO) {
+        if (!str_contains(strtolower($pago->estado ?? ''), 'cancelado')) {
             throw ValidationException::withMessages([
                 'estado' => 'Solo se pueden revertir pagos que estén en estado PAGADO.',
             ]);
         }
 
         DB::transaction(function () use ($pago) {
-            // Cambiar a pendiente o vencido según la fecha
-            $nuevoEstado = $pago->fecha_vencimiento < now()->startOfDay()
-                ? EstadoPago::VENCIDO
-                : EstadoPago::PENDIENTE;
-
             $this->pagos->update($pago, [
-                'estado' => $nuevoEstado,
+                'estado' => 'Pendiente',
                 'fecha_pago' => null,
                 'metodo_pago' => null,
                 'evidencia_path' => null,
@@ -110,21 +103,12 @@ class PagoService
 
     /**
      * Actualiza estados vencidos de un cronograma.
-     * Lógica movida desde Cronograma::actualizarEstadosVencidos()
+     * Ya no aplica porque el estado viene de Oracle.
      */
     public function actualizarEstadosVencidos(Cronograma $cronograma): int
     {
-        $pagosPendientes = $this->pagos->findPendientesByCronograma($cronograma->id);
-        
-        $actualizados = 0;
-        foreach ($pagosPendientes as $pago) {
-            if ($pago->estado === EstadoPago::PENDIENTE && $pago->fecha_vencimiento < now()->startOfDay()) {
-                $this->pagos->update($pago, ['estado' => EstadoPago::VENCIDO]);
-                $actualizados++;
-            }
-        }
-
-        return $actualizados;
+        // El estado se gestiona desde Oracle, no localmente
+        return 0;
     }
 
     /**
@@ -136,8 +120,8 @@ class PagoService
         $pagosPendientes = $this->pagos->findPendientesByCronograma($cronogramaId);
         
         foreach ($pagosPendientes as $pago) {
-            if ($pago->estado === EstadoPago::PENDIENTE) {
-                $this->pagos->update($pago, ['estado' => EstadoPago::ANULADO]);
+            if (str_contains(strtolower($pago->estado ?? ''), 'pendiente')) {
+                $this->pagos->update($pago, ['estado' => 'Anulado']);
             }
         }
     }

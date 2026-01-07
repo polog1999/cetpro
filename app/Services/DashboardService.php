@@ -7,7 +7,6 @@ use App\Models\Matricula;
 use App\Models\Pago;
 use App\Models\Horario;
 use App\Models\Programa;
-use App\Enums\EstadoPago;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +16,8 @@ use Carbon\Carbon;
 /**
  * Servicio para gestionar datos del Dashboard
  * Centraliza toda la lógica de negocio para KPIs, gráficos y tablas
+ * 
+ * NOTA: El estado de pagos ahora viene de Oracle (string)
  */
 class DashboardService
 {
@@ -83,7 +84,7 @@ class DashboardService
      */
     protected function getIngresosDelMes(array $filters): float
     {
-        $query = Pago::where('estado', EstadoPago::PAGADO);
+        $query = Pago::whereRaw("LOWER(estado) LIKE '%cancelado%'");
         
         if (isset($filters['desde']) && isset($filters['hasta'])) {
             $query->whereBetween('fecha_pago', [
@@ -106,7 +107,10 @@ class DashboardService
      */
     protected function getPendientePorCobrar(array $filters): float
     {
-        $query = Pago::whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO]);
+        $query = Pago::where(function ($q) {
+            $q->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+              ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+        });
         
         if (isset($filters['programa_id'])) {
             $query->whereHas('cronograma.matricula.horario', function ($q) use ($filters) {
@@ -123,7 +127,7 @@ class DashboardService
     protected function getMorosos(array $filters): int
     {
         $query = Estudiante::whereHas('matriculas.cronograma.pagos', function ($q) {
-            $q->where('estado', EstadoPago::VENCIDO);
+            $q->whereRaw("LOWER(estado) LIKE '%vencido%'");
         });
         
         if (isset($filters['programa_id'])) {
@@ -235,7 +239,7 @@ class DashboardService
             $iniciomes = $fecha->copy()->startOfMonth();
             $finMes = $fecha->copy()->endOfMonth();
             
-            $pagadoMes = Pago::where('estado', EstadoPago::PAGADO)
+            $pagadoMes = Pago::whereRaw("LOWER(estado) LIKE '%cancelado%'")
                 ->whereBetween('fecha_pago', [$iniciomes, $finMes])
                 ->when(isset($filters['programa_id']), function ($q) use ($filters) {
                     $q->whereHas('cronograma.matricula.horario', fn($query) => 
@@ -244,7 +248,10 @@ class DashboardService
                 })
                 ->sum('monto');
             
-            $pendienteMes = Pago::whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+            $pendienteMes = Pago::where(function ($q) {
+                    $q->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                      ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+                })
                 ->whereBetween('fecha_vencimiento', [$iniciomes, $finMes])
                 ->when(isset($filters['programa_id']), function ($q) use ($filters) {
                     $q->whereHas('cronograma.matricula.horario', fn($query) => 
@@ -318,7 +325,7 @@ class DashboardService
             ->join('matriculas', 'matriculas.estudiante_id', '=', 'estudiantes.id')
             ->join('cronogramas', 'cronogramas.matricula_id', '=', 'matriculas.id')
             ->join('pagos', 'pagos.cronograma_id', '=', 'cronogramas.id')
-            ->where('pagos.estado', EstadoPago::VENCIDO)
+            ->whereRaw("LOWER(pagos.estado) LIKE '%vencido%'")
             ->when(isset($filters['programa_id']), function ($q) use ($filters) {
                 $q->join('horarios', 'horarios.id_horario', '=', 'matriculas.horario_id')
                     ->where('horarios.id_programa', $filters['programa_id']);
@@ -343,7 +350,7 @@ class DashboardService
                 'usuarios.usuario as usuario'
             )
             ->join('usuarios', 'usuarios.id', '=', 'pagos.usuario_id')
-            ->where('pagos.estado', EstadoPago::PAGADO)
+            ->whereRaw("LOWER(pagos.estado) LIKE '%cancelado%'")
             ->limit($limit / 2);
         
         $matriculas = Matricula::select(
@@ -367,9 +374,9 @@ class DashboardService
     public function getAccionesDelDia(array $filters = []): array
     {
         return [
-            'cuotas_vencidas' => Pago::where('estado', EstadoPago::VENCIDO)->count(),
+            'cuotas_vencidas' => Pago::whereRaw("LOWER(estado) LIKE '%vencido%'")->count(),
             
-            'por_vencer' => Pago::where('estado', EstadoPago::PENDIENTE)
+            'por_vencer' => Pago::whereRaw("LOWER(estado) LIKE '%pendiente%'")
                 ->whereBetween('fecha_vencimiento', [now(), now()->addDays(7)])
                 ->count(),
             
@@ -382,7 +389,7 @@ class DashboardService
                 ->where('estado', '!=', EstadoMatricula::ANULADO->value)
                 ->count(),
             
-            'sin_evidencia' => Pago::where('estado', EstadoPago::PAGADO)
+            'sin_evidencia' => Pago::whereRaw("LOWER(estado) LIKE '%cancelado%'")
                 ->whereNull('evidencia_path')
                 ->count(),
         ];

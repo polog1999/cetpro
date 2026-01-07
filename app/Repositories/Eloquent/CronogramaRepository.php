@@ -3,7 +3,6 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Cronograma;
-use App\Enums\EstadoPago;
 use App\Repositories\CronogramaRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -43,7 +42,10 @@ class CronogramaRepository implements CronogramaRepositoryInterface
     public function getCronogramasConDeuda(): Collection
     {
         return Cronograma::whereHas('pagos', function ($query) {
-            $query->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO]);
+            $query->where(function ($q) {
+                $q->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                  ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+            });
         })->with('matricula.estudiante')->get();
     }
 }

@@ -62,7 +62,7 @@ class TopMorosidadTable extends BaseWidget
                         $ultimaVencida = $record->matriculas()
                             ->join('cronogramas', 'cronogramas.matricula_id', '=', 'matriculas.id')
                             ->join('pagos', 'pagos.cronograma_id', '=', 'cronogramas.id')
-                            ->where('pagos.estado', \App\Enums\EstadoPago::VENCIDO)
+                            ->whereRaw("LOWER(pagos.estado) LIKE '%vencido%'")
                             ->max('pagos.fecha_vencimiento');
                         
                         if (!$ultimaVencida) {

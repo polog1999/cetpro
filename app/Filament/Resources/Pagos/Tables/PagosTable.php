@@ -28,7 +28,6 @@ use App\Models\Programa;
 use App\Models\Horario;
 use App\Models\Curso;
 
-use App\Enums\EstadoPago;
 use App\Models\Pago;
 
 class PagosTable
@@ -74,8 +73,16 @@ class PagosTable
                 TextColumn::make('num_liquidacion')
                     ->searchable(),
                 TextColumn::make('estado')
-                    ->label('Estado')
-                    ->searchable(),
+                    ->label('Estado Oracle')
+                    ->searchable()
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'cancelado') => 'success',
+                        str_contains(strtolower($state), 'pendiente') => 'warning',
+                        str_contains(strtolower($state), 'vencido') => 'danger',
+                        str_contains(strtolower($state), 'anulado') => 'gray',
+                        default => 'info',
+                    }),
 
                 TextColumn::make('fecha_vencimiento')
                     ->label('Fecha de vencimiento')

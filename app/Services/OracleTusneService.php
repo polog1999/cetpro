@@ -303,6 +303,31 @@ class OracleTusneService
     }
 
     /**
+     * Obtiene el estado de una liquidación desde Oracle.
+     * 
+     * Consulta la vista VU_BUSCA_TUSNE_PER_Pen para obtener el estado
+     * de un número de liquidación específico.
+     *
+     * @param string $numLiquidacion Número de liquidación (ej: 1312202605662284)
+     * @return string|null Estado de la liquidación (ej: 'Pendiente 2026') o null si no existe
+     */
+    public function obtenerEstadoLiquidacion(string $numLiquidacion): ?string
+    {
+        try {
+            $sql = "SELECT ESTADO FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen WHERE LIQUIDACION = :liquidacion";
+            
+            $resultado = $this->executeQuery($sql, [':liquidacion' => $numLiquidacion]);
+            
+            return $resultado->first()?->ESTADO;
+        } catch (Exception $e) {
+            Log::warning('Error obteniendo estado de liquidación Oracle: ' . $e->getMessage(), [
+                'num_liquidacion' => $numLiquidacion,
+            ]);
+            return null;
+        }
+    }
+
+    /**
      * Busca una persona por su número de documento.
      *
      * @param string $numDoc Número de documento

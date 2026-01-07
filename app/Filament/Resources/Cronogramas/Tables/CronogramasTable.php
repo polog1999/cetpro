@@ -9,7 +9,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\SelectFilter;
-use App\Enums\EstadoPago;
 
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
@@ -168,7 +167,7 @@ class CronogramasTable
                     ->getStateUsing(function (Cronograma $record): string {
                         // Solo es deudor si tiene pagos con estado VENCIDO
                         $esDeudor = $record->pagos()
-                            ->where('estado', EstadoPago::VENCIDO)
+                            ->whereRaw("LOWER(estado) LIKE '%vencido%'")
                             ->exists();
 
                         return $esDeudor ? 'Deudor' : 'Al día';
@@ -186,7 +185,7 @@ class CronogramasTable
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withExists([
                             'pagos as tiene_deuda' => function ($query) {
-                                $query->where('estado', EstadoPago::VENCIDO);
+                                $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
                             }
                         ])->orderBy('tiene_deuda', $direction);
                     }),
@@ -253,13 +252,13 @@ class CronogramasTable
 
                         if ($data['value'] === 'con_deuda') {
                             return $query->whereHas('pagos', function (Builder $q) {
-                                $q->where('estado', EstadoPago::VENCIDO);
+                                $q->whereRaw("LOWER(estado) LIKE '%vencido%'");
                             });
                         }
 
                         if ($data['value'] === 'al_dia') {
                             return $query->whereDoesntHave('pagos', function (Builder $q) {
-                                $q->where('estado', EstadoPago::VENCIDO);
+                                $q->whereRaw("LOWER(estado) LIKE '%vencido%'");
                             });
                         }
 

@@ -17,7 +17,7 @@ class NotasTable
             ->columns([
                 TextColumn::make('matricula.codigo_inscripcion')
                     ->label('Código de matrícula')
-                    ->numeric()
+                    
                     ->sortable(),
                 TextColumn::make('curso.nombre_curso')
                     ->label('Curso')

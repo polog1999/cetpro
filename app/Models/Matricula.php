@@ -15,7 +15,6 @@ use App\Models\Curso;
 use App\Models\Cronograma;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
-use App\Enums\EstadoPago;
 use App\Enums\TipoCertificado;
 
 class Matricula extends Model
@@ -260,12 +259,22 @@ class Matricula extends Model
                 }
             }
             
-            // Crear el pago con o sin código de liquidación
+            // Obtener estado desde Oracle si tenemos número de liquidación
+            $estadoOracle = 'Pendiente'; // Default si no se puede obtener
+            if ($numLiquidacion && $oracleService) {
+                try {
+                    $estadoOracle = $oracleService->obtenerEstadoLiquidacion($numLiquidacion) ?? 'Pendiente';
+                } catch (\Exception $e) {
+                    \Log::warning("Error obteniendo estado de liquidación: " . $e->getMessage());
+                }
+            }
+            
+            // Crear el pago con código de liquidación y estado desde Oracle
             $cronograma->pagos()->create([
                 'nro_cuota'         => $i,
                 // 'codigo' se genera en el modelo Pago::creating si se deja null
                 'monto'             => $montos[$i - 1],
-                'estado'            => EstadoPago::PENDIENTE,
+                'estado'            => $estadoOracle,  // ← Estado desde Oracle
                 'fecha_vencimiento' => $fechasVencimiento[$i - 1] ?? null,
                 'metodo_pago'       => null,
                 'fecha_pago'        => null,

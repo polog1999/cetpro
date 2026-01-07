@@ -127,7 +127,7 @@ class MatriculaService
         $tieneDeuda = Matricula::where('estudiante_id', $estudianteId)
             ->where('estado', '!=', EstadoMatricula::ANULADO)
             ->whereHas('cronograma.pagos', function ($query) {
-                $query->where('estado', \App\Enums\EstadoPago::VENCIDO);
+                $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
             })
             ->exists();
         
@@ -508,8 +508,8 @@ class MatriculaService
             // Anular los pagos pendientes del cronograma
             if ($matricula->cronograma) {
                 $matricula->cronograma->pagos()
-                    ->where('estado', \App\Enums\EstadoPago::PENDIENTE)
-                    ->update(['estado' => \App\Enums\EstadoPago::ANULADO]);
+                    ->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                    ->update(['estado' => 'Anulado']);
             }
 
             DB::commit();

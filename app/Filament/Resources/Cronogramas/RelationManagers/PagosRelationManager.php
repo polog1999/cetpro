@@ -8,7 +8,6 @@ use Filament\Tables\Table;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Schemas\Schema;
-use App\Enums\EstadoPago;
 
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
@@ -54,11 +53,10 @@ class PagosRelationManager extends RelationManager
                     ->required()
                     ->columnSpan(1),
 
-                Forms\Components\Select::make('estado')
-                    ->label('Estado')
-                    ->options(EstadoPago::class) // Carga las opciones del Enum automáticamente
-                    ->required()
-                    ->native(false)
+                Forms\Components\TextInput::make('estado')
+                    ->label('Estado Oracle')
+                    ->disabled()
+                    ->helperText('Estado sincronizado desde Oracle')
                     ->columnSpan(1),
 
                 Forms\Components\DatePicker::make('fecha_vencimiento')
@@ -103,9 +101,16 @@ class PagosRelationManager extends RelationManager
                     ->sortable()
                     ->weight('bold'),
 
-                // ESTADO (Usando tu Enum)
+                // ESTADO (String desde Oracle)
                 Tables\Columns\TextColumn::make('estado')
                     ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'cancelado') => 'success',
+                        str_contains(strtolower($state), 'pendiente') => 'warning',
+                        str_contains(strtolower($state), 'vencido') => 'danger',
+                        str_contains(strtolower($state), 'anulado') => 'gray',
+                        default => 'info',
+                    })
                     ->sortable()
                     ->searchable(),
 
@@ -168,10 +173,10 @@ class PagosRelationManager extends RelationManager
                     ])
                     ->action(function(Pago $record, array $data):void{
                         $fechaActual = now();
+                        // El estado se sincroniza desde Oracle, aquí solo guardamos evidencia
                         $record->update([
                             'evidencia_path'=>$data['evidencia_path'],
                             'metodo_pago'=>$data['metodo_pago'],
-                            'estado'=>EstadoPago::PAGADO,
                             'fecha_pago'=>$fechaActual,
                         ]);
                     }),

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Pagos\Schemas;
 
-use App\Enums\EstadoPago;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -25,10 +24,10 @@ class PagoForm
                 TextInput::make('monto')
                     ->required()
                     ->numeric(),
-                Select::make('estado')
-                    ->options(EstadoPago::class)
-                    ->default('pendiente')
-                    ->required(),
+                TextInput::make('estado')
+                    ->label('Estado Oracle')
+                    ->disabled()
+                    ->helperText('El estado viene de Oracle'),
                 DatePicker::make('fecha_vencimiento')
                     ->required(),
                 DatePicker::make('fecha_pago'),
