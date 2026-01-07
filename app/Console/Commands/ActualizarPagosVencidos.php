@@ -5,6 +5,12 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Services\CronogramaService;
 
+/**
+ * Comando para actualizar pagos vencidos.
+ * 
+ * NOTA: El estado de los pagos ahora viene desde Oracle.
+ * Este comando sincroniza el estado local basado en fecha de vencimiento.
+ */
 class ActualizarPagosVencidos extends Command
 {
     /**
@@ -49,8 +55,8 @@ class ActualizarPagosVencidos extends Command
         }
 
         try {
-            // Obtener pagos que se van a actualizar
-            $pagosVencidos = \App\Models\Pago::where('estado', \App\Enums\EstadoPago::PENDIENTE)
+            // Obtener pagos que se van a actualizar (estado pendiente desde Oracle)
+            $pagosVencidos = \App\Models\Pago::whereRaw("LOWER(estado) LIKE '%pendiente%'")
                 ->where('fecha_vencimiento', '<', now()->startOfDay())
                 ->get();
 
@@ -68,10 +74,10 @@ class ActualizarPagosVencidos extends Command
             $table = $pagosVencidos->map(function ($pago) {
                 return [
                     'ID' => $pago->id,
-                    'Código' => $pago->codigo,
-                    'Estudiante' => $pago->cronograma->matricula->estudiante->nombre_completo ?? 'N/A',
+                    'Código' => $pago->codigo ?? 'N/A',
+                    'Estudiante' => $pago->cronograma?->matricula?->estudiante?->nombre_completo ?? 'N/A',
                     'Monto' => 'S/ ' . number_format($pago->monto, 2),
-                    'Vencimiento' => $pago->fecha_vencimiento->format('d/m/Y'),
+                    'Vencimiento' => $pago->fecha_vencimiento?->format('d/m/Y') ?? 'N/A',
                     'Días atraso' => $pago->diasRetraso(),
                 ];
             });
@@ -98,7 +104,7 @@ class ActualizarPagosVencidos extends Command
                 $this->info('🔄 Actualizando estados de matrículas afectadas...');
                 
                 $matriculasAfectadas = \App\Models\Matricula::whereHas('cronograma.pagos', function ($query) {
-                    $query->where('estado', \App\Enums\EstadoPago::VENCIDO);
+                    $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
                 })->get();
 
                 foreach ($matriculasAfectadas as $matricula) {
@@ -121,4 +127,3 @@ class ActualizarPagosVencidos extends Command
         }
     }
 }
-

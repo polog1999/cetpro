@@ -179,7 +179,9 @@ class Pago extends Model
      */
     public function diasRetraso(): int
     {
-        if ($this->estado === EstadoPago::PAGADO) {
+        // Si el estado contiene 'cancelado' o 'pagado', no hay retraso
+        $estadoLower = strtolower($this->estado ?? '');
+        if (str_contains($estadoLower, 'cancelado') || str_contains($estadoLower, 'pagado')) {
             return 0;
         }
 

@@ -275,10 +275,6 @@ class MatriculaForm
                                         Select::make('provincia')
                                             ->options(Provincia::class)
                                             ->default('Lima'),
-    
-                                        Select::make('distrito')
-                                            ->options(DistritoLima::class)
-                                            ->required(),
                                     ])
                                     ->collapsed(),
 

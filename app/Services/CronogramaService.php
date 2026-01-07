@@ -5,25 +5,28 @@ namespace App\Services;
 use App\Models\Cronograma;
 use App\Models\Pago;
 use App\Models\Matricula;
-use App\Enums\EstadoPago;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Servicio para gestión de cronogramas de pago y cuotas.
+ * 
+ * NOTA: El estado de los pagos viene desde Oracle, no se usa enum local.
+ * Estados posibles: 'Pendiente', 'Cancelado', 'Vencido', 'Anulado' (strings de Oracle)
  */
 class CronogramaService
 {
     /**
      * Actualiza todos los pagos pendientes que ya han vencido.
+     * NOTA: Esta función ya no aplica directamente porque el estado viene de Oracle.
      *
      * @return int Número de pagos actualizados
      */
     public function actualizarPagosVencidos(): int
     {
-        return Pago::where('estado', EstadoPago::PENDIENTE)
+        return Pago::whereRaw("LOWER(estado) LIKE '%pendiente%'")
             ->where('fecha_vencimiento', '<', now()->startOfDay())
-            ->update(['estado' => EstadoPago::VENCIDO]);
+            ->update(['estado' => 'Vencido']);
     }
 
     /**
@@ -145,10 +148,10 @@ class CronogramaService
     public function obtenerCronogramasConCuotasVencidas()
     {
         return Cronograma::whereHas('pagos', function ($query) {
-            $query->where('estado', EstadoPago::VENCIDO);
+            $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
         })
         ->with(['matricula.estudiante', 'pagos' => function ($query) {
-            $query->where('estado', EstadoPago::VENCIDO);
+            $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
         }])
         ->get();
     }
@@ -161,10 +164,10 @@ class CronogramaService
     public function obtenerEstudiantesConPagosVencidos()
     {
         return Matricula::whereHas('cronograma.pagos', function ($query) {
-            $query->where('estado', EstadoPago::VENCIDO);
+            $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
         })
         ->with(['estudiante', 'cronograma.pagos' => function ($query) {
-            $query->where('estado', EstadoPago::VENCIDO);
+            $query->whereRaw("LOWER(estado) LIKE '%vencido%'");
         }])
         ->get();
     }
@@ -180,7 +183,10 @@ class CronogramaService
         return (float) Pago::whereHas('cronograma.matricula', function ($query) use ($estudianteId) {
             $query->where('estudiante_id', $estudianteId);
         })
-        ->whereIn('estado', [EstadoPago::PENDIENTE, EstadoPago::VENCIDO])
+        ->where(function ($query) {
+            $query->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+                  ->orWhereRaw("LOWER(estado) LIKE '%vencido%'");
+        })
         ->sum('monto');
     }
 
@@ -192,14 +198,14 @@ class CronogramaService
     public function obtenerEstadisticasPagos(): array
     {
         $totalPagos = Pago::count();
-        $pagosPagados = Pago::where('estado', EstadoPago::PAGADO)->count();
-        $pagosPendientes = Pago::where('estado', EstadoPago::PENDIENTE)->count();
-        $pagosVencidos = Pago::where('estado', EstadoPago::VENCIDO)->count();
-        $pagosAnulados = Pago::where('estado', EstadoPago::ANULADO)->count();
+        $pagosPagados = Pago::whereRaw("LOWER(estado) LIKE '%cancelado%'")->count();
+        $pagosPendientes = Pago::whereRaw("LOWER(estado) LIKE '%pendiente%'")->count();
+        $pagosVencidos = Pago::whereRaw("LOWER(estado) LIKE '%vencido%'")->count();
+        $pagosAnulados = Pago::whereRaw("LOWER(estado) LIKE '%anulado%'")->count();
 
-        $montoPagado = (float) Pago::where('estado', EstadoPago::PAGADO)->sum('monto');
-        $montoPendiente = (float) Pago::where('estado', EstadoPago::PENDIENTE)->sum('monto');
-        $montoVencido = (float) Pago::where('estado', EstadoPago::VENCIDO)->sum('monto');
+        $montoPagado = (float) Pago::whereRaw("LOWER(estado) LIKE '%cancelado%'")->sum('monto');
+        $montoPendiente = (float) Pago::whereRaw("LOWER(estado) LIKE '%pendiente%'")->sum('monto');
+        $montoVencido = (float) Pago::whereRaw("LOWER(estado) LIKE '%vencido%'")->sum('monto');
 
         return [
             'cantidad' => [

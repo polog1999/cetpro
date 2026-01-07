@@ -18,7 +18,7 @@ use Filament\Facades\Filament;
 use App\Enums\Rol;
 
 use UnitEnum;
-use App\Enums\EstadoPago;
+// Estado de pagos viene desde Oracle (strings: 'Pendiente', 'Cancelado', 'Vencido', 'Anulado')
 
 use App\Filament\Resources\Cronogramas\RelationManagers\PagosRelationManager; // El que creaste
 
@@ -117,7 +117,7 @@ class CronogramaResource extends Resource
         
         // Contar cronogramas que tienen al menos una cuota pendiente y vencida
         $cronogramasEnDeuda = static::getModel()::whereHas('pagos', function ($query) {
-            $query->where('estado', EstadoPago::PENDIENTE)
+            $query->whereRaw("LOWER(estado) LIKE '%pendiente%'")
                   ->where('fecha_vencimiento', '<', now());
         })->count();
         
@@ -154,9 +154,9 @@ class CronogramaResource extends Resource
                 TextEntry::make('progreso')
                                 ->label('Cuotas Pagadas')
                                 ->state(function (Cronograma $record): string {
-                                    // Contamos cuántos pagos tienen estado PAGADO
+                                    // Contamos cuántos pagos tienen estado CANCELADO (pagado en Oracle)
                                     $pagadas = $record->pagos()
-                                        ->where('estado', EstadoPago::PAGADO)
+                                        ->whereRaw("LOWER(estado) LIKE '%cancelado%'")
                                         ->count();
                                     
                                     return "{$pagadas} de {$record->num_cuotas}";
@@ -170,7 +170,7 @@ class CronogramaResource extends Resource
                                 ->state(function (Cronograma $record): string {
                                     // Buscamos si existe alguna cuota PENDIENTE y VENCIDA
                                     $esDeudor = $record->pagos()
-                                        ->where('estado', EstadoPago::PENDIENTE)
+                                        ->whereRaw("LOWER(estado) LIKE '%pendiente%'")
                                         ->where('fecha_vencimiento', '<', now()) // Venció antes de hoy
                                         ->exists();
 

@@ -71,14 +71,6 @@ class Matricula extends Model
     }
 
     /**
-     * Obtener el promedio general de todas las notas
-     */
-    public function obtenerPromedioGeneral(): float
-    {
-        return $this->notas()->avg('nota') ?? 0;
-    }
-
-    /**
      * Obtener notas agrupadas por curso
      */
     public function obtenerNotasPorCurso($cursoId)
