@@ -146,27 +146,36 @@ class MatriculaService
     
     /**
      * Genera un código de inscripción único para la matrícula.
+     * 
+     * Formato: AñoDNIHorarioID (sin guiones)
+     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
      *
      * @param int $horarioId
+     * @param int|null $estudianteId
      * @return string|null
      */
-    public function generarCodigoInscripcion(int $horarioId): ?string
+    public function generarCodigoInscripcion(int $horarioId, ?int $estudianteId = null): ?string
     {
         $horario = $this->horarios->find($horarioId);
         
-        if (!$horario || !$horario->id_programa) {
+        if (!$horario) {
             return null;
         }
 
         $year = now()->format('Y');
-        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
-        $prefijo = "{$year}-{$programaId}";
         
-        $count = $this->matriculas->contarPorPrefijoCodigo($prefijo);
+        // Obtener DNI del estudiante
+        $dni = '00000000';
+        if ($estudianteId) {
+            $estudiante = Estudiante::find($estudianteId);
+            $dni = $estudiante?->nro_documento ?? '00000000';
+        }
         
-        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        // Obtener ID del horario
+        $horarioIdStr = $horario->id_horario ?? $horarioId;
         
-        return "{$year}-{$programaId}-{$secuencial}";
+        // Formato: AñoDNIHorarioID (sin guiones)
+        return "{$year}{$dni}{$horarioIdStr}";
     }
     
     /**
@@ -199,7 +208,10 @@ class MatriculaService
         
         // 3. Generar código de inscripción si no existe
         if (empty($data['codigo_inscripcion'])) {
-            $data['codigo_inscripcion'] = $this->generarCodigoInscripcion($data['horario_id']);
+            $data['codigo_inscripcion'] = $this->generarCodigoInscripcion(
+                $data['horario_id'], 
+                $data['estudiante_id'] ?? null
+            );
         }
         
         // 4. Establecer valores por defecto

@@ -853,13 +853,13 @@ class MatriculaForm
     }
 
     /**
-     * Genera el código de inscripción en formato "YYYY-XXX-NNN"
-     * donde YYYY = año actual, XXX = ID del programa con 3 dígitos, 
-     * y NNN = número secuencial de matrícula para ese programa/año
+     * Genera el código de inscripción en formato: AñoDNIHorarioID (sin guiones)
+     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
      */
     protected static function generarCodigoInscripcion(Set $set, Get $get): void
     {
         $horarioId = $get('horario_id');
+        $estudianteId = $get('estudiante_id');
 
         if (! $horarioId) {
             $set('codigo_inscripcion', null);
@@ -867,7 +867,7 @@ class MatriculaForm
         }
 
         $service = app(\App\Services\MatriculaService::class);
-        $codigo = $service->generarCodigoInscripcion($horarioId);
+        $codigo = $service->generarCodigoInscripcion($horarioId, $estudianteId);
 
         $set('codigo_inscripcion', $codigo);
     }
