@@ -507,9 +507,8 @@ class Matricula extends Model
     /**
      * Genera el código de inscripción para la matrícula.
      * 
-     * Formato:
-     * - PROGRAMA/FORMACION_CONTINUA: YYYY-PPP-NNN
-     * - CURSO: YYYY-PPP-CCC-NNN
+     * Formato: AñoDNIHorarioID (sin guiones)
+     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
      */
     private static function generarCodigoInscripcion(Matricula $matricula, ?Horario $horario): void
     {
@@ -517,38 +516,17 @@ class Matricula extends Model
             return;
         }
 
-        if ($horario && $horario->id_programa) {
-            $prefijo = self::construirPrefijoCodigoInscripcion($matricula, $horario);
-        } else {
-            // Fallback si no hay horario o programa
-            $prefijo = now()->format('Y') . '-000';
-        }
-
-        // Contar cuántas matrículas ya existen con este prefijo
-        $count = static::where('codigo_inscripcion', 'like', "{$prefijo}-%")->count();
-        
-        // Número secuencial (siguiente después del último)
-        $secuencial = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-        
-        $matricula->codigo_inscripcion = "{$prefijo}-{$secuencial}";
-    }
-
-    /**
-     * Construye el prefijo del código de inscripción según el tipo de matrícula.
-     */
-    private static function construirPrefijoCodigoInscripcion(Matricula $matricula, Horario $horario): string
-    {
         $year = now()->format('Y');
-        $programaId = str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
-        $prefijo = "{$year}-{$programaId}";
         
-        // Para CURSO: incluir el ID del curso en el prefijo
-        if ($matricula->tipo_matricula === TipoMatricula::CURSO && $matricula->id_curso) {
-            $cursoId = str_pad($matricula->id_curso, 3, '0', STR_PAD_LEFT);
-            $prefijo = "{$prefijo}-{$cursoId}";
-        }
+        // Obtener DNI del estudiante
+        $estudiante = Estudiante::find($matricula->estudiante_id);
+        $dni = $estudiante?->nro_documento ?? '00000000';
         
-        return $prefijo;
+        // Obtener ID del horario
+        $horarioId = $horario?->id_horario ?? $matricula->horario_id ?? '0';
+        
+        // Formato: AñoDNIHorarioID (sin guiones)
+        $matricula->codigo_inscripcion = "{$year}{$dni}{$horarioId}";
     }
 
     /**

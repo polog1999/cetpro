@@ -210,7 +210,6 @@ class MatriculaForm
     
                                         TextInput::make('nombres')
                                             ->required()
-                                            ->columnSpanFull()
                                             ->regex('/^[\pL\s]+$/u')
                                             ->validationMessages([
                                                 'regex' => 'Solo se permiten letras y espacios.',
@@ -232,6 +231,11 @@ class MatriculaForm
                                                 'regex' => 'Solo se permiten letras y espacios.',
                                             ])
                                             ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                        
+    
+                                        Select::make('distrito')
+                                            ->required()
+                                            ->options(DistritoLima::class),
                                     ]),
 
                                     Section::make('Datos adicionales')
@@ -263,9 +267,6 @@ class MatriculaForm
                                         Select::make('provincia')
                                             ->options(Provincia::class)
                                             ->default('Lima'),
-    
-                                        Select::make('distrito')
-                                            ->options(DistritoLima::class),
                                     ])
                                     ->collapsed(),
 

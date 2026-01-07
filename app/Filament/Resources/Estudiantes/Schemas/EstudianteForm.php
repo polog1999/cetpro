@@ -112,7 +112,8 @@ class EstudianteForm
                     ->default('Lima')
                     ->required(),
                 Select::make('distrito')
-                    ->options(DistritoLima::class),
+                    ->options(DistritoLima::class)
+                    ->required(),
             ]);
     }
 }

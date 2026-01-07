@@ -10,7 +10,7 @@ use Exception;
  * Servicio para consultas a base de datos Oracle externa (TUSNE).
  * 
  * Consulta las vistas:
- * - ds_valores.VU_BUSCA_TUSNE_PER (búsqueda de personas)
+ * - ds_valores.VU_CETPRO_BUS (búsqueda de personas)
  * - DS_VALORES.VU_BUSCA_TUSNE_PER_Pen (personas pendientes)
  * 
  * Usa la extensión OCI8 nativa de PHP para conectar a Oracle.
@@ -142,7 +142,7 @@ class OracleTusneService
     }
 
     /**
-     * Busca personas en la vista VU_BUSCA_TUSNE_PER.
+     * Busca personas en la vista VU_CETPRO_BUS.
      * 
      * Permite búsqueda por:
      * - Nombre (búsqueda parcial con LIKE)
@@ -184,7 +184,7 @@ class OracleTusneService
             }
 
             $whereClause = implode(' OR ', $conditions);
-            $sql = "SELECT * FROM {$this->schema}.VU_BUSCA_TUSNE_PER WHERE {$whereClause}";
+            $sql = "SELECT * FROM {$this->schema}.VU_CETPRO_BUS WHERE {$whereClause}";
 
             return $this->executeQuery($sql, $params);
         } catch (Exception $e) {
@@ -223,7 +223,7 @@ class OracleTusneService
      * Obtiene el código de contribuyente más reciente por número de documento.
      * 
      * Retorna únicamente el código con la fecha de emisión (EMITIDO) más reciente,
-     * realizando un JOIN entre VU_BUSCA_TUSNE_PER y VU_BUSCA_TUSNE_PER_Pen.
+     * realizando un JOIN entre VU_CETPRO_BUS y VU_BUSCA_TUSNE_PER_Pen.
      *
      * @param string $numDoc Número de documento
      * @return object|null Objeto con CODIGO, EMITIDO y CONCEPTO, o null si no existe
@@ -238,9 +238,9 @@ class OracleTusneService
                     l.EMITIDO,
                     l.CONCEPTO
                 FROM 
-                    {$this->schema}.VU_BUSCA_TUSNE_PER p
+                    {$this->schema}.VU_CETPRO_BUS p
                 JOIN 
-                    {$this->schema}.VU_BUSCA_TUSNE_PER_Pen l ON p.CODIGO = l.CODIGO
+                    {$this->schema}.VU_BUSCA_TUSNE_PER_Pen l ON p.CODCON = l.CODIGO
                 WHERE 
                     p.NUMDOC = :numdoc
                 ORDER BY 
