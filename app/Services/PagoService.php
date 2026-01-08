@@ -6,6 +6,7 @@ use App\Models\Pago;
 use App\Models\Cronograma;
 use App\Repositories\PagoRepositoryInterface;
 use App\Repositories\CronogramaRepositoryInterface;
+use App\Services\OracleTusneService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -132,5 +133,68 @@ class PagoService
     public function obtenerProximoPago(int $cronogramaId): ?Pago
     {
         return $this->pagos->getProximoPago($cronogramaId);
+    }
+
+    /**
+     * Sincroniza los estados de pago desde Oracle.
+     * 
+     * Consulta VU_BUSCA_TUSNE_PER_Pen.ESTADO usando el num_liquidacion
+     * de cada pago y actualiza el estado local si difiere.
+     *
+     * @param int $cronogramaId
+     * @return array ['sincronizados' => int, 'errores' => int]
+     */
+    public function sincronizarEstadosDesdeOracle(int $cronogramaId): array
+    {
+        $resultado = ['sincronizados' => 0, 'errores' => 0];
+
+        try {
+            $oracleService = app(OracleTusneService::class);
+            
+            // Verificar conexión Oracle antes de proceder
+            if (!$oracleService->verificarConexion()) {
+                \Log::warning('Oracle no disponible para sincronizar estados de pago', [
+                    'cronograma_id' => $cronogramaId,
+                ]);
+                return $resultado;
+            }
+
+            // Obtener pagos del cronograma que tienen num_liquidacion
+            $pagos = Pago::where('cronograma_id', $cronogramaId)
+                ->whereNotNull('num_liquidacion')
+                ->where('num_liquidacion', '!=', '')
+                ->get();
+
+            foreach ($pagos as $pago) {
+                try {
+                    $estadoOracle = $oracleService->obtenerEstadoLiquidacion($pago->num_liquidacion);
+                    
+                    if ($estadoOracle && $estadoOracle !== $pago->estado) {
+                        $this->pagos->update($pago, ['estado' => $estadoOracle]);
+                        $resultado['sincronizados']++;
+                        
+                        \Log::info('Estado de pago sincronizado desde Oracle', [
+                            'pago_id' => $pago->id,
+                            'num_liquidacion' => $pago->num_liquidacion,
+                            'estado_anterior' => $pago->estado,
+                            'estado_nuevo' => $estadoOracle,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    $resultado['errores']++;
+                    \Log::warning('Error sincronizando pago individual desde Oracle', [
+                        'pago_id' => $pago->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error general en sincronización Oracle de pagos', [
+                'cronograma_id' => $cronogramaId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $resultado;
     }
 }

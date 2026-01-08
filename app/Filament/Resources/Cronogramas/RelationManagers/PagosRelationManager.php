@@ -30,6 +30,42 @@ class PagosRelationManager extends RelationManager
         return false;
     }
 
+    /**
+     * Sincroniza estados de pago desde Oracle cuando se carga el componente.
+     */
+    public function boot(): void
+    {
+        // Sincronizar estados desde Oracle al cargar la vista de pagos
+        $this->sincronizarConOracle();
+    }
+
+    /**
+     * Sincroniza los estados de pago con Oracle.
+     */
+    protected function sincronizarConOracle(): void
+    {
+        try {
+            $record = $this->getOwnerRecord();
+            
+            if ($record && $record->id) {
+                $pagoService = app(\App\Services\PagoService::class);
+                $resultado = $pagoService->sincronizarEstadosDesdeOracle($record->id);
+                
+                if ($resultado['sincronizados'] > 0) {
+                    \Log::info('Sincronización Oracle en PagosRelationManager', [
+                        'cronograma_id' => $record->id,
+                        'sincronizados' => $resultado['sincronizados'],
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            // Fallo silencioso - no interrumpir la carga de la vista
+            \Log::warning('Error en sincronización Oracle al cargar pagos', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function  form(Schema $schema): Schema
     {
         return $schema->components([

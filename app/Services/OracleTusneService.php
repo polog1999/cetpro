@@ -46,7 +46,8 @@ class OracleTusneService
 
         $host = config('database.connections.oracle.host');
         $port = config('database.connections.oracle.port', '1521');
-        $serviceName = config('database.connections.oracle.service_name');
+        #$serviceName = config('database.connections.oracle.service_name');
+        $sid = config('database.connections.oracle.sid');
         $database = config('database.connections.oracle.database');
         $username = config('database.connections.oracle.username');
         $password = config('database.connections.oracle.password');
@@ -54,7 +55,11 @@ class OracleTusneService
 
         // Construir connection string para Oracle
         // Formato: //host:port/service_name
-        $connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
+        #$connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
+
+        // Construir connection string para Oracle usando SID
+        // Formato: (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host)(PORT=port))(CONNECT_DATA=(SID=sid)))
+        $connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
 
         $this->connection = @oci_connect($username, $password, $connectionString, $charset);
 
@@ -577,7 +582,12 @@ class OracleTusneService
             
             $fechaNacimiento = $estudiante->fecha_nacimiento?->format('d/m/Y');
             
-            // Para TPE01 (persona natural): MCNAPEPAT, MCNAPEMAT, MCNNOMBRE van NULL
+            // Preparar apellidos y nombres en mayúsculas
+            $apellidoPaterno = trim(strtoupper($estudiante->apellido_paterno ?? ''));
+            $apellidoMaterno = trim(strtoupper($estudiante->apellido_materno ?? ''));
+            $nombres = trim(strtoupper($estudiante->nombres ?? ''));
+            
+            // Para TPE01 (persona natural): guardamos TODOS los campos de nombre
             $sql = "
                 INSERT INTO SMACARNOM (
                     MCNCONTRIB, MCNESTADO, MCNTIPO, MCNAPEPAT, MCNAPEMAT, MCNNOMBRE,
@@ -585,7 +595,7 @@ class OracleTusneService
                     MCNAPENOMB, MCNTIPODI, MCNNRODI, MCNTIPTELE, MCNROTELE, MCNEMAIL,
                     MCNDNI, MCNRUC, DISTRICODI, MCNFECNAC, CODCAT, MCNFECHREG, MCNHORA, SEXO
                 ) VALUES (
-                    :codigo, :estado, :tipo, NULL, NULL, NULL,
+                    :codigo, :estado, :tipo, :apepat, :apemat, :nombre,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     :nomcom, :tipodi, :nrodi, NULL, :telefono, :email,
                     :dni, NULL, :distrito, TO_DATE(:fecnac, 'DD/MM/YYYY'), NULL, SYSDATE,
@@ -597,6 +607,9 @@ class OracleTusneService
                 ':codigo' => $codigoContribuyente,
                 ':estado' => 'ERE04',
                 ':tipo' => 'TPE01',
+                ':apepat' => $apellidoPaterno ?: null,
+                ':apemat' => $apellidoMaterno ?: null,
+                ':nombre' => $nombres ?: null,
                 ':nomcom' => $nombreCompleto,
                 ':tipodi' => $tipoDocumento,
                 ':nrodi' => $estudiante->nro_documento,

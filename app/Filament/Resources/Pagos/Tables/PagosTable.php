@@ -73,7 +73,7 @@ class PagosTable
                 TextColumn::make('num_liquidacion')
                     ->searchable(),
                 TextColumn::make('estado')
-                    ->label('Estado Oracle')
+                    ->label('Estado de Pago')
                     ->searchable()
                     ->badge()
                     ->color(fn (string $state): string => match (true) {
