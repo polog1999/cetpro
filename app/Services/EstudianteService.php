@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Models\Estudiante;
+use App\Models\Usuario;
+use App\Models\Role;
 use App\Repositories\EstudianteRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class EstudianteService
 {
@@ -77,7 +80,12 @@ class EstudianteService
         $estudianteData['apoderado_id'] = $apoderadoId;
         
         // Crear estudiante
-        return $this->estudiantes->create($estudianteData);
+        $estudiante = $this->estudiantes->create($estudianteData);
+        
+        // Crear usuario automático para el estudiante
+        $this->crearUsuarioParaEstudiante($estudiante);
+        
+        return $estudiante;
     }
 
     public function crear(array $data): Estudiante
@@ -90,7 +98,60 @@ class EstudianteService
             }
         }
 
-        return $this->estudiantes->create($data);
+        $estudiante = $this->estudiantes->create($data);
+        
+        // Crear usuario automático para el estudiante
+        $this->crearUsuarioParaEstudiante($estudiante);
+        
+        return $estudiante;
+    }
+    
+    /**
+     * Crea automáticamente un usuario para el estudiante.
+     * Usuario y contraseña = número de documento.
+     */
+    protected function crearUsuarioParaEstudiante(Estudiante $estudiante): void
+    {
+        try {
+            // Buscar el rol Alumno
+            $rolAlumno = Role::where('nombre', 'Alumno')->first();
+            
+            if (!$rolAlumno) {
+                Log::warning('Rol Alumno no encontrado. No se creó usuario para estudiante.', [
+                    'estudiante_id' => $estudiante->id,
+                ]);
+                return;
+            }
+            
+            // Verificar que no exista ya un usuario con este username
+            $existeUsuario = Usuario::where('usuario', $estudiante->nro_documento)->exists();
+            
+            if ($existeUsuario) {
+                Log::info('Usuario ya existe para este documento.', [
+                    'nro_documento' => $estudiante->nro_documento,
+                ]);
+                return;
+            }
+            
+            // Crear el usuario
+            Usuario::create([
+                'usuario' => $estudiante->nro_documento,
+                'password' => $estudiante->nro_documento,
+                'estudiante_id' => $estudiante->id,
+                'role_id' => $rolAlumno->id,
+                'activo' => true,
+            ]);
+            
+            Log::info('Usuario creado automáticamente para estudiante.', [
+                'estudiante_id' => $estudiante->id,
+                'usuario' => $estudiante->nro_documento,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al crear usuario para estudiante: ' . $e->getMessage(), [
+                'estudiante_id' => $estudiante->id,
+            ]);
+        }
     }
 
     public function actualizar(int $id, array $data): Estudiante

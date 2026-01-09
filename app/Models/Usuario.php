@@ -23,6 +23,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     protected $fillable = [
         'empleado_id',
         'docente_id',   // << Vinculación con docentes
+        'estudiante_id', // << Vinculación con estudiantes (portal)
         'role_id',      // << Nuevo campo
         'usuario',      // campo “username”
         'password',
@@ -67,6 +68,22 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
+     * Relación con Estudiante (para portal de alumnos)
+     */
+    public function estudiante(): BelongsTo
+    {
+        return $this->belongsTo(Estudiante::class);
+    }
+
+    /**
+     * Verificar si el usuario es alumno (estudiante)
+     */
+    public function esAlumno(): bool
+    {
+        return $this->role?->nombre === 'Alumno' || $this->estudiante_id !== null;
+    }
+
+    /**
      * Verificar si el usuario es profesor
      */
     public function esProfesor(): bool
@@ -84,9 +101,14 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Si tiene rol asignado, verificar que tenga permisos
+        // Los alumnos NO pueden acceder al panel de Filament
+        if ($this->esAlumno()) {
+            return false;
+        }
+        
+        // Si tiene rol asignado (y no es alumno), puede acceder
         if ($this->role) {
-            return true; // Cualquier rol puede acceder al panel (los permisos se verifican en cada recurso)
+            return true;
         }
 
         return false;

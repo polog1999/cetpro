@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Apoderado;
 use App\Models\Nota;
 use App\Models\Matricula;
+use App\Models\Usuario;
 use App\Enums\EstadoCivil;
 use App\Enums\TipoGenero;
 use App\Enums\TipoDocumento;
@@ -89,5 +90,13 @@ class Estudiante extends Model
             'id', // PK en estudiantes
             'id' // PK en matriculas
         );
+    }
+
+    /**
+     * Relación con Usuario (cuenta de acceso al portal)
+     */
+    public function usuario()
+    {
+        return $this->hasOne(Usuario::class, 'estudiante_id');
     }
 }

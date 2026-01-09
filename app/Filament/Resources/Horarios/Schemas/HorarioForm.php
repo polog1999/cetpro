@@ -39,6 +39,15 @@ class HorarioForm
                     ->required()
                     ->live()
                     ->dehydrated(false)
+                    ->afterStateHydrated(function (Set $set, Get $get, $record) {
+                        // Al editar, cargar el tipo_programa desde el programa relacionado
+                        if ($record && $record->id_programa) {
+                            $programa = Programa::find($record->id_programa);
+                            if ($programa && $programa->tipo_programa) {
+                                $set('tipo_programa', $programa->tipo_programa->value ?? $programa->tipo_programa);
+                            }
+                        }
+                    })
                     ->afterStateUpdated(function (Set $set) {
                         // Resetea programa y textarea al cambiar tipo_programa
                         $set('id_programa', null);
@@ -63,6 +72,28 @@ class HorarioForm
                     ->required()
                     ->live()
                     ->disabled(fn (Get $get): bool => ! $get('tipo_programa'))
+                    ->afterStateHydrated(function (Set $set, $state, $record) {
+                        // Al editar, cargar los cursos del programa
+                        if ($record && $state) {
+                            $programa = Programa::with('cursos')->find($state);
+                            
+                            if (! $programa || $programa->cursos->isEmpty()) {
+                                $set('cursos_programa', 'No hay cursos asignados a este programa.');
+                                return;
+                            }
+
+                            $texto = $programa->cursos
+                                ->map(function ($curso) {
+                                    $nombre = $curso->nombre_curso
+                                        ?? $curso->nombre
+                                        ?? 'Sin nombre';
+                                    return '- ' . $nombre;
+                                })
+                                ->implode(PHP_EOL);
+
+                            $set('cursos_programa', $texto);
+                        }
+                    })
                     ->afterStateUpdated(function (Get $get, Set $set) {
                         $id = $get('id_programa');
 

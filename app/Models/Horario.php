@@ -31,10 +31,12 @@ class Horario extends Model
     ];
 
     protected $casts = [
-        'turno'     => Turno::class,
-        'modalidad' => Modalidad::class,
-        'dias'      => 'array',
-        'activo'    => 'boolean',
+        'turno'       => Turno::class,
+        'modalidad'   => Modalidad::class,
+        'dias'        => 'array',
+        'activo'      => 'boolean',
+        'hora_inicio' => 'datetime:H:i:s',
+        'hora_fin'    => 'datetime:H:i:s',
     ];
 
     public function programa()

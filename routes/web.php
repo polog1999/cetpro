@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MatriculaPdfController;
 use App\Http\Controllers\MatriculaCursosPdfController;
 use App\Http\Controllers\EvidenciaPagoController;
+use App\Http\Controllers\StudentPortalController;
 
 // Rutas seguras para evidencias de pago (con control de acceso)
 Route::middleware(['web', 'auth'])->group(function () {
@@ -20,6 +21,18 @@ Route::get('/matriculas/{matricula}/pdf', [MatriculaPdfController::class, 'show'
 
 Route::get('/matriculas/{matricula}/cursos-pdf', [MatriculaCursosPdfController::class, 'show'])
     ->name('matriculas.cursos-pdf');
+
+// Portal de Estudiantes (Alumnos)
+Route::middleware(['web', 'auth', 'alumno'])->prefix('portal')->group(function () {
+    Route::get('/', [StudentPortalController::class, 'dashboard'])->name('portal.dashboard');
+    Route::get('/pagos', [StudentPortalController::class, 'pagos'])->name('portal.pagos');
+    Route::get('/matriculas', [StudentPortalController::class, 'matriculas'])->name('portal.matriculas');
+    Route::get('/horarios', [StudentPortalController::class, 'horarios'])->name('portal.horarios');
+    Route::get('/notas', [StudentPortalController::class, 'notas'])->name('portal.notas');
+    Route::get('/cambiar-password', [StudentPortalController::class, 'cambiarPasswordForm'])->name('portal.cambiar-password');
+    Route::post('/cambiar-password', [StudentPortalController::class, 'cambiarPassword'])->name('portal.cambiar-password.update');
+    Route::post('/logout', [StudentPortalController::class, 'logout'])->name('portal.logout');
+});
 
 // Ruta raíz
 Route::get('/', function () {

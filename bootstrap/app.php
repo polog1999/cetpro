@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'prevent-back-history' => \App\Http\Middleware\PreventBackHistoryMiddleware::class,
+            'alumno' => \App\Http\Middleware\EnsureIsAlumno::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

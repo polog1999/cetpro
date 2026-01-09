@@ -57,6 +57,16 @@ class Login extends BaseLogin
         }
 
         session()->regenerate();
+        
+        // Si es alumno (estudiante), redirigir al portal en lugar del admin
+        if ($user->esAlumno()) {
+            return new class implements \Filament\Auth\Http\Responses\Contracts\LoginResponse {
+                public function toResponse($request)
+                {
+                    return redirect()->route('portal.dashboard');
+                }
+            };
+        }
 
         return app(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class);
     }
