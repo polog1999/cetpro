@@ -111,23 +111,23 @@ class CronogramaResource extends Resource
 
 
 //Contar
-    public static function getNavigationBadge(): ?string
-    {
-        // return static::getModel()::count(); <- Lógica de cuetan total anterior
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     // return static::getModel()::count(); <- Lógica de cuetan total anterior
         
-        // Contar cronogramas que tienen al menos una cuota pendiente y vencida
-        $cronogramasEnDeuda = static::getModel()::whereHas('pagos', function ($query) {
-            $query->whereRaw("LOWER(estado) LIKE '%pendiente%'")
-                  ->where('fecha_vencimiento', '<', now());
-        })->count();
+    //     // Contar cronogramas que tienen al menos una cuota pendiente y vencida
+    //     $cronogramasEnDeuda = static::getModel()::whereHas('pagos', function ($query) {
+    //         $query->whereRaw("LOWER(estado) LIKE '%pendiente%'")
+    //               ->where('fecha_vencimiento', '<', now());
+    //     })->count();
         
-        return $cronogramasEnDeuda > 0 ? (string) $cronogramasEnDeuda : null;
-    }
+    //     return $cronogramasEnDeuda > 0 ? (string) $cronogramasEnDeuda : null;
+    // }
 
-    public static function getNavigationBadgeColor(): ?string
-    {
-        return 'danger'; // Badge rojo
-    }
+    // public static function getNavigationBadgeColor(): ?string
+    // {
+    //     return 'danger'; // Badge rojo
+    // }
 
     //Infolist
 

@@ -105,6 +105,26 @@ class StudentPortalController extends Controller
     }
 
     /**
+     * Documentos del estudiante (PDFs subidos en sus matrículas).
+     */
+    public function documentos(Request $request): View
+    {
+        $estudiante = $request->user()->estudiante;
+        
+        // Obtener matrículas que tienen documento subido
+        $matriculasConDocumento = $estudiante->matriculas()
+            ->whereNotNull('documento_path')
+            ->with(['horario.programa'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return view('portal.documentos', [
+            'estudiante' => $estudiante,
+            'matriculas' => $matriculasConDocumento,
+        ]);
+    }
+
+    /**
      * Cerrar sesión del estudiante.
      */
     public function logout(Request $request): RedirectResponse

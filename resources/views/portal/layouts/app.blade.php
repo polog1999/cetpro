@@ -73,6 +73,10 @@
                        class="px-4 py-2 text-sm font-medium rounded-md transition-colors {{ request()->routeIs('portal.notas') ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5' }}">
                         Notas
                     </a>
+                    <a href="{{ route('portal.documentos') }}" 
+                       class="px-4 py-2 text-sm font-medium rounded-md transition-colors {{ request()->routeIs('portal.documentos') ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5' }}">
+                        Documentos
+                    </a>
                 </nav>
 
                 <!-- User Menu Dropdown -->
@@ -133,6 +137,10 @@
             <a href="{{ route('portal.notas') }}" 
                class="px-3 py-1.5 text-xs font-medium rounded whitespace-nowrap {{ request()->routeIs('portal.notas') ? 'bg-white/10 text-white' : 'text-slate-300' }}">
                 Notas
+            </a>
+            <a href="{{ route('portal.documentos') }}" 
+               class="px-3 py-1.5 text-xs font-medium rounded whitespace-nowrap {{ request()->routeIs('portal.documentos') ? 'bg-white/10 text-white' : 'text-slate-300' }}">
+                Documentos
             </a>
         </nav>
     </header>

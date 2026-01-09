@@ -105,10 +105,10 @@ class EstudianteResource extends Resource
 
 
 //Contar
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
     /**
      * Habilita la búsqueda global para Estudiantes.

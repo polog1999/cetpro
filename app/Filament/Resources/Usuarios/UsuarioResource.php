@@ -83,8 +83,8 @@ class UsuarioResource extends Resource
         return static::canViewAny();
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 }

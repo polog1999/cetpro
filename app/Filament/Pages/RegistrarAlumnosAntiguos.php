@@ -43,7 +43,7 @@ class RegistrarAlumnosAntiguos extends Page implements HasForms
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-plus';
     protected static string|null $navigationLabel = 'Registrar Alumnos Antiguos';
-    protected static ?string $title = 'Registrar Alumnos Antiguos (Oracle)';
+    protected static ?string $title = 'Registrar Alumnos Antiguos';
     protected static string|UnitEnum|null $navigationGroup = 'Administración';
     protected string $view = 'filament.pages.registrar-alumnos-antiguos';
 

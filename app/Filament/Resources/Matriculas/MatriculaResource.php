@@ -53,10 +53,10 @@ class MatriculaResource extends Resource
     }
 
     //Contar
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
     // Verificación de permisos
     public static function canViewAny(): bool

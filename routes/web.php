@@ -29,6 +29,7 @@ Route::middleware(['web', 'auth', 'alumno'])->prefix('portal')->group(function (
     Route::get('/matriculas', [StudentPortalController::class, 'matriculas'])->name('portal.matriculas');
     Route::get('/horarios', [StudentPortalController::class, 'horarios'])->name('portal.horarios');
     Route::get('/notas', [StudentPortalController::class, 'notas'])->name('portal.notas');
+    Route::get('/documentos', [StudentPortalController::class, 'documentos'])->name('portal.documentos');
     Route::get('/cambiar-password', [StudentPortalController::class, 'cambiarPasswordForm'])->name('portal.cambiar-password');
     Route::post('/cambiar-password', [StudentPortalController::class, 'cambiarPassword'])->name('portal.cambiar-password.update');
     Route::post('/logout', [StudentPortalController::class, 'logout'])->name('portal.logout');
