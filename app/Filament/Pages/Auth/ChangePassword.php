@@ -32,21 +32,18 @@ class ChangePassword extends Page implements HasForms
                             ->label('Contraseña Actual')
                             ->password()
                             ->required()
-                            ->currentPassword()
-                            ->extraInputAttributes(['style' => 'max-width: 500px']),
+                            ->currentPassword(),
                         \Filament\Forms\Components\TextInput::make('new_password')
                             ->label('Nueva Contraseña')
                             ->password()
                             ->required()
                             ->minLength(8)
                             ->same('new_password_confirmation')
-                            ->rule(\Illuminate\Validation\Rules\Password::default())
-                            ->extraInputAttributes(['style' => 'max-width: 500px']),
+                            ->rule(\Illuminate\Validation\Rules\Password::default()),
                         \Filament\Forms\Components\TextInput::make('new_password_confirmation')
                             ->label('Confirmar Nueva Contraseña')
                             ->password()
-                            ->required()
-                            ->extraInputAttributes(['style' => 'max-width: 500px']),
+                            ->required(),
                     ]),
             ])
             ->statePath('data');
