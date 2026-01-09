@@ -341,7 +341,68 @@ class OracleTusneService
     public function buscarPorDocumento(string $numDoc): ?object
     {
         $resultados = $this->buscarPersona(numDoc: $numDoc);
-        return $resultados->first();
+        $persona = $resultados->first();
+        
+        if ($persona) {
+            // Si encontramos a la persona, también buscamos sus pagos
+            // Usamos el campo CODCON (o MCNCONTRIB dependiendo de la vista)
+            $codigo = $persona->CODCON ?? $persona->MCNCONTRIB ?? null;
+            if ($codigo) {
+                $persona->PAGOS = $this->buscarPersonaPendiente($codigo);
+            } else {
+                $persona->PAGOS = collect([]);
+            }
+        }
+        
+        return $persona;
+    }
+
+    /**
+     * Obtiene los datos completos de una persona desde Oracle SMACARNOM.
+     * Incluye datos personales y su historial de pagos.
+     * 
+     * @param string $nroDoc Número de documento (DNI)
+     * @return object|null 
+     */
+    public function obtenerDatosCompletosPersona(string $nroDoc): ?object
+    {
+        try {
+            $nroDoc = trim($nroDoc);
+
+            // 1. Intentar búsqueda directa en SMACARNOM
+            $sqlPersona = "SELECT * FROM SMACARNOM WHERE TRIM(MCNNRODI) = :nrodi";
+            $persona = $this->executeQuery($sqlPersona, [':nrodi' => $nroDoc])->first();
+
+            // 2. Si no encuentra, intentar por VU_CETPRO_BUS (puede mapear DNI a CODCON)
+            if (!$persona) {
+                $enBusqueda = $this->buscarPorDocumento($nroDoc);
+                $codigo = $enBusqueda->CODCON ?? $enBusqueda->MCNCONTRIB ?? null;
+
+                if ($codigo) {
+                    $sqlPersonaCod = "SELECT * FROM SMACARNOM WHERE MCNCONTRIB = :codigo";
+                    $persona = $this->executeQuery($sqlPersonaCod, [':codigo' => $codigo])->first();
+                }
+            }
+
+            if (!$persona) {
+                return null;
+            }
+
+            // 3. Obtener pagos
+            $codigo = $persona->MCNCONTRIB;
+            if ($codigo) {
+                $persona->PAGOS = $this->buscarPersonaPendiente($codigo);
+            } else {
+                $persona->PAGOS = collect([]);
+            }
+
+            return $persona;
+        } catch (Exception $e) {
+            Log::error('Error en obtenerDatosCompletosPersona Oracle: ' . $e->getMessage(), [
+                'nroDoc' => $nroDoc,
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -354,6 +415,94 @@ class OracleTusneService
     {
         $resultados = $this->buscarPersona(codigo: $codigo);
         return $resultados->first();
+    }
+
+    /**
+     * Busca historial completo (datos + pagos/liquidaciones) por DNI.
+     * Agrupa los resultados por Código de Contribuyente.
+     * 
+     * @param string $dni
+     * @return array [ 'C001' => ['datos' => [...], 'pagos' => [...]], ... ]
+     */
+    public function buscarHistorialPorDni(string $dni): array
+    {
+        try {
+            $dni = trim($dni);
+            
+            $sql = "
+                SELECT 
+                    a.MCNAPENOMB, 
+                    a.MCNNRODI, 
+                    a.MCNFECNAC,
+                    a.SEXO,
+                    a.MCNAPEPAT, -- Agregado
+                    a.MCNAPEMAT, -- Agregado
+                    a.MCNNOMBRE, -- Agregado
+                    d.DISTRIDESC, -- Agregado (Nombre distrito)
+                    a.MCNCONTRIB as CODIGO_ORIGEN,
+                    b.CODIGO as CODIGO_PAGO,
+                    b.CONCEPTO, 
+                    b.LIQUIDACION, 
+                    b.IMPORTE, 
+                    b.EMITIDO, 
+                    b.PAGADO, 
+                    b.ESTADO
+                FROM SMACARNOM a
+                JOIN DS_VALORES.VU_BUSCA_TUSNE_PER_PEN b
+                  ON a.MCNCONTRIB = b.CODIGO
+                LEFT JOIN SMADISTRITO d 
+                  ON a.DISTRICODI = d.DISTRICODI -- Join para distrito
+                WHERE TRIM(a.MCNNRODI) = :dni
+                ORDER BY b.EMITIDO DESC
+            ";
+
+            $resultados = $this->executeQuery($sql, [':dni' => $dni]);
+            
+            // Agrupar por código de contribuyente
+            $historial = [];
+            
+            foreach ($resultados as $row) {
+                // Usamos el código que viene del pago (que es el nexo), o el de la persona
+                $codigoRaw = $row->CODIGO_PAGO ?? $row->CODIGO_ORIGEN;
+                $codigo = trim((string)$codigoRaw); 
+                
+                if (!isset($historial[$codigo])) {
+                    $historial[$codigo] = [
+                        'datos_personales' => [ // Array asociativo
+                            'MCNAPENOMB' => trim((string)$row->MCNAPENOMB),
+                            'MCNNRODI' => trim((string)$row->MCNNRODI),
+                            'MCNCONTRIB' => $codigo,
+                            'MCNFECNAC' => $row->MCNFECNAC,
+                            'SEXO'       => trim((string)$row->SEXO),
+                            'MCNAPEPAT'  => trim((string)$row->MCNAPEPAT), 
+                            'MCNAPEMAT'  => trim((string)$row->MCNAPEMAT),
+                            'MCNNOMBRE'  => trim((string)$row->MCNNOMBRE),
+                            'DISTRIDESC' => trim((string)$row->DISTRIDESC),
+                        ],
+                        'pagos' => [] // Array simple
+                    ];
+                }
+                
+                // Agregar pago a la lista
+                if ($row->LIQUIDACION) { 
+                    $liquid = trim((string)$row->LIQUIDACION);
+                    $historial[$codigo]['pagos'][] = [ // Array asociativo
+                        'CONCEPTO' => trim((string)$row->CONCEPTO),
+                        'LIQUIDACION' => $liquid,
+                        'IMPORTE' => $row->IMPORTE,
+                        'EMITIDO' => $row->EMITIDO,
+                        'PAGADO' => trim((string)$row->PAGADO),
+                        'ESTADO' => trim((string)$row->ESTADO),
+                    ];
+                }
+            }
+            
+            return $historial;
+            
+        } catch (Exception $e) {
+            Log::error('Error buscarHistorialPorDni: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**

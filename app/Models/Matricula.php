@@ -23,6 +23,12 @@ class Matricula extends Model
 
     protected $table = 'matriculas';
 
+    /**
+     * Flag to skip automatic cronograma generation.
+     * Set to true when importing legacy students.
+     */
+    public bool $skipCronogramaGeneration = false;
+
     protected $fillable = [
         'codigo_inscripcion',
         'estudiante_id',
@@ -577,6 +583,10 @@ class Matricula extends Model
         
         // DESPUÉS de guardar: generar cronograma
         static::created(function (Matricula $matricula) {
+            // No generar cronograma si es importación de alumno antiguo
+            if ($matricula->skipCronogramaGeneration) {
+                return;
+            }
             $matricula->generarCronograma();
         });
     }
