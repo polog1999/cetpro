@@ -3,3 +3,28 @@
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 @source '../../../../vendor/diogogpinto/filament-auth-ui-enhancer/resources/**/*.blade.php';
+
+/* ============================================
+   LOGO GRANDE en páginas de AUTH (login, register, etc.)
+   El inline style usa height: 1.5rem, necesitamos !important
+   ============================================ */
+.fi-simple-page img.fi-logo,
+[class*="fi-simple"] img.fi-logo,
+.fi-auth-card img.fi-logo,
+body:not(:has(.fi-sidebar)) img.fi-logo {
+    height: 10rem !important;
+    max-height: 10rem !important;
+    width: auto !important;
+}
+
+/* ============================================
+   LOGO PEQUEÑO en sidebar/topbar del panel
+   ============================================ */
+.fi-sidebar img.fi-logo,
+.fi-sidebar-header img.fi-logo,
+.fi-topbar img.fi-logo,
+body:has(.fi-sidebar) .fi-sidebar img.fi-logo {
+    height: 2.5rem !important;
+    max-height: 2.5rem !important;
+    width: auto !important;
+}

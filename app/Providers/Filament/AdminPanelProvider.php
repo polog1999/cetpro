@@ -84,7 +84,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->brandName('Plataforma de gestión documentaria')
             ->brandLogo(asset('imagen/login.png'))
-            ->brandLogoHeight('8rem') // Tamaño del logo (ajusta: 6rem, 8rem, 10rem, etc.)
+            ->brandLogoHeight('10rem') // Grande para login, CSS reduce en sidebar
             ->userMenuItems([
                 \Filament\Navigation\MenuItem::make()
                     ->label('Cambiar Contraseña')

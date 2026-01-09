@@ -805,4 +805,98 @@ class OracleTusneService
     {
         $this->cerrarConexion();
     }
+
+    /**
+     * Obtiene datos de una liquidación desde Oracle (estado y fecha de pago).
+     *
+     * @param string $numLiquidacion Número de liquidación
+     * @return object|null Objeto con ESTADO y PAGADO, o null si no existe
+     */
+    public function obtenerDatosLiquidacion(string $numLiquidacion): ?object
+    {
+        try {
+            $sql = "SELECT ESTADO, PAGADO, IMPORTE FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen WHERE LIQUIDACION = :liquidacion";
+            
+            $resultado = $this->executeQuery($sql, [':liquidacion' => $numLiquidacion]);
+            
+            return $resultado->first();
+        } catch (Exception $e) {
+            Log::warning('Error obteniendo datos de liquidación Oracle: ' . $e->getMessage(), [
+                'num_liquidacion' => $numLiquidacion,
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Sincroniza los pagos de un cronograma con los datos actuales de Oracle.
+     * Actualiza estado y fecha_pago de cada pago que tenga num_liquidacion.
+     * IMPORTANTE: Los valores de Oracle SIEMPRE sobrescriben los de PostgreSQL.
+     *
+     * @param \App\Models\Cronograma $cronograma
+     * @return int Número de pagos actualizados
+     */
+    public function sincronizarPagosCronograma(\App\Models\Cronograma $cronograma): int
+    {
+        $actualizados = 0;
+        
+        $pagosConLiquidacion = $cronograma->pagos()
+            ->whereNotNull('num_liquidacion')
+            ->get();
+        
+        foreach ($pagosConLiquidacion as $pago) {
+            $datosOracle = $this->obtenerDatosLiquidacion($pago->num_liquidacion);
+            
+            if ($datosOracle) {
+                $cambios = [];
+                
+                // Actualizar estado SIEMPRE desde Oracle (es la fuente de verdad)
+                if ($datosOracle->ESTADO !== null && $datosOracle->ESTADO !== $pago->estado) {
+                    $cambios['estado'] = $datosOracle->ESTADO;
+                }
+                
+                // Actualizar fecha de pago SIEMPRE desde Oracle
+                // Si Oracle tiene NULL, PostgreSQL también debe tener NULL
+                if (!empty($datosOracle->PAGADO)) {
+                    try {
+                        $fechaPago = \Carbon\Carbon::createFromFormat('d/m/Y', $datosOracle->PAGADO);
+                        if ($pago->fecha_pago != $fechaPago) {
+                            $cambios['fecha_pago'] = $fechaPago;
+                        }
+                    } catch (\Exception $e) {
+                        try {
+                            $fechaPago = \Carbon\Carbon::parse($datosOracle->PAGADO);
+                            if ($pago->fecha_pago != $fechaPago) {
+                                $cambios['fecha_pago'] = $fechaPago;
+                            }
+                        } catch (\Exception $e2) {
+                            Log::warning('Error parseando fecha de pago Oracle', [
+                                'pago_id' => $pago->id,
+                                'fecha_oracle' => $datosOracle->PAGADO,
+                            ]);
+                        }
+                    }
+                } else {
+                    // Oracle tiene NULL, si PostgreSQL tiene fecha, hay que limpiarla
+                    if ($pago->fecha_pago !== null) {
+                        $cambios['fecha_pago'] = null;
+                    }
+                }
+                
+                // Aplicar cambios si hay alguno
+                if (!empty($cambios)) {
+                    $pago->update($cambios);
+                    $actualizados++;
+                    
+                    Log::info('Pago sincronizado desde Oracle', [
+                        'pago_id' => $pago->id,
+                        'num_liquidacion' => $pago->num_liquidacion,
+                        'cambios' => $cambios,
+                    ]);
+                }
+            }
+        }
+        
+        return $actualizados;
+    }
 }
