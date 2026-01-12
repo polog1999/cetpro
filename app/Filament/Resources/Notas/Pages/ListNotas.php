@@ -52,39 +52,6 @@ class ListNotas extends Page implements HasForms
         $this->showConfirmModal = false;
     }
 
-    public function mount(): void
-    {
-=======
-    
-    // Modal de confirmación
-    public bool $showConfirmModal = false;
-    
-    /**
-     * Mostrar modal de confirmación
-     */
-    public function confirmarGuardar(): void
-    {
-        $this->showConfirmModal = true;
-    }
-    
-    /**
-     * Cancelar modal de confirmación
-     */
-    public function cancelarConfirmacion(): void
-    {
-        $this->showConfirmModal = false;
-    }
-
-    public function mount(): void
-    {
->>>>>>> 5398bf3 (improved_notas_view)
-        // Verificar que sea profesor
-        $user = Filament::auth()->user();
-        if (!$user?->esProfesor()) {
-            // Si no es profesor, redirigir o mostrar mensaje
-        }
-    }
-
     /**
      * Obtener programas para el select
      */
@@ -173,7 +140,11 @@ class ListNotas extends Page implements HasForms
         // Filtrar por horario_id Y por id_curso (curso específico)
         return Matricula::with(['estudiante'])
             ->where('horario_id', $this->horario_id)
-            ->where('id_curso', $this->curso_id)  // <-- IMPORTANTE: filtrar por curso
+            // Permitir matrículas por curso específico O por programa completo (id_curso null)
+            ->where(function ($query) {
+                $query->where('id_curso', $this->curso_id)
+                      ->orWhereNull('id_curso');
+            })
             ->whereIn('estado', [
                 \App\Enums\EstadoMatricula::ENPROCESO->value,
                 \App\Enums\EstadoMatricula::CULMINADO->value,
