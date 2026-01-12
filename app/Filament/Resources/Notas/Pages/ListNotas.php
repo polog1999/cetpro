@@ -57,6 +57,19 @@ class ListNotas extends Page implements HasForms
      */
     public function getProgramasProperty(): Collection
     {
+        $user = Filament::auth()->user();
+
+        // Si el usuario es docente, filtrar programas donde tenga horarios asignados
+        if ($user?->docente_id) {
+            return Programa::whereHas('horarios', function ($query) use ($user) {
+                $query->where('id_docente', $user->docente_id)
+                      ->where('activo', true);
+            })
+            ->orderBy('nombre_programa')
+            ->pluck('nombre_programa', 'id_programa');
+        }
+
+        // Si es admin u otro rol sin docente asociado, mostrar todos
         return Programa::orderBy('nombre_programa')->pluck('nombre_programa', 'id_programa');
     }
 

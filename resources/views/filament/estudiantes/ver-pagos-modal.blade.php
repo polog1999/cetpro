@@ -82,7 +82,7 @@
                                                 Cuota {{ $pago->nro_cuota }}
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-xs font-mono text-gray-600 dark:text-gray-400">
-                                                {{ $pago->codigo }}
+                                                {{ $pago->num_liquidacion }}
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
                                                 S/. {{ number_format($pago->monto, 2) }}
@@ -91,13 +91,16 @@
                                                 {{ $pago->fecha_vencimiento->format('d/m/Y') }}
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap">
+                                                @php
+                                                    $estado = strtolower($pago->estado ?? '');
+                                                @endphp
                                                 <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                                                    @if($pago->estado->value === 'pagado') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                                                    @elseif($pago->estado->value === 'vencido') bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                                                    @elseif($pago->estado->value === 'pendiente') bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                                    @if(str_contains($estado, 'pagado') || str_contains($estado, 'cancelado')) bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                                    @elseif(str_contains($estado, 'vencido')) bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                                    @elseif(str_contains($estado, 'pendiente')) bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                                                     @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                                     @endif">
-                                                    {{ $pago->estado->getLabel() }}
+                                                    {{ ucfirst($pago->estado) }}
                                                 </span>
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
