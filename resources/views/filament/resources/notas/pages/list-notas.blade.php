@@ -145,6 +145,7 @@
                         Cancelar
                     </button>
                     <button 
+<<<<<<< HEAD
                         wire:click="guardarNotas"
                         wire:loading.attr="disabled"
                         wire:confirm="⚠️ ADVERTENCIA: Una vez subidas las notas, no podrá modificarlas. Para cambios posteriores deberá solicitar una rectificación. ¿Desea continuar?"
@@ -153,6 +154,20 @@
                     >
                         <span wire:loading.remove wire:target="guardarNotas">Confirmar y Guardar Notas</span>
                         <span wire:loading wire:target="guardarNotas">Guardando...</span>
+=======
+                        wire:click="confirmarGuardar"
+                        wire:loading.attr="disabled"
+                        type="button"
+                        @if($this->todosConNota)
+                            disabled
+                            class="px-6 py-2 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60"
+                            title="Todos los estudiantes ya tienen nota registrada"
+                        @else
+                            class="px-6 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800 transition-colors disabled:opacity-50"
+                        @endif
+                    >
+                        Confirmar y Guardar Notas
+>>>>>>> 5398bf3 (improved_notas_view)
                     </button>
                 </div>
             </div>
@@ -167,10 +182,92 @@
             </div>
         @endif
     </div>
+<<<<<<< HEAD
+=======
+    
+    {{-- Modal de confirmación estilo Filament --}}
+    @if($showConfirmModal)
+        <div 
+            x-data="{ open: true }"
+            x-show="open"
+            x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto"
+        >
+            {{-- Backdrop --}}
+            <div 
+                class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 transition-opacity"
+                x-show="open"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+            ></div>
+            
+            {{-- Modal --}}
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div 
+                    class="relative w-full max-w-lg transform overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-xl transition-all"
+                    x-show="open"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                >
+                    {{-- Header --}}
+                    <div class="p-6 pb-0">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Confirmar subida de notas
+                                </h3>
+                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <strong class="text-amber-600 dark:text-amber-400">⚠️ Advertencia:</strong> Una vez subidas las notas, <strong>no podrá modificarlas</strong>. Para cambios posteriores deberá solicitar una rectificación formal.
+                                </p>
+                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                    ¿Está seguro de que desea continuar?
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {{-- Footer --}}
+                    <div class="flex justify-end gap-3 p-6 pt-4">
+                        <button 
+                            wire:click="cancelarConfirmacion"
+                            type="button"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            wire:click="guardarNotas"
+                            wire:loading.attr="disabled"
+                            type="button"
+                            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800 transition-colors disabled:opacity-50"
+                        >
+                            <span wire:loading.remove wire:target="guardarNotas">Sí, guardar notas</span>
+                            <span wire:loading wire:target="guardarNotas">Guardando...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+>>>>>>> 5398bf3 (improved_notas_view)
 
     {{-- Script para auto-avance de campos --}}
     @push('scripts')
     <script>
+<<<<<<< HEAD
         document.addEventListener('livewire:navigated', initNotaAutoAdvance);
         document.addEventListener('DOMContentLoaded', initNotaAutoAdvance);
 
@@ -193,6 +290,25 @@
         if (typeof Livewire !== 'undefined') {
             Livewire.hook('morph.updated', initNotaAutoAdvance);
         }
+=======
+        // Usar event delegation para que funcione con Livewire
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('nota-input')) {
+                // Solo permitir números
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                
+                // Si tiene 2 caracteres, pasar al siguiente
+                if (e.target.value.length >= 2) {
+                    const currentIndex = parseInt(e.target.dataset.notaIndex);
+                    const nextInput = document.querySelector(`[data-nota-index="${currentIndex + 1}"]`);
+                    if (nextInput) {
+                        nextInput.focus();
+                        nextInput.select();
+                    }
+                }
+            }
+        });
+>>>>>>> 5398bf3 (improved_notas_view)
     </script>
     @endpush
 </x-filament-panels::page>

@@ -27,35 +27,18 @@ class EstudiantesTable
                 TextColumn::make('codigo_contribuyente')
                     ->label('Cód. Contribuyente')
                     ->getStateUsing(function ($record): string {
-                        // Primero usar el código guardado localmente
+                        // Solo mostrar códigos locales (prefijo 'C' generados por el sistema)
                         if (!empty($record->codigo_contribuyente)) {
-                            return $record->codigo_contribuyente;
-                        }
-                        
-                        // Si no hay código local, consultar Oracle (con cache)
-                        return Cache::remember(
-                            "contribuyente_dni_{$record->nro_documento}",
-                            3600,
-                            function () use ($record) {
-                                try {
-                                    $oracle = app(OracleTusneService::class);
-                                    $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($record->nro_documento);
-                                    
-                                    if ($codigoReciente && !empty($codigoReciente->CODIGO)) {
-                                        return trim($codigoReciente->CODIGO);
-                                    }
-                                    
-                                    return 'Sin número';
-                                } catch (\Exception $e) {
-                                    return 'Sin número';
-                                }
+                            // Verificar que sea un código 'C' (generado por el sistema)
+                            if (str_starts_with($record->codigo_contribuyente, 'C')) {
+                                return $record->codigo_contribuyente;
                             }
-                        );
+                        }
+                        return 'Sin código';
                     })
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'Sin número' => 'warning',
-                        'Error' => 'danger',
+                        'Sin código' => 'gray',
                         default => 'success',
                     })
                     ->copyable()

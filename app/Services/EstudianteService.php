@@ -113,39 +113,43 @@ class EstudianteService
     protected function crearUsuarioParaEstudiante(Estudiante $estudiante): void
     {
         try {
-            // Buscar el rol Alumno
-            $rolAlumno = Role::where('nombre', 'Alumno')->first();
-            
-            if (!$rolAlumno) {
-                Log::warning('Rol Alumno no encontrado. No se creó usuario para estudiante.', [
+            // Usar transaction para crear un savepoint. 
+            // Si falla algo aquí, se hace rollback solo a este punto y no aborta la transacción principal de PostgreSQL.
+            \Illuminate\Support\Facades\DB::transaction(function () use ($estudiante) {
+                // Buscar el rol Alumno
+                $rolAlumno = Role::where('nombre', 'Alumno')->first();
+                
+                if (!$rolAlumno) {
+                    Log::warning('Rol Alumno no encontrado. No se creó usuario para estudiante.', [
+                        'estudiante_id' => $estudiante->id,
+                    ]);
+                    return;
+                }
+                
+                // Verificar que no exista ya un usuario con este username
+                $existeUsuario = Usuario::where('usuario', $estudiante->nro_documento)->exists();
+                
+                if ($existeUsuario) {
+                    Log::info('Usuario ya existe para este documento.', [
+                        'nro_documento' => $estudiante->nro_documento,
+                    ]);
+                    return;
+                }
+                
+                // Crear el usuario
+                Usuario::create([
+                    'usuario' => $estudiante->nro_documento,
+                    'password' => $estudiante->nro_documento,
                     'estudiante_id' => $estudiante->id,
+                    'role_id' => $rolAlumno->id,
+                    'activo' => true,
                 ]);
-                return;
-            }
-            
-            // Verificar que no exista ya un usuario con este username
-            $existeUsuario = Usuario::where('usuario', $estudiante->nro_documento)->exists();
-            
-            if ($existeUsuario) {
-                Log::info('Usuario ya existe para este documento.', [
-                    'nro_documento' => $estudiante->nro_documento,
+                
+                Log::info('Usuario creado automáticamente para estudiante.', [
+                    'estudiante_id' => $estudiante->id,
+                    'usuario' => $estudiante->nro_documento,
                 ]);
-                return;
-            }
-            
-            // Crear el usuario
-            Usuario::create([
-                'usuario' => $estudiante->nro_documento,
-                'password' => $estudiante->nro_documento,
-                'estudiante_id' => $estudiante->id,
-                'role_id' => $rolAlumno->id,
-                'activo' => true,
-            ]);
-            
-            Log::info('Usuario creado automáticamente para estudiante.', [
-                'estudiante_id' => $estudiante->id,
-                'usuario' => $estudiante->nro_documento,
-            ]);
+            });
             
         } catch (\Exception $e) {
             Log::error('Error al crear usuario para estudiante: ' . $e->getMessage(), [

@@ -710,10 +710,10 @@ class OracleTusneService
     {
         try {
             // PASO 1: Verificar si ya existe en Oracle
-            $codigoExistente = $this->verificarContribuyenteExistente($estudiante->nro_documento);
-            if ($codigoExistente) {
-                return $codigoExistente;
-            }
+            // $codigoExistente = $this->verificarContribuyenteExistente($estudiante->nro_documento);
+            // if ($codigoExistente) {
+            //     return $codigoExistente;
+            // }
 
             // PASO 2: Si no existe, crear nuevo contribuyente
             $codigoContribuyente = $this->obtenerSiguienteCodigoContribuyente();

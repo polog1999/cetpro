@@ -32,9 +32,34 @@ class ListNotas extends Page implements HasForms
     
     // Array de notas
     public array $notas = [];
+<<<<<<< HEAD
 
     public function mount(): void
     {
+=======
+    
+    // Modal de confirmación
+    public bool $showConfirmModal = false;
+    
+    /**
+     * Mostrar modal de confirmación
+     */
+    public function confirmarGuardar(): void
+    {
+        $this->showConfirmModal = true;
+    }
+    
+    /**
+     * Cancelar modal de confirmación
+     */
+    public function cancelarConfirmacion(): void
+    {
+        $this->showConfirmModal = false;
+    }
+
+    public function mount(): void
+    {
+>>>>>>> 5398bf3 (improved_notas_view)
         // Verificar que sea profesor
         $user = Filament::auth()->user();
         if (!$user?->esProfesor()) {
@@ -101,6 +126,27 @@ class ListNotas extends Page implements HasForms
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Verificar si todos los estudiantes ya tienen notas
+     */
+    public function getTodosConNotaProperty(): bool
+    {
+        if ($this->estudiantes->isEmpty()) {
+            return true; // Si no hay estudiantes, considerar como "todos tienen nota"
+        }
+        
+        // Verificar si todos ya tienen nota
+        foreach ($this->estudiantes as $estudiante) {
+            if (!$estudiante['ya_tiene_nota']) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+>>>>>>> 5398bf3 (improved_notas_view)
      * Obtener estudiantes matriculados en el curso específico
      */
     public function getEstudiantesProperty(): Collection
@@ -244,7 +290,12 @@ class ListNotas extends Page implements HasForms
                 ->send();
         }
 
+<<<<<<< HEAD
         // Recargar
+=======
+        // Cerrar modal y recargar
+        $this->showConfirmModal = false;
+>>>>>>> 5398bf3 (improved_notas_view)
         $this->updatedHorarioId();
     }
 
