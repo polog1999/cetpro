@@ -56,7 +56,8 @@ class NotaResource extends Resource
     {
         $user = Filament::auth()->user();
         
-        return $user?->role?->es_admin || $user?->canAccessResource('estudiantes') || false;
+        // Permitir acceso a admin, profesores, y usuarios con permiso a estudiantes
+        return $user?->role?->es_admin || $user?->esProfesor() || $user?->canAccessResource('estudiantes') || false;
     }
 
     public static function canCreate(): bool
