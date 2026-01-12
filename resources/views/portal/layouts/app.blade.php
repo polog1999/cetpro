@@ -156,7 +156,7 @@
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <p class="text-center text-sm text-slate-500">
-                © {{ date('Y') }} CETPRO María de los Milagros. Portal Estudiantil.
+                © {{ date('Y') }} CETPRO La Molina. Portal Estudiantil.
             </p>
         </div>
     </footer>

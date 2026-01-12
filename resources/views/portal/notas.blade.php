@@ -16,15 +16,15 @@
 @else
     <!-- Summary -->
     @php
-        $promedio = $notas->avg('nota');
-        $aprobadas = $notas->where('nota', '>=', 11)->count();
+        $promedio = $notas->avg('nota_numerica');
+        $aprobadas = $notas->where('nota_numerica', '>=', 11)->count();
         $total = $notas->count();
     @endphp
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-lg border border-slate-200 p-4">
             <p class="text-sm font-medium text-slate-500">Promedio General</p>
             <p class="mt-1 text-2xl font-semibold {{ $promedio >= 11 ? 'text-green-600' : 'text-red-600' }}">
-                {{ number_format($promedio, 1) }}
+                {{ number_format($promedio ?? 0, 1) }}
             </p>
         </div>
         <div class="bg-white rounded-lg border border-slate-200 p-4">
@@ -64,21 +64,21 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-6 py-4">
                             <div class="text-sm font-medium text-slate-900">
-                                {{ $nota->matricula?->horario?->programa?->nombre_programa ?? 'N/A' }}
+                                {{ $nota->matricula?->horario?->programa?->nombre_programa ?? $nota->curso?->nombre_curso ?? 'N/A' }}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            {{ $nota->tipo_evaluacion ?? 'Evaluación' }}
+                            {{ $nota->nota_letra?->value ?? 'Numérica' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <span class="inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold
-                                {{ $nota->nota >= 11 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ $nota->nota }}
+                                {{ ($nota->nota_numerica ?? 0) >= 11 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ $nota->nota_numerica ?? '-' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm {{ $nota->nota >= 11 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $nota->nota >= 11 ? 'Aprobado' : 'Desaprobado' }}
+                            <span class="text-sm {{ ($nota->nota_numerica ?? 0) >= 11 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ ($nota->nota_numerica ?? 0) >= 11 ? 'Aprobado' : 'Desaprobado' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">

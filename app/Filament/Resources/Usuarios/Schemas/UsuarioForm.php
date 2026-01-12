@@ -15,6 +15,7 @@ class UsuarioForm
     {
         return $schema
             ->components([
+                // El campo empleado solo se muestra si NO es un usuario de alumno
                 Select::make('empleado_id')
                     ->label('Empleado')
                     ->relationship('empleado', 'nombre')
@@ -23,8 +24,15 @@ class UsuarioForm
                     })
                     ->searchable()
                     ->preload()
-                    ->required()
+                    ->required(fn ($record) => $record === null || !$record->estudiante_id)
+                    ->visible(fn ($record) => $record === null || !$record->estudiante_id)
                     ->helperText('Seleccione el empleado para crear su usuario de acceso al sistema'),
+                    
+                // Mostrar info del estudiante si es usuario de alumno (solo lectura)
+                \Filament\Forms\Components\Placeholder::make('estudiante_info')
+                    ->label('Estudiante')
+                    ->content(fn ($record) => $record?->estudiante?->nombre_completo ?? '-')
+                    ->visible(fn ($record) => $record?->estudiante_id),
                     
                 Select::make('role_id')
                     ->label('Rol')
@@ -35,12 +43,14 @@ class UsuarioForm
                     ->searchable()
                     ->preload()
                     ->required()
-                    ->helperText('Seleccione el rol que determinará los permisos del usuario. Si selecciona "Profesor", se creará automáticamente un docente'),
+                    ->disabled(fn ($record) => $record?->estudiante_id) // Deshabilitar para alumnos
+                    ->helperText('Seleccione el rol que determinará los permisos del usuario'),
                     
                 TextInput::make('usuario')
                     ->label('Nombre de usuario')
                     ->required()
                     ->unique(ignoreRecord: true)
+                    ->disabled(fn ($record) => $record?->estudiante_id) // Deshabilitar para alumnos
                     ->helperText('Nombre de usuario único para iniciar sesión'),
 
                 TextInput::make('password')
@@ -54,12 +64,6 @@ class UsuarioForm
                     ->label('Usuario Activo')
                     ->default(true)
                     ->helperText('Si desactiva, el usuario no podrá iniciar sesión'),
-                
-
-                // Section::make('Información del Usuario')
-                //     ->description('Complete los datos para crear un nuevo usuario del sistema')
-                //     ->schema([
-                //     ]),
             ]);
     }
 }

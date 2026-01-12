@@ -73,6 +73,14 @@ class EstudiantesTable
                     ->color('info')
                     ->sortable(),
                     
+                // Columna de usuario de portal
+                TextColumn::make('usuario.usuario')
+                    ->label('Usuario Portal')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->default('Sin usuario')
+                    ->icon(fn ($state) => $state ? 'heroicon-m-check-circle' : 'heroicon-m-x-circle'),
+                    
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -195,6 +203,62 @@ class EstudiantesTable
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar'),
+                
+                // Crear usuario de alumno
+                \Filament\Actions\Action::make('crear_usuario')
+                    ->label('')
+                    ->tooltip('Crear usuario de portal')
+                    ->icon('heroicon-o-user-plus')
+                    ->color('success')
+                    ->visible(fn ($record) => !auth()->user()?->esProfesor() && !$record->usuario)
+                    ->requiresConfirmation()
+                    ->modalHeading('Crear usuario de portal')
+                    ->modalDescription(fn ($record) => "Se creará un usuario para {$record->nombre_completo} con DNI como usuario y contraseña.")
+                    ->action(function ($record) {
+                        \App\Models\Usuario::create([
+                            'usuario' => $record->nro_documento,
+                            'password' => $record->nro_documento,
+                            'nombre' => $record->nombre_completo,
+                            'activo' => true,
+                            'estudiante_id' => $record->id,
+                        ]);
+                        \Filament\Notifications\Notification::make()
+                            ->title('Usuario creado')
+                            ->body("Usuario: {$record->nro_documento} / Contraseña: {$record->nro_documento}")
+                            ->success()
+                            ->send();
+                    }),
+                
+                // Cambiar contraseña de alumno (solo admin)
+                \Filament\Actions\Action::make('cambiar_password')
+                    ->label('')
+                    ->tooltip('Cambiar contraseña')
+                    ->icon('heroicon-o-key')
+                    ->color('warning')
+                    ->visible(fn ($record) => auth()->user()?->role?->es_admin && $record->usuario)
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('nueva_password')
+                            ->label('Nueva Contraseña')
+                            ->password()
+                            ->required()
+                            ->minLength(4)
+                            ->helperText('Mínimo 4 caracteres'),
+                        \Filament\Forms\Components\TextInput::make('confirmar_password')
+                            ->label('Confirmar Contraseña')
+                            ->password()
+                            ->required()
+                            ->same('nueva_password'),
+                    ])
+                    ->modalHeading(fn ($record) => "Cambiar contraseña de {$record->nombre_completo}")
+                    ->action(function ($record, array $data) {
+                        $record->usuario->update([
+                            'password' => $data['nueva_password'],
+                        ]);
+                        \Filament\Notifications\Notification::make()
+                            ->title('Contraseña actualizada')
+                            ->success()
+                            ->send();
+                    }),
                 
                 DeleteAction::make()
                     ->visible(fn () => !auth()->user()?->esProfesor())

@@ -14,6 +14,8 @@ class UsuariosTable
     public static function configure(Table $table): Table
     {
         return $table
+            // Solo mostrar usuarios de personal (no alumnos)
+            ->modifyQueryUsing(fn ($query) => $query->whereNull('estudiante_id'))
             ->columns([
                 TextColumn::make('empleado_nombre_completo')
                     ->label('Empleado')
@@ -28,8 +30,10 @@ class UsuariosTable
                               ->orWhere('apellido_materno', 'ilike', "%{$search}%");
                         });
                     }),
+                    
                 TextColumn::make('usuario')
                     ->searchable(),
+                    
                 TextColumn::make('role.nombre')
                     ->label('Rol')
                     ->searchable()
@@ -39,6 +43,13 @@ class UsuariosTable
                         'Secretaria' => 'info',
                         default => 'gray',
                     }),
+                    
+                TextColumn::make('activo')
+                    ->label('Estado')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->color(fn ($state) => $state ? 'success' : 'danger'),
+                    
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

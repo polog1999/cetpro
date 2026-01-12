@@ -48,6 +48,7 @@ class UsuarioResource extends Resource
             'index' => ListUsuarios::route('/'),
             'create' => CreateUsuario::route('/create'),
             'edit' => EditUsuario::route('/{record}/edit'),
+            'alumnos' => \App\Filament\Resources\Usuarios\Pages\ListUsuariosAlumnos::route('/alumnos'),
         ];
     }
 
