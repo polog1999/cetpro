@@ -143,14 +143,6 @@ class CronogramasTable
                     // OJO: sin ->searchable() para evitar SQL raro sobre relaciones
 
                 // =========================
-                // NÚMERO DE CUOTAS
-                // =========================
-                TextColumn::make('num_cuotas')
-                    ->label('N.º cuotas')
-                    ->numeric()
-                    ->sortable(),
-
-                // =========================
                 // MONTO TOTAL
                 // =========================
                 TextColumn::make('monto_total')

@@ -13,6 +13,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
+use Filament\Tables\Enums\RecordActionsPosition;
 
 class EstudiantesTable
 {
@@ -178,10 +179,14 @@ class EstudiantesTable
                             ->placeholder('Ingrese apellido materno'),
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 \Filament\Actions\ViewAction::make()
+                    ->label('')
+                    ->tooltip('Ver')
                     ->visible(fn () => !auth()->user()?->esProfesor()),
                 EditAction::make()
+                    ->label('')
+                    ->tooltip('Editar')
                     ->visible(fn () => !auth()->user()?->esProfesor()),
                 
                 \Filament\Actions\Action::make('ver_pagos')
@@ -261,6 +266,8 @@ class EstudiantesTable
                     }),
                 
                 DeleteAction::make()
+                    ->label('')
+                    ->tooltip('Eliminar')
                     ->visible(fn () => !auth()->user()?->esProfesor())
                     ->before(fn (DeleteAction $action, $record) => 
                         self::preventDeleteWithDependencies(
@@ -270,7 +277,7 @@ class EstudiantesTable
                             'matrícula(s)'
                         )
                     ),
-            ])
+                ], position: RecordActionsPosition::BeforeCells)
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
