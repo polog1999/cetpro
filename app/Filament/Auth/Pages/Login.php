@@ -10,6 +10,19 @@ class Login extends BaseLogin
 {
     // Trait HasCustomLayout removido
     
+    /**
+     * Texto de bienvenida profesional
+     */
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return new \Illuminate\Support\HtmlString('
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-primary-600 dark:text-primary-400">CETPRO LA MOLINA</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sistema de Gestión Académica</p>
+            </div>
+        ');
+    }
+    
     protected function getEmailFormComponent(): TextInput
     {
         return TextInput::make('usuario')

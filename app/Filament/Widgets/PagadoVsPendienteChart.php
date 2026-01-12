@@ -23,7 +23,31 @@ class PagadoVsPendienteChart extends ChartWidget
             $filters['programa_id'] = $this->filters['programa_id'];
         }
         
-        return $dashboardService->getPagadoVsPendiente($filters);
+        $data = $dashboardService->getPagadoVsPendiente($filters);
+        
+        return [
+            'labels' => $data['labels'],
+            'datasets' => [
+                [
+                    'label' => 'Pagado',
+                    'data' => $data['datasets'][0]['data'],
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.8)',
+                    'borderColor' => 'rgb(16, 185, 129)',
+                    'borderWidth' => 2,
+                    'borderRadius' => 8,
+                    'borderSkipped' => false,
+                ],
+                [
+                    'label' => 'Pendiente',
+                    'data' => $data['datasets'][1]['data'],
+                    'backgroundColor' => 'rgba(245, 158, 11, 0.8)',
+                    'borderColor' => 'rgb(245, 158, 11)',
+                    'borderWidth' => 2,
+                    'borderRadius' => 8,
+                    'borderSkipped' => false,
+                ]
+            ]
+        ];
     }
 
     protected function getType(): string
@@ -37,15 +61,32 @@ class PagadoVsPendienteChart extends ChartWidget
             'plugins' => [
                 'legend' => [
                     'display' => true,
+                    'position' => 'top',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'padding' => 20,
+                    ],
+                ],
+                'tooltip' => [
+                    'callbacks' => [
+                        'label' => "function(context) { return context.dataset.label + ': S/. ' + context.raw.toLocaleString(); }",
+                    ],
                 ],
             ],
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Monto (S/.)'
-                    ]
+                    'grid' => [
+                        'color' => 'rgba(0, 0, 0, 0.05)',
+                    ],
+                    'ticks' => [
+                        'callback' => "function(value) { return 'S/. ' + value.toLocaleString(); }",
+                    ],
+                ],
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
                 ],
             ],
         ];

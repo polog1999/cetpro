@@ -25,55 +25,49 @@ class KPIsGenerales extends BaseWidget
         
         return [
             Stat::make('Estudiantes Activos', number_format($kpis['estudiantes_activos']))
-                ->description('Total de estudiantes activos en el sistema')
+                ->description('Matriculados en el sistema')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('success')
                 ->chart([7, 3, 4, 5, 6, 3, 5, 3])
                 ->extraAttributes([
-                    'class' => 'cursor-pointer',
+                    'class' => 'ring-2 ring-success-500/20 hover:ring-success-500/40 transition-all duration-300',
                 ]),
 
             Stat::make('Matrículas del Mes', number_format($kpis['matriculas_mes']))
-                ->description('Nuevas matrículas en el período')
+                ->description('Nuevas inscripciones')
                 ->descriptionIcon('heroicon-m-academic-cap')
                 ->color('info')
-                ->chart([3, 5, 7, 6, 8, 10, 12]),
+                ->chart([3, 5, 7, 6, 8, 10, 12])
+                ->extraAttributes([
+                    'class' => 'ring-2 ring-info-500/20 hover:ring-info-500/40 transition-all duration-300',
+                ]),
 
             Stat::make('Ingresos del Mes', 'S/. ' . number_format($kpis['ingresos_mes'], 2))
-                ->description('Total pagado en el período')
-                ->descriptionIcon('heroicon-m-currency-dollar')
+                ->description('Total recaudado')
+                ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success')
-                ->chart([10, 15, 20, 18, 22, 25, 30]),
+                ->chart([10, 15, 20, 18, 22, 25, 30])
+                ->extraAttributes([
+                    'class' => 'ring-2 ring-success-500/20 hover:ring-success-500/40 transition-all duration-300',
+                ]),
 
-            Stat::make('Pendiente de Cobrar', 'S/. ' . number_format($kpis['pendiente_cobrar'], 2))
-                ->description('Cuotas pendientes y vencidas')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
+            Stat::make('Pendiente de Cobro', 'S/. ' . number_format($kpis['pendiente_cobrar'], 2))
+                ->description('Por cobrar')
+                ->descriptionIcon('heroicon-m-clock')
                 ->color('warning')
-                ->chart([30, 28, 26, 24, 22, 20, 18]),
+                ->chart([30, 28, 26, 24, 22, 20, 18])
+                ->extraAttributes([
+                    'class' => 'ring-2 ring-warning-500/20 hover:ring-warning-500/40 transition-all duration-300',
+                ]),
 
             Stat::make('Estudiantes Morosos', number_format($kpis['morosos']))
-                ->description('Con al menos 1 cuota vencida')
-                ->descriptionIcon('heroicon-m-user-minus')
+                ->description('Con cuotas vencidas')
+                ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color('danger')
-                ->chart([5, 6, 7, 8, 7, 6, 5]),
-
-            Stat::make('Cupos Disponibles', number_format($kpis['cupos_disponibles']))
-                ->description('Vacantes en horarios activos')
-                ->descriptionIcon('heroicon-m-users')
-                ->color('primary')
-                ->chart([50, 48, 45, 43, 40, 38, 35]),
-
-            Stat::make('Horarios Activos', number_format($kpis['horarios_activos']))
-                ->description('Clases en curso')
-                ->descriptionIcon('heroicon-m-calendar')
-                ->color('primary')
-                ->chart([4, 6, 8, 10, 12, 14, 16]),
-
-            Stat::make('Matrículas Incompletas', number_format($kpis['matriculas_incompletas']))
-                ->description('Sin cronograma de pagos generado')
-                ->descriptionIcon('heroicon-m-document-minus')
-                ->color('warning')
-                ->chart([10, 9, 8, 7, 6, 5, 4]),
+                ->chart([5, 6, 7, 8, 7, 6, 5])
+                ->extraAttributes([
+                    'class' => 'ring-2 ring-danger-500/20 hover:ring-danger-500/40 transition-all duration-300',
+                ]),
         ];
     }
     

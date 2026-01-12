@@ -23,7 +23,27 @@ class MatriculasPorMesChart extends ChartWidget
             $filters['programa_id'] = $this->filters['programa_id'];
         }
         
-        return $dashboardService->getMatriculasPorMes($filters);
+        $data = $dashboardService->getMatriculasPorMes($filters);
+        
+        return [
+            'labels' => $data['labels'],
+            'datasets' => [
+                [
+                    'label' => 'Matrículas',
+                    'data' => $data['datasets'][0]['data'],
+                    'fill' => true,
+                    'backgroundColor' => 'rgba(79, 70, 229, 0.1)',
+                    'borderColor' => 'rgb(79, 70, 229)',
+                    'borderWidth' => 3,
+                    'tension' => 0.4,
+                    'pointBackgroundColor' => 'rgb(79, 70, 229)',
+                    'pointBorderColor' => '#fff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 5,
+                    'pointHoverRadius' => 7,
+                ]
+            ]
+        ];
     }
 
     protected function getType(): string
@@ -37,12 +57,29 @@ class MatriculasPorMesChart extends ChartWidget
             'plugins' => [
                 'legend' => [
                     'display' => true,
+                    'position' => 'top',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'padding' => 20,
+                    ],
                 ],
             ],
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
+                    'grid' => [
+                        'color' => 'rgba(0, 0, 0, 0.05)',
+                    ],
                 ],
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+            ],
+            'interaction' => [
+                'intersect' => false,
+                'mode' => 'index',
             ],
         ];
     }

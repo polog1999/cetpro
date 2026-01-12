@@ -42,22 +42,37 @@ class Dashboard extends BaseDashboard
     }
     
     /**
+     * Widgets del header (aparecen arriba de los filtros)
+     */
+    public function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\WelcomeWidget::class,
+        ];
+    }
+    
+    /**
      * Obtiene los widgets del dashboard en orden específico
      */
     public function getWidgets(): array
     {
         return [
-            // 1. KPIs (8 tarjetas)
+            // 1. KPIs principales (5 tarjetas destacadas)
             \App\Filament\Widgets\KPIsGenerales::class,
             
-            // 2. Gráficos (3 charts)
+            // 2. KPIs secundarios (3 tarjetas compactas)
+            \App\Filament\Widgets\SecondaryKPIsWidget::class,
+            
+            // 3. Gráficos (2 columnas)
             \App\Filament\Widgets\MatriculasPorMesChart::class,
             \App\Filament\Widgets\PagadoVsPendienteChart::class,
             \App\Filament\Widgets\DistribucionPorProgramaChart::class,
             
-            // 3. Tablas
+            // 4. Tablas (full width)
             \App\Filament\Widgets\ActividadRecienteTable::class,
             \App\Filament\Widgets\TopMorosidadTable::class,
+            
+            // 5. Widget para profesores
             \App\Filament\Widgets\NotasSummaryWidget::class,
         ];
     }
