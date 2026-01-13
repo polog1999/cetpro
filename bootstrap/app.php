@@ -85,7 +85,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->body('No tienes los permisos necesarios para acceder a este módulo.')
                 ->send();
                 
-            return redirect()->route('filament.admin.pages.dashboard');
+            return new RedirectResponse(route('filament.admin.pages.dashboard'));
         });
         
         // Manejar otros errores HTTP (500, etc)
