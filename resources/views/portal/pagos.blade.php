@@ -44,6 +44,9 @@
                         Cuota
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        N° Liquidación
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Programa
                     </th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -62,6 +65,13 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="text-sm font-medium text-slate-900">{{ $pago->nro_cuota }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            @if($pago->num_liquidacion)
+                                <span class="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-1 rounded">{{ $pago->num_liquidacion }}</span>
+                            @else
+                                <span class="text-sm text-slate-400">—</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                             {{ $pago->cronograma?->matricula?->horario?->programa?->nombre_programa ?? '—' }}

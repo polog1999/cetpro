@@ -34,7 +34,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Radio; 
 use Filament\Schemas\Components\Wizard; // Wizard
 use Filament\Forms\Components\DatePicker; // Fechas
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Carbon\Carbon;
 
 class RegistrarAlumnosAntiguos extends Page implements HasForms
@@ -66,48 +66,134 @@ class RegistrarAlumnosAntiguos extends Page implements HasForms
                     Wizard\Step::make('Búsqueda')
                         ->description('Buscar alumno en Oracle')
                         ->schema([
-                            TextInput::make('nro_documento')
-                                ->label('Número de Documento (DNI)')
-                                ->required()
-                                ->maxLength(15)
-                                ->live()
-                                ->extraInputAttributes(['wire:keydown.enter' => 'buscarEnOracle']) // Buscar con Enter
-                                ->suffixAction(
-                                    Action::make('buscar')
-                                        ->icon('heroicon-m-magnifying-glass')
-                                        ->action(fn () => $this->buscarEnOracle())
-                                ),
+                            Grid::make()
+                                ->columns(12)
+                                ->schema([
+                                    TextInput::make('nro_documento')
+                                        ->label('Número de Documento (DNI)')
+                                        ->required()
+                                        ->maxLength(15)
+                                        ->live()
+                                        ->columnSpan(9)
+                                        ->extraInputAttributes(['wire:keydown.enter' => 'buscarEnOracle']),
+                                    
+                                    Placeholder::make('boton_buscar')
+                                        ->hiddenLabel()
+                                        ->columnSpan(3)
+                                        ->content(new HtmlString('<button type="button" wire:click="buscarEnOracle" class="fi-btn fi-btn-size-md relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-btn-color-primary bg-primary-600 text-white hover:bg-primary-500 focus-visible:ring-primary-500/50 shadow-sm gap-1.5 px-4 py-2 mt-6 w-full"><span class="fi-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" /></svg></span> Buscar</button>')),
+                                ]),
                             
-                            Radio::make('codigo_seleccionado')
-                                ->label('Registros encontrados (Seleccione uno):')
+                            Section::make('Resultados de la Búsqueda')
                                 ->visible(fn () => $this->busquedaRealizada && !empty($this->historialOracle))
-                                ->options(function () {
-                                    $options = [];
-                                    foreach ($this->historialOracle as $codigo => $data) {
-                                        $p = $data['datos_personales'];
-                                        $options[$codigo] = "{$p['MCNAPENOMB']} ({$codigo})";
-                                    }
-                                    return $options;
-                                })
-                                ->descriptions(function () {
-                                    $descriptions = [];
-                                    foreach ($this->historialOracle as $codigo => $data) {
-                                        $p = $data['datos_personales'];
-                                        $pagos = collect($data['pagos']);
-                                        $totalImporte = $pagos->sum('IMPORTE');
-                                        $cantPagos = $pagos->count();
-                                        
-                                        $descriptions[$codigo] = "DNI: {$p['MCNNRODI']} | Pagos: {$cantPagos} | Total: S/ " . number_format($totalImporte, 2);
-                                    }
-                                    return $descriptions;
-                                })
-                                ->required()
-                                ->live()
-                                ->afterStateUpdated(function ($state) {
-                                    $this->codigoSeleccionado = $state;
-                                    $this->llenarDatosEstudiante($state);
-                                }),
-                        ]),
+                                ->schema([
+                                    Radio::make('codigo_seleccionado')
+                                        ->label('Seleccione un registro para continuar:')
+                                        ->options(function () {
+                                            $options = [];
+                                            foreach ($this->historialOracle as $codigo => $data) {
+                                                $p = $data['datos_personales'];
+                                                $options[$codigo] = "{$p['MCNAPENOMB']} (Código: {$codigo})";
+                                            }
+                                            return $options;
+                                        })
+                                        ->descriptions(function () {
+                                            $descriptions = [];
+                                            foreach ($this->historialOracle as $codigo => $data) {
+                                                $p = $data['datos_personales'];
+                                                $pagos = collect($data['pagos']);
+                                                $totalImporte = $pagos->sum('IMPORTE');
+                                                $cantPagos = $pagos->count();
+                                                $pagosPendientes = $pagos->filter(fn($pago) => stripos($pago['ESTADO'], 'Pendiente') !== false)->count();
+                                                $pagosCancelados = $cantPagos - $pagosPendientes;
+                                                
+                                                // Información personal
+                                                $html = '<div class="text-sm space-y-4 mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">';
+                                                
+                                                // Encabezado de datos personales
+                                                $html .= '<div style="padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">';
+                                                $html .= '<h4 style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Datos Personales</h4>';
+                                                $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center; font-size: 14px; gap: 24px;">';
+                                                $html .= '<div><span style="color: #6b7280;">DNI:</span>&nbsp;&nbsp;<span style="font-weight: 600; color: #1f2937;">' . e($p['MCNNRODI']) . '</span></div>';
+                                                $html .= '<div style="color: #d1d5db;">|</div>';
+                                                $html .= '<div><span style="color: #6b7280;">Sexo:</span>&nbsp;&nbsp;<span style="font-weight: 600; color: #1f2937;">' . e($p['SEXO'] === 'M' ? 'Masculino' : 'Femenino') . '</span></div>';
+                                                $html .= '<div style="color: #d1d5db;">|</div>';
+                                                $html .= '<div><span style="color: #6b7280;">Distrito:</span>&nbsp;&nbsp;<span style="font-weight: 600; color: #1f2937;">' . e($p['DISTRIDESC'] ?: 'No registrado') . '</span></div>';
+                                                $html .= '</div>';
+                                                $html .= '</div>';
+                                                
+                                                // Resumen de pagos
+                                                $html .= '<div class="py-3 border-b border-gray-300 dark:border-gray-600">';
+                                                $html .= '<h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Resumen de Pagos</h4>';
+                                                $html .= '<div class="flex flex-wrap gap-3">';
+                                                $html .= '<div class="px-4 py-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"><span class="text-xs text-gray-500 dark:text-gray-400 block">Total</span><span class="text-lg font-bold text-gray-800 dark:text-gray-200">' . $cantPagos . '</span></div>';
+                                                $html .= '<div class="px-4 py-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700"><span class="text-xs text-green-600 dark:text-green-400 block">Cancelados</span><span class="text-lg font-bold text-green-700 dark:text-green-300">' . $pagosCancelados . '</span></div>';
+                                                $html .= '<div class="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-700"><span class="text-xs text-yellow-600 dark:text-yellow-400 block">Pendientes</span><span class="text-lg font-bold text-yellow-700 dark:text-yellow-300">' . $pagosPendientes . '</span></div>';
+                                                $html .= '<div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700"><span class="text-xs text-blue-600 dark:text-blue-400 block">Importe Total</span><span class="text-lg font-bold text-blue-700 dark:text-blue-300">S/ ' . number_format($totalImporte, 2) . '</span></div>';
+                                                $html .= '</div>';
+                                                $html .= '</div>';
+                                                
+                                                // Tabla de pagos
+                                                $html .= '<div class="pt-2">';
+                                                $html .= '<h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Detalle de Pagos</h4>';
+                                                $html .= '<div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">';
+                                                $html .= '<table class="w-full text-sm">';
+                                                $html .= '<thead class="bg-gray-100 dark:bg-gray-800">';
+                                                $html .= '<tr>';
+                                                $html .= '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Liquidación</th>';
+                                                $html .= '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Concepto</th>';
+                                                $html .= '<th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Importe</th>';
+                                                $html .= '<th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Emitido</th>';
+                                                $html .= '<th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagado</th>';
+                                                $html .= '<th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado</th>';
+                                                $html .= '</tr>';
+                                                $html .= '</thead>';
+                                                $html .= '<tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
+                                                
+                                                foreach ($pagos as $pago) {
+                                                    $esPendiente = stripos($pago['ESTADO'], 'Pendiente') !== false;
+                                                    $rowClass = $esPendiente ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : 'bg-white dark:bg-gray-900';
+                                                    $estadoClass = $esPendiente 
+                                                        ? 'text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800/50' 
+                                                        : 'text-green-800 dark:text-green-200 bg-green-100 dark:bg-green-800/50';
+                                                    
+                                                    $html .= '<tr class="' . $rowClass . ' hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">';
+                                                    $html .= '<td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">' . e($pago['LIQUIDACION']) . '</td>';
+                                                    $html .= '<td class="px-4 py-3 text-gray-700 dark:text-gray-300">' . e($pago['CONCEPTO']) . '</td>';
+                                                    $html .= '<td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-200">S/ ' . number_format((float)$pago['IMPORTE'], 2) . '</td>';
+                                                    $html .= '<td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400">' . e($pago['EMITIDO']) . '</td>';
+                                                    $html .= '<td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400">' . e($pago['PAGADO'] ?: '-') . '</td>';
+                                                    $html .= '<td class="px-4 py-3 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' . $estadoClass . '">' . e($pago['ESTADO']) . '</span></td>';
+                                                    $html .= '</tr>';
+                                                }
+                                                
+                                                $html .= '</tbody>';
+                                                $html .= '</table>';
+                                                $html .= '</div>';
+                                                $html .= '</div>';
+                                                $html .= '</div>';
+                                                
+                                                $descriptions[$codigo] = new HtmlString($html);
+                                            }
+                                            return $descriptions;
+                                        })
+                                        ->required()
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            $this->codigoSeleccionado = $state;
+                                            $this->llenarDatosEstudiante($state);
+                                        }),
+                                ]),
+                        ])
+                        ->afterValidation(function () {
+                            if (empty($this->codigoSeleccionado)) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Selección requerida')
+                                    ->body('Debe buscar y seleccionar un registro antes de continuar.')
+                                    ->send();
+                                throw new Halt();
+                            }
+                        }),
 
                     // PASO 2: DATOS DEL ESTUDIANTE
                     Wizard\Step::make('Datos del Estudiante')
@@ -243,8 +329,12 @@ class RegistrarAlumnosAntiguos extends Page implements HasForms
 
     public function buscarEnOracle(): void
     {
-        $this->validateOnly('data.nro_documento');
-        $dni = $this->data['nro_documento'];
+        $dni = $this->data['nro_documento'] ?? null;
+        
+        if (empty($dni)) {
+            Notification::make()->warning()->title('Campo requerido')->body('Ingrese un número de documento para buscar.')->send();
+            return;
+        }
 
         try {
             $oracleService = app(OracleTusneService::class);
