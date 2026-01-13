@@ -675,12 +675,26 @@ class OracleTusneService
     public function verificarContribuyenteExistente(string $numDoc): ?string
     {
         try {
-            $sql = "SELECT CODCON FROM ds_valores.VU_CETPRO_BUS WHERE NUMDOC = :numdoc";
+            // Buscamos en SMACARNOM el código más reciente (por fecha registro)
+            // PERO SOLO si tiene relación con el CETPRO (existe en VU_BUSCA_TUSNE_PER_Pen)
+            $sql = "
+                SELECT A.MCNCONTRIB
+                FROM SMACARNOM A
+                WHERE TRIM(A.MCNNRODI) = :numdoc
+                AND EXISTS (
+                    SELECT 1
+                    FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen B
+                    WHERE B.CODIGO = A.MCNCONTRIB
+                )
+                ORDER BY A.MCNFECHREG DESC
+                FETCH FIRST 1 ROWS ONLY
+            ";
+
             $resultado = $this->executeQuery($sql, [':numdoc' => $numDoc]);
-            $codigo = $resultado->first()?->CODCON;
+            $codigo = $resultado->first()?->MCNCONTRIB;
             
             if ($codigo) {
-                Log::info('Contribuyente encontrado en Oracle', [
+                Log::info('Contribuyente encontrado con historial en CETPRO', [
                     'codigo' => trim($codigo),
                     'nro_documento' => $numDoc,
                 ]);
@@ -710,10 +724,10 @@ class OracleTusneService
     {
         try {
             // PASO 1: Verificar si ya existe en Oracle
-            // $codigoExistente = $this->verificarContribuyenteExistente($estudiante->nro_documento);
-            // if ($codigoExistente) {
-            //     return $codigoExistente;
-            // }
+            $codigoExistente = $this->verificarContribuyenteExistente($estudiante->nro_documento);
+            if ($codigoExistente) {
+                return $codigoExistente;
+            }
 
             // PASO 2: Si no existe, crear nuevo contribuyente
             $codigoContribuyente = $this->obtenerSiguienteCodigoContribuyente();

@@ -28,14 +28,9 @@ class EstudiantesTable
                 TextColumn::make('codigo_contribuyente')
                     ->label('Cód. Contribuyente')
                     ->getStateUsing(function ($record): string {
-                        // Solo mostrar códigos locales (prefijo 'C' generados por el sistema)
-                        if (!empty($record->codigo_contribuyente)) {
-                            // Verificar que sea un código 'C' (generado por el sistema)
-                            if (str_starts_with($record->codigo_contribuyente, 'C')) {
-                                return $record->codigo_contribuyente;
-                            }
-                        }
-                        return 'Sin código';
+                        return !empty($record->codigo_contribuyente) 
+                            ? $record->codigo_contribuyente 
+                            : 'Sin código';
                     })
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
