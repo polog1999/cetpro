@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,      // Luego los roles
             RolProfesorSeeder::class,
             AdminSetupSeeder::class, // Finalmente el usuario admin
+            AlumnosSeeder::class,
         ]);
     }
 

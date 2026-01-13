@@ -63,8 +63,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 return redirect()->route('filament.admin.auth.login');
             }
             
-            // Si está autenticado, mostrar página 403
-            return response()->view('errors.403', [], 403);
+            // Si está autenticado, enviar notificación y redirigir al dashboard
+            Notification::make()
+                ->warning()
+                ->title('Acceso denegado')
+                ->body('No tienes los permisos necesarios para acceder a este módulo.')
+                ->send();
+                
+            return redirect()->route('filament.admin.pages.dashboard');
         });
         
         // Manejar otros errores HTTP (500, etc)

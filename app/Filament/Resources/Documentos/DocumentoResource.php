@@ -18,7 +18,7 @@ class DocumentoResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Gestión de Matrícula';
+    protected static string | UnitEnum | null $navigationGroup = 'Gestión estudiantil';
 
     protected static ?string $navigationLabel = 'Documentos';
 

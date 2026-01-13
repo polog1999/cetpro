@@ -23,7 +23,7 @@ class NotaResource extends Resource
     protected static ?string $model = Nota::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-    protected static string|UnitEnum|null $navigationGroup = 'Gestión de Matrícula';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestión estudiantil';
     protected static ?string $recordTitleAttribute = 'nombre';
 
     public static function form(Schema $schema): Schema

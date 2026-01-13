@@ -17,6 +17,8 @@ class PermisosSeeder extends Seeder
             ['nombre' => 'Matrículas', 'recurso' => 'matriculas', 'grupo' => 'Gestión Estudiantil', 'descripcion' => 'Acceso completo al módulo de matrículas'],
             ['nombre' => 'Estudiantes', 'recurso' => 'estudiantes', 'grupo' => 'Gestión Estudiantil', 'descripcion' => 'Acceso completo al módulo de estudiantes'],
             ['nombre' => 'Apoderados', 'recurso' => 'apoderados', 'grupo' => 'Gestión Estudiantil', 'descripcion' => 'Acceso completo al módulo de apoderados'],
+            ['nombre' => 'Documentos', 'recurso' => 'documentos', 'grupo' => 'Gestión Estudiantil', 'descripcion' => 'Acceso completo al módulo de documentos'],
+            ['nombre' => 'Notas', 'recurso' => 'notas', 'grupo' => 'Gestión Estudiantil', 'descripcion' => 'Acceso completo al módulo de notas'],
 
             // Gestión Académica
             ['nombre' => 'Programas', 'recurso' => 'programas', 'grupo' => 'Gestión Académica', 'descripcion' => 'Acceso completo al módulo de programas'],
