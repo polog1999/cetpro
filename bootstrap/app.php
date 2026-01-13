@@ -10,7 +10,10 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Filament\Notifications\Notification;
+use Throwable;
+use Illuminate\Http\RedirectResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -52,15 +55,27 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->view('errors.404', [], 404);
         });
         
-        // Manejar errores 403 (acceso denegado)
-        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
+        // Manejar errores 403 (acceso denegado y autorización)
+        $exceptions->render(function (Throwable $e, Request $request) {
+            $is403 = false;
+
+            if ($e instanceof AuthorizationException || $e instanceof AccessDeniedHttpException) {
+                $is403 = true;
+            } elseif ($e instanceof HttpException && $e->getStatusCode() === 403) {
+                $is403 = true;
+            }   
+
+            if (!$is403) {
+                return null;
+            }
+
             if ($request->expectsJson() || $request->is('livewire/*')) {
                 return null;
             }
             
             // Si no está autenticado, redirigir al login
             if (!auth()->check()) {
-                return redirect()->route('filament.admin.auth.login');
+                return new RedirectResponse(route('filament.admin.auth.login'));
             }
             
             // Si está autenticado, enviar notificación y redirigir al dashboard
