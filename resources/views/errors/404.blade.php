@@ -27,79 +27,78 @@
             padding: 60px 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
-            max-width: 600px;
+            max-width: 500px;
             margin: 20px;
         }
         
         .error-code {
-            font-size: 120px;
+            font-size: 100px;
             font-weight: bold;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .error-title {
-            font-size: 32px;
+            font-size: 28px;
             color: #2d3748;
             margin-bottom: 15px;
             font-weight: 600;
         }
         
         .error-message {
-            font-size: 18px;
+            font-size: 16px;
             color: #718096;
             margin-bottom: 30px;
             line-height: 1.6;
         }
         
         .error-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
+            font-size: 60px;
+            margin-bottom: 10px;
         }
         
-        .btn-home {
+        .btn {
             display: inline-block;
-            padding: 15px 40px;
+            padding: 14px 35px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-decoration: none;
             border-radius: 50px;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 15px;
             transition: transform 0.3s, box-shadow 0.3s;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            margin: 5px;
         }
         
-        .btn-home:hover {
+        .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
         
-        .helpful-links {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 1px solid #e2e8f0;
+        .btn-secondary {
+            background: #718096;
+            box-shadow: 0 4px 15px rgba(113, 128, 150, 0.4);
         }
         
-        .helpful-links h3 {
-            font-size: 16px;
-            color: #4a5568;
-            margin-bottom: 15px;
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(113, 128, 150, 0.6);
         }
         
-        .helpful-links a {
-            display: inline-block;
-            margin: 5px 10px;
-            color: #667eea;
-            text-decoration: none;
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .countdown {
+            margin-top: 20px;
             font-size: 14px;
-        }
-        
-        .helpful-links a:hover {
-            text-decoration: underline;
+            color: #a0aec0;
         }
     </style>
 </head>
@@ -109,17 +108,35 @@
         <div class="error-code">404</div>
         <h1 class="error-title">Página no encontrada</h1>
         <p class="error-message">
-            Lo sentimos, la página que estás buscando no existe o ha sido movida. 
-            Por favor, verifica la URL o regresa a la página principal.
+            La página que buscas no existe o ha sido movida.
         </p>
-        <a href="{{ url('/admin') }}" class="btn-home">Volver al Inicio</a>
         
-        <div class="helpful-links">
-            <h3>Enlaces útiles</h3>
-            <a href="{{ url('/admin') }}">Panel Principal</a>
-            <a href="{{ url('/admin/estudiantes') }}">Estudiantes</a>
-            <a href="{{ url('/admin/matriculas') }}">Matrículas</a>
+        <div class="buttons">
+            @auth
+                <a href="{{ url('/admin') }}" class="btn">Ir al Panel</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">Regresar</a>
+            @else
+                <a href="{{ route('filament.admin.auth.login') }}" class="btn">Iniciar Sesión</a>
+            @endauth
         </div>
+        
+        @guest
+        <div class="countdown">
+            Serás redirigido al login en <span id="countdown">5</span> segundos...
+        </div>
+        <script>
+            let seconds = 5;
+            const countdown = document.getElementById('countdown');
+            const interval = setInterval(() => {
+                seconds--;
+                countdown.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    window.location.href = "{{ route('filament.admin.auth.login') }}";
+                }
+            }, 1000);
+        </script>
+        @endguest
     </div>
 </body>
 </html>

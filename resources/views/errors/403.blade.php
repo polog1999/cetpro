@@ -27,54 +27,54 @@
             padding: 60px 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
-            max-width: 600px;
+            max-width: 500px;
             margin: 20px;
         }
         
         .error-code {
-            font-size: 120px;
+            font-size: 100px;
             font-weight: bold;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .error-title {
-            font-size: 32px;
+            font-size: 28px;
             color: #2d3748;
             margin-bottom: 15px;
             font-weight: 600;
         }
         
         .error-message {
-            font-size: 18px;
+            font-size: 16px;
             color: #718096;
             margin-bottom: 30px;
             line-height: 1.6;
         }
         
         .error-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
+            font-size: 60px;
+            margin-bottom: 10px;
         }
         
-        .btn-home {
+        .btn {
             display: inline-block;
-            padding: 15px 40px;
+            padding: 14px 35px;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             text-decoration: none;
             border-radius: 50px;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 15px;
             transition: transform 0.3s, box-shadow 0.3s;
             box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
             margin: 5px;
         }
         
-        .btn-home:hover {
+        .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
         }
@@ -84,18 +84,30 @@
             box-shadow: 0 4px 15px rgba(113, 128, 150, 0.4);
         }
         
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(113, 128, 150, 0.6);
+        }
+        
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
         .info-box {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f7fafc;
+            margin-top: 25px;
+            padding: 15px;
+            background: #fff5f5;
             border-radius: 10px;
             border-left: 4px solid #f5576c;
+            text-align: left;
         }
         
         .info-box p {
-            font-size: 14px;
+            font-size: 13px;
             color: #4a5568;
-            margin: 5px 0;
+            margin: 3px 0;
         }
     </style>
 </head>
@@ -105,18 +117,25 @@
         <div class="error-code">403</div>
         <h1 class="error-title">Acceso Denegado</h1>
         <p class="error-message">
-            No tienes los permisos necesarios para acceder a esta sección del sistema. 
-            Si crees que esto es un error, por favor contacta con el administrador.
+            No tienes permisos para acceder a esta sección.
         </p>
         
-        <a href="{{ url('/admin') }}" class="btn-home">Volver al Inicio</a>
-        <a href="javascript:history.back()" class="btn-home btn-secondary">Regresar</a>
-        
-        <div class="info-box">
-            <p><strong>💡 ¿Por qué veo este mensaje?</strong></p>
-            <p>Esta página requiere permisos especiales que tu cuenta no tiene asignados.</p>
-            <p>Contacta al administrador del sistema si necesitas acceso.</p>
+        <div class="buttons">
+            @auth
+                <a href="{{ url('/admin') }}" class="btn">Ir al Panel</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">Regresar</a>
+            @else
+                <a href="{{ route('filament.admin.auth.login') }}" class="btn">Iniciar Sesión</a>
+            @endauth
         </div>
+        
+        @auth
+        <div class="info-box">
+            <p><strong>💡 ¿Por qué veo esto?</strong></p>
+            <p>Tu cuenta no tiene los permisos necesarios para esta página.</p>
+            <p>Contacta al administrador si necesitas acceso.</p>
+        </div>
+        @endauth
     </div>
 </body>
 </html>
