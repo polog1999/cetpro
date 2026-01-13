@@ -16,20 +16,18 @@
 @else
     <!-- Summary -->
     @php
-        $promedio = $notas->avg('nota_numerica');
-        $aprobadas = $notas->where('nota_numerica', '>=', 11)->count();
+        $aprobadas = $notas->filter(fn($n) => in_array($n->nota_letra?->value, ['AD', 'A', 'B']))->count();
         $total = $notas->count();
+        $porcentaje = $total > 0 ? round(($aprobadas / $total) * 100) : 0;
     @endphp
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-lg border border-slate-200 p-4">
-            <p class="text-sm font-medium text-slate-500">Promedio General</p>
-            <p class="mt-1 text-2xl font-semibold {{ $promedio >= 11 ? 'text-green-600' : 'text-red-600' }}">
-                {{ number_format($promedio ?? 0, 1) }}
-            </p>
+            <p class="text-sm font-medium text-slate-500">Módulos Aprobados</p>
+            <p class="mt-1 text-2xl font-semibold text-green-600">{{ $aprobadas }}/{{ $total }}</p>
         </div>
         <div class="bg-white rounded-lg border border-slate-200 p-4">
-            <p class="text-sm font-medium text-slate-500">Módulos Aprobados</p>
-            <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $aprobadas }}/{{ $total }}</p>
+            <p class="text-sm font-medium text-slate-500">Porcentaje de Aprobación</p>
+            <p class="mt-1 text-2xl font-semibold {{ $porcentaje >= 50 ? 'text-green-600' : 'text-amber-600' }}">{{ $porcentaje }}%</p>
         </div>
         <div class="bg-white rounded-lg border border-slate-200 p-4">
             <p class="text-sm font-medium text-slate-500">Total Evaluaciones</p>
@@ -49,7 +47,7 @@
                         Tipo
                     </th>
                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Nota
+                        Calificación
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Estado
@@ -61,6 +59,17 @@
             </thead>
             <tbody class="bg-white divide-y divide-slate-200">
                 @foreach($notas as $nota)
+                    @php
+                        $notaLetra = $nota->nota_letra?->value ?? null;
+                        $colorClass = match($notaLetra) {
+                            'AD' => 'bg-green-100 text-green-800',
+                            'A' => 'bg-blue-100 text-blue-800',
+                            'B' => 'bg-amber-100 text-amber-800',
+                            'C' => 'bg-red-100 text-red-800',
+                            default => 'bg-slate-100 text-slate-800',
+                        };
+                        $esAprobado = in_array($notaLetra, ['AD', 'A', 'B']);
+                    @endphp
                     <tr class="hover:bg-slate-50">
                         <td class="px-6 py-4">
                             <div class="text-sm font-medium text-slate-900">
@@ -68,17 +77,16 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            {{ $nota->nota_letra?->value ?? 'Numérica' }}
+                            {{ $nota->tipo_evaluacion?->value ?? 'Evaluación' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold
-                                {{ ($nota->nota_numerica ?? 0) >= 11 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ $nota->nota_numerica ?? '-' }}
+                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold {{ $colorClass }}">
+                                {{ $notaLetra ?? '-' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm {{ ($nota->nota_numerica ?? 0) >= 11 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ ($nota->nota_numerica ?? 0) >= 11 ? 'Aprobado' : 'Desaprobado' }}
+                            <span class="text-sm {{ $esAprobado ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $esAprobado ? 'Aprobado' : 'Desaprobado' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
