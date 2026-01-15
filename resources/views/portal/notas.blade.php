@@ -60,15 +60,33 @@
             <tbody class="bg-white divide-y divide-slate-200">
                 @foreach($notas as $nota)
                     @php
-                        $notaLetra = $nota->nota_letra?->value ?? null;
-                        $colorClass = match($notaLetra) {
-                            'AD' => 'bg-green-100 text-green-800',
-                            'A' => 'bg-blue-100 text-blue-800',
-                            'B' => 'bg-amber-100 text-amber-800',
-                            'C' => 'bg-red-100 text-red-800',
-                            default => 'bg-slate-100 text-slate-800',
-                        };
-                        $esAprobado = in_array($notaLetra, ['AD', 'A', 'B']);
+                        $notaLetra = $nota->nota_letra?->value;
+                        $notaNumerica = $nota->nota_numerica;
+                        
+                        // Determinar si es aprobado
+                        $esAprobado = false;
+                        if ($notaNumerica !== null) {
+                            $esAprobado = $notaNumerica >= 13; // Considerar 13 como nota aprobatoria estándar, o configurable
+                        } elseif ($notaLetra !== null) {
+                            $esAprobado = in_array($notaLetra, ['AD', 'A', 'B']);
+                        }
+                        
+                        // Determinar color
+                        $colorClass = 'bg-slate-100 text-slate-800';
+                        if ($notaNumerica !== null) {
+                            $colorClass = $esAprobado ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                        } elseif ($notaLetra !== null) {
+                             $colorClass = match($notaLetra) {
+                                'AD' => 'bg-green-100 text-green-800',
+                                'A' => 'bg-blue-100 text-blue-800',
+                                'B' => 'bg-amber-100 text-amber-800',
+                                'C' => 'bg-red-100 text-red-800',
+                                default => 'bg-slate-100 text-slate-800',
+                            };
+                        }
+                        
+                        // Valor a mostrar
+                        $valorMostrar = $notaNumerica !== null ? number_format($notaNumerica, 0) : ($notaLetra ?? '-');
                     @endphp
                     <tr class="hover:bg-slate-50">
                         <td class="px-6 py-4">
@@ -77,11 +95,11 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            {{ $nota->tipo_evaluacion?->value ?? 'Evaluación' }}
+                            {{ $nota->tipo_evaluacion?->value ?? 'Evaluación Final' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <span class="inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold {{ $colorClass }}">
-                                {{ $notaLetra ?? '-' }}
+                                {{ $valorMostrar }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">

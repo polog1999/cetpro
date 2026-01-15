@@ -40,3 +40,8 @@ Route::get('/', function () {
     return redirect('/admin');
 });
 
+
+// Redirección para el middleware auth si intenta ir a 'login'
+Route::get('/login', function () {
+    return redirect()->route('filament.admin.auth.login');
+})->name('login');

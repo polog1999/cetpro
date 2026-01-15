@@ -19,7 +19,7 @@ class StudentPortalController extends Controller
         return view('portal.dashboard', [
             'estudiante' => $estudiante,
             'matriculasActivas' => $estudiante->matriculas()
-                ->where('estado', '!=', 'anulado')
+                ->where('estado', '!=', \App\Enums\EstadoMatricula::ANULADO)
                 ->count(),
             'ultimaMatricula' => $estudiante->matriculas()
                 ->latest()
@@ -74,7 +74,7 @@ class StudentPortalController extends Controller
         $estudiante = $request->user()->estudiante;
         
         $horarios = $estudiante->matriculas()
-            ->where('estado', '!=', 'anulado')
+                ->where('estado', '!=', \App\Enums\EstadoMatricula::ANULADO)
             ->with(['horario.programa', 'horario.docente'])
             ->get()
             ->pluck('horario')
