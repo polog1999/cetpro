@@ -212,6 +212,8 @@ class CreateMatricula extends CreateRecord
             'estetica personal' => 'B0001',
             'confección textil' => 'B0002',
             'confeccion textil' => 'B0002',
+            'textil y confección' => 'B0002',
+            'textil y confeccion' => 'B0002',
             'ofimática' => 'B0003',
             'ofimatica' => 'B0003',
             'computación e informática' => 'B0003',

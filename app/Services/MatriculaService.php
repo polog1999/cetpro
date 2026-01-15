@@ -219,7 +219,21 @@ class MatriculaService
         $data['fecha_inscripcion'] = $data['fecha_inscripcion'] ?? now();
         
         // 5. Crear matrícula
-        return $this->matriculas->create($data);
+        $matricula = $this->matriculas->create($data);
+
+        // 6. Asegurar que el estudiante tenga usuario para el portal
+        try {
+            $estudiante = Estudiante::find($data['estudiante_id']);
+            if ($estudiante && !$estudiante->usuario) {
+                $estudianteService = app(\App\Services\EstudianteService::class);
+                $estudianteService->crearUsuarioParaEstudiante($estudiante);
+                \Illuminate\Support\Facades\Log::info('Usuario creado automáticamente al matricular estudiante antiguo', ['estudiante_id' => $estudiante->id]);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al asegurar usuario en matrícula', ['error' => $e->getMessage()]);
+        }
+
+        return $matricula;
     }
     
     /**

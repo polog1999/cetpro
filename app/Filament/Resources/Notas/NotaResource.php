@@ -63,12 +63,12 @@ class NotaResource extends Resource
     public static function canCreate(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || false;
+        return $user?->role?->es_admin || $user?->esProfesor() || $user?->canAccessResource('estudiantes') || false;
     }
 
     public static function canEdit($record): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || false;
+        return $user?->role?->es_admin || $user?->esProfesor() || $user?->canAccessResource('estudiantes') || false;
     }
 }

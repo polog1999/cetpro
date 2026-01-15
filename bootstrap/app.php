@@ -12,7 +12,6 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Filament\Notifications\Notification;
-use Throwable;
 use Illuminate\Http\RedirectResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -56,7 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         
         // Manejar errores 403 (acceso denegado y autorización)
-        $exceptions->render(function (Throwable $e, Request $request) {
+        $exceptions->render(function (\Throwable $e, Request $request) {
             $is403 = false;
 
             if ($e instanceof AuthorizationException || $e instanceof AccessDeniedHttpException) {
@@ -105,4 +104,3 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->view('errors.500', [], 500);
         });
     })->create();
-

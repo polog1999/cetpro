@@ -80,13 +80,13 @@ class HorarioResource extends Resource
     public static function canCreate(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('horarios') || false;
     }
 
     public static function canEdit($record): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || false;
+        return $user?->role?->es_admin || $user?->canAccessResource('horarios') || false;
     }
 
     public static function canDelete($record): bool

@@ -60,11 +60,6 @@ class PagosTable
                         },
                     ),
 
-                TextColumn::make('codigo')
-                    ->label('Código')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('monto')
                     ->label('Monto')
                     ->numeric()

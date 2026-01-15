@@ -19,8 +19,6 @@ class PagoForm
                 TextInput::make('nro_cuota')
                     ->required()
                     ->numeric(),
-                TextInput::make('codigo')
-                    ->required(),
                 TextInput::make('monto')
                     ->required()
                     ->numeric(),

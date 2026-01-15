@@ -215,18 +215,22 @@ class EstudiantesTable
                     ->modalHeading('Crear usuario de portal')
                     ->modalDescription(fn ($record) => "Se creará un usuario para {$record->nombre_completo} con DNI como usuario y contraseña.")
                     ->action(function ($record) {
-                        \App\Models\Usuario::create([
-                            'usuario' => $record->nro_documento,
-                            'password' => $record->nro_documento,
-                            'nombre' => $record->nombre_completo,
-                            'activo' => true,
-                            'estudiante_id' => $record->id,
-                        ]);
-                        \Filament\Notifications\Notification::make()
-                            ->title('Usuario creado')
-                            ->body("Usuario: {$record->nro_documento} / Contraseña: {$record->nro_documento}")
-                            ->success()
-                            ->send();
+                        try {
+                            $service = app(\App\Services\EstudianteService::class);
+                            $service->crearUsuarioParaEstudiante($record);
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Usuario creado')
+                                ->body("Usuario: {$record->nro_documento} / Contraseña: {$record->nro_documento}")
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
                 
                 // Cambiar contraseña de alumno (solo admin)
@@ -285,6 +289,34 @@ class EstudiantesTable
                                 'nombres'
                             )
                         ),
+                        
+                    // Acción masiva para crear usuarios
+                    \Filament\Actions\BulkAction::make('crear_usuarios_masivo')
+                        ->label('Crear usuarios de portal')
+                        ->icon('heroicon-o-user-plus')
+                        ->requiresConfirmation()
+                        ->modalHeading('Crear usuarios para seleccionados')
+                        ->modalDescription('Se crearán cuentas de usuario (DNI/DNI) para los estudiantes seleccionados que aún no tengan cuenta.')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $count = 0;
+                            $service = app(\App\Services\EstudianteService::class);
+                            
+                            foreach ($records as $record) {
+                                if (!$record->usuario) {
+                                    try {
+                                        $service->crearUsuarioParaEstudiante($record);
+                                        $count++;
+                                    } catch (\Exception $e) {
+                                        // Continuar con el siguiente
+                                    }
+                                }
+                            }
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title("Se crearon {$count} usuarios")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ]);
     }

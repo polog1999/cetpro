@@ -17,17 +17,33 @@ class UsuariosTable
             // Solo mostrar usuarios de personal (no alumnos)
             ->modifyQueryUsing(fn ($query) => $query->whereNull('estudiante_id'))
             ->columns([
-                TextColumn::make('empleado_nombre_completo')
-                    ->label('Empleado')
+                TextColumn::make('persona')
+                    ->label('Empleado / Docente')
                     ->getStateUsing(function ($record) {
-                        $emp = $record->empleado;
-                        return $emp ? "{$emp->nombre} {$emp->apellido_paterno} {$emp->apellido_materno}" : '-';
+                        // Primero verificar si tiene empleado
+                        if ($record->empleado) {
+                            $emp = $record->empleado;
+                            return "{$emp->nombre} {$emp->apellido_paterno} {$emp->apellido_materno}";
+                        }
+                        // Si no tiene empleado, verificar si tiene docente
+                        if ($record->docente) {
+                            $doc = $record->docente;
+                            return "{$doc->nombres} {$doc->apellido_paterno} {$doc->apellido_materno}";
+                        }
+                        return '-';
                     })
                     ->searchable(query: function ($query, string $search) {
-                        return $query->whereHas('empleado', function ($q) use ($search) {
-                            $q->where('nombre', 'ilike', "%{$search}%")
-                              ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
-                              ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                        return $query->where(function ($q) use ($search) {
+                            $q->whereHas('empleado', function ($subQ) use ($search) {
+                                $subQ->where('nombre', 'ilike', "%{$search}%")
+                                    ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                    ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                            })
+                            ->orWhereHas('docente', function ($subQ) use ($search) {
+                                $subQ->where('nombres', 'ilike', "%{$search}%")
+                                    ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                    ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                            });
                         });
                     }),
                     
@@ -39,8 +55,11 @@ class UsuariosTable
                     ->searchable()
                     ->badge()
                     ->color(fn ($state) => match ($state) {
+                        'Administrador' => 'success',
                         'Admin' => 'success',
+                        'Director' => 'warning',
                         'Secretaria' => 'info',
+                        'Profesor' => 'primary',
                         default => 'gray',
                     }),
                     

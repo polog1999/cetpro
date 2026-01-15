@@ -97,12 +97,12 @@ class PagoResource extends Resource
      */
     public static function getGloballySearchableAttributes(): array
     {
-        return ['codigo'];
+        return ['num_liquidacion', 'estado'];
     }
 
     public static function getGlobalSearchResultTitle($record): string
     {
-        return 'Pago: ' . $record->codigo;
+        return 'Pago: ' . ($record->num_liquidacion ?? 'Cuota #' . $record->nro_cuota);
     }
 
     public static function getGlobalSearchResultDetails($record): array

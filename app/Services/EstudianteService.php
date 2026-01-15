@@ -110,7 +110,7 @@ class EstudianteService
      * Crea automáticamente un usuario para el estudiante.
      * Usuario y contraseña = número de documento.
      */
-    protected function crearUsuarioParaEstudiante(Estudiante $estudiante): void
+    public function crearUsuarioParaEstudiante(Estudiante $estudiante): void
     {
         try {
             // Usar transaction para crear un savepoint. 

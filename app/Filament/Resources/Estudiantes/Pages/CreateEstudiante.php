@@ -80,6 +80,16 @@ class CreateEstudiante extends CreateRecord
                 ->body('No se pudo conectar con Oracle')
                 ->send();
         }
+
+        // Crear usuario automático para el portal
+        try {
+            $service = app(\App\Services\EstudianteService::class);
+            $service->crearUsuarioParaEstudiante($this->record);
+        } catch (\Exception $e) {
+            Log::error('Error al crear usuario automático para estudiante creado en Filament', [
+                'estudiante_id' => $this->record->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
-

@@ -26,8 +26,7 @@ class PermisosSeeder extends Seeder
             ['nombre' => 'Horarios', 'recurso' => 'horarios', 'grupo' => 'Gestión Académica', 'descripcion' => 'Acceso completo al módulo de horarios'],
 
             // Gestión Administrativa
-            ['nombre' => 'Docentes', 'recurso' => 'docentes', 'grupo' => 'Gestión Administrativa', 'descripcion' => 'Acceso completo al módulo de docentes'],
-            ['nombre' => 'Empleados', 'recurso' => 'empleados', 'grupo' => 'Gestión Administrativa', 'descripcion' => 'Acceso completo al módulo de empleados'],
+            ['nombre' => 'Docentes', 'recurso' => 'docentes', 'grupo' => 'Gestión Académica', 'descripcion' => 'Acceso completo al módulo de docentes'],
 
             // Gestión Financiera
             ['nombre' => 'Cronogramas', 'recurso' => 'cronogramas', 'grupo' => 'Gestión Financiera', 'descripcion' => 'Acceso completo al módulo de cronogramas de pago'],

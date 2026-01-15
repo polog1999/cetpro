@@ -125,6 +125,14 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
             );
         }
         
+        if ($this->docente) {
+            return trim(
+                $this->docente->nombres . ' ' . 
+                $this->docente->apellido_paterno . ' ' . 
+                ($this->docente->apellido_materno ?? '')
+            );
+        }
+        
         return $this->usuario ?? 'Usuario';
     }
 }

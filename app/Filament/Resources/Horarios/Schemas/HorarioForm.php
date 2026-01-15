@@ -184,23 +184,70 @@ class HorarioForm
                         Select::make('tipo_documento')
                             ->label('Tipo de documento')
                             ->options(TipoDocumento::class)
-                            ->required(),
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn (Select $component) => $component
+                                ->getContainer()
+                                ->getComponent('docente_nro_documento')
+                                ?->state(null)
+                            ),
 
                         TextInput::make('nro_documento')
+                            ->key('docente_nro_documento')
                             ->label('Nro. de documento')
-                            ->required(),
+                            ->required()
+                            ->unique(Docente::class, 'nro_documento')
+                            ->validationMessages([
+                                'unique' => 'Este número de documento ya está registrado.',
+                            ])
+                            ->maxLength(function (Get $get) {
+                                $tipo = $get('tipo_documento');
+                                if (! $tipo instanceof TipoDocumento) {
+                                    $tipo = TipoDocumento::tryFrom($tipo);
+                                }
+                                return $tipo?->getMaxLength() ?? 8;
+                            })
+                            ->extraInputAttributes(function (Get $get) {
+                                $tipo = $get('tipo_documento');
+                                if (! $tipo instanceof TipoDocumento) {
+                                    $tipo = TipoDocumento::tryFrom($tipo);
+                                }
+                                $isNumeric = $tipo?->isNumeric() ?? true;
+                                $maxLength = $tipo?->getMaxLength() ?? 8;
+                                
+                                $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
+                                
+                                return [
+                                    'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
+                                ];
+                            }),
 
                         TextInput::make('nombres')
                             ->label('Nombres')
-                            ->required(),
+                            ->required()
+                            ->regex('/^[\pL\s]+$/u')
+                            ->validationMessages([
+                                'regex' => 'Solo se permiten letras y espacios.',
+                            ])
+                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
                         TextInput::make('apellido_paterno')
                             ->label('Apellido paterno')
-                            ->required(),
+                            ->required()
+                            ->regex('/^[\pL\s]+$/u')
+                            ->validationMessages([
+                                'regex' => 'Solo se permiten letras y espacios.',
+                            ])
+                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
                         TextInput::make('apellido_materno')
                             ->label('Apellido materno')
-                            ->required(),
+                            ->required()
+                            ->regex('/^[\pL\s]+$/u')
+                            ->validationMessages([
+                                'regex' => 'Solo se permiten letras y espacios.',
+                            ])
+                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
                     ])
                     ->createOptionAction(function (Action $action) {
                         return $action
@@ -209,7 +256,37 @@ class HorarioForm
                             ->modalSubmitActionLabel('Guardar docente');
                     })
                     ->createOptionUsing(function (array $data) {
-                        return Docente::create($data)->getKey();
+                        return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+                            // Crear el docente
+                            $docente = Docente::create($data);
+                            
+                            // Buscar o crear el rol de Profesor
+                            $rolProfesor = \App\Models\Role::firstOrCreate(
+                                ['nombre' => 'Profesor'],
+                                [
+                                    'descripcion' => 'Docente con acceso al sistema para gestión de notas',
+                                    'es_admin' => false,
+                                ]
+                            );
+                            
+                            // Crear el usuario automáticamente
+                            \App\Models\Usuario::create([
+                                'usuario' => $docente->nro_documento,
+                                'password' => \Illuminate\Support\Facades\Hash::make($docente->nro_documento),
+                                'docente_id' => $docente->id,
+                                'role_id' => $rolProfesor->id,
+                                'activo' => true,
+                            ]);
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title('Docente y usuario creados')
+                                ->body("Usuario: {$docente->nro_documento} / Contraseña: {$docente->nro_documento}")
+                                ->persistent()
+                                ->send();
+                            
+                            return $docente->getKey();
+                        });
                     }),
 
                 // HORA DE INICIO

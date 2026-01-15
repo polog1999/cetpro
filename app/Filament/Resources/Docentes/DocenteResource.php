@@ -48,8 +48,8 @@ class DocenteResource extends Resource
     {
         return [
             'index' => ListDocentes::route('/'),
-            // 'create' => CreateDocente::route('/create'),  // Deshabilitado: Docentes se crean automáticamente
-            // 'edit' => EditDocente::route('/{record}/edit'),  // Deshabilitado: Editar desde Empleado
+            'create' => CreateDocente::route('/create'),
+            'edit' => EditDocente::route('/{record}/edit'),
         ];
     }
 
@@ -62,15 +62,14 @@ class DocenteResource extends Resource
 
     public static function canCreate(): bool
     {
-        // Los docentes se crean automáticamente cuando se crea un usuario de tipo Profesor
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || $user?->canAccessResource('docentes') || false;
     }
 
     public static function canEdit($record): bool
     {
-        // Los docentes no se pueden editar desde aquí
-        // Editar empleado relacionado para sincronizar cambios
-        return false;
+        $user = Filament::auth()->user();
+        return $user?->role?->es_admin || $user?->canAccessResource('docentes') || false;
     }
 
     public static function canDelete($record): bool

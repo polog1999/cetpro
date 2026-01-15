@@ -33,8 +33,6 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Wizard;
-use Filament\Schemas\Components\Wizard\Step;
 
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
@@ -171,188 +169,182 @@ class MatriculaForm
                         static::generarCodigoInscripcion($set, $get);
                     })
                     ->createOptionForm([
-                        Wizard::make([
-                            Step::make('Estudiante')
-                                ->schema([
-                                    Section::make('Información requerida')
-                                    ->columns(2)
-                                    ->schema([
-                                        Select::make('tipo_documento')
-                                            ->options(TipoDocumento::class)
-                                            ->required()
-                                            ->live()
-                                            ->afterStateUpdated(fn (Select $component) => $component
-                                                ->getContainer()
-                                                ->getComponent('modal_nro_documento')
-                                                ?->state(null)
-                                            ),
-    
-                                        TextInput::make('nro_documento')
-                                            ->key('modal_nro_documento')
-                                            ->required()
-                                            ->unique(Estudiante::class, 'nro_documento')
-                                            ->validationMessages([
-                                                'unique' => 'Este número de documento ya está registrado para otro estudiante.',
-                                            ])
-                                            ->maxLength(function (Get $get) {
-                                                $tipo = $get('tipo_documento');
-                                                if (! $tipo instanceof TipoDocumento) {
-                                                    $tipo = TipoDocumento::tryFrom($tipo);
-                                                }
-                                                return $tipo?->getMaxLength() ?? 8;
-                                            })
-                                            ->extraInputAttributes(function (Get $get) {
-                                                $tipo = $get('tipo_documento');
-                                                if (! $tipo instanceof TipoDocumento) {
-                                                    $tipo = TipoDocumento::tryFrom($tipo);
-                                                }
-                                                $isNumeric = $tipo?->isNumeric() ?? true;
-                                                $maxLength = $tipo?->getMaxLength() ?? 8;
-                                                
-                                                $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
-                                                
-                                                return [
-                                                    'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
-                                                ];
-                                            }),
-    
-                                        TextInput::make('nombres')
-                                            ->required()
-                                            ->regex('/^[\pL\s]+$/u')
-                                            ->validationMessages([
-                                                'regex' => 'Solo se permiten letras y espacios.',
-                                            ])
-                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
-    
-                                        TextInput::make('apellido_paterno')
-                                            ->required()
-                                            ->regex('/^[\pL\s]+$/u')
-                                            ->validationMessages([
-                                                'regex' => 'Solo se permiten letras y espacios.',
-                                            ])
-                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
-    
-                                        TextInput::make('apellido_materno')
-                                            ->required()
-                                            ->regex('/^[\pL\s]+$/u')
-                                            ->validationMessages([
-                                                'regex' => 'Solo se permiten letras y espacios.',
-                                            ])
-                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
-                                        
-    
-                                        Select::make('distrito')
-                                            ->required()
-                                            ->options(DistritoLima::class),
-                                    ]),
+                        Section::make('Información del Estudiante')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('tipo_documento')
+                                    ->options(TipoDocumento::class)
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Select $component) => $component
+                                        ->getContainer()
+                                        ->getComponent('modal_nro_documento')
+                                        ?->state(null)
+                                    ),
 
-                                    Section::make('Datos adicionales')
-                                    ->columns(2)
-                                    ->schema([
-                                        Select::make('genero')
-                                            ->options(TipoGenero::class),
-    
-                                        Select::make('estado_civil')
-                                            ->options(EstadoCivil::class),
-    
-                                        DatePicker::make('fecha_nacimiento'),
-    
-                                        TextInput::make('telefono')
-                                            ->tel()
-                                            ->numeric()
-                                            ->maxLength(9)
-                                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"]),
-    
-                                        TextInput::make('email')
-                                            ->label('Email')
-                                            ->email(),
-    
-                                        TextInput::make('direccion'),
-    
-                                        Select::make('grado_instruccion')
-                                            ->options(GradoInstruccion::class),
-    
-                                        Select::make('provincia')
-                                            ->options(Provincia::class)
-                                            ->default('Lima'),
+                                TextInput::make('nro_documento')
+                                    ->key('modal_nro_documento')
+                                    ->required()
+                                    ->unique(Estudiante::class, 'nro_documento')
+                                    ->validationMessages([
+                                        'unique' => 'Este número de documento ya está registrado para otro estudiante.',
                                     ])
-                                    ->collapsed(),
+                                    ->maxLength(function (Get $get) {
+                                        $tipo = $get('tipo_documento');
+                                        if (! $tipo instanceof TipoDocumento) {
+                                            $tipo = TipoDocumento::tryFrom($tipo);
+                                        }
+                                        return $tipo?->getMaxLength() ?? 8;
+                                    })
+                                    ->extraInputAttributes(function (Get $get) {
+                                        $tipo = $get('tipo_documento');
+                                        if (! $tipo instanceof TipoDocumento) {
+                                            $tipo = TipoDocumento::tryFrom($tipo);
+                                        }
+                                        $isNumeric = $tipo?->isNumeric() ?? true;
+                                        $maxLength = $tipo?->getMaxLength() ?? 8;
+                                        
+                                        $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
+                                        
+                                        return [
+                                            'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
+                                        ];
+                                    }),
 
-                                ])
-                                ->columns(1),
+                                TextInput::make('nombres')
+                                    ->required()
+                                    ->regex('/^[\pL\s]+$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
-                            Step::make('Apoderado')
-                                ->description('Opcional. Solo si requiere')
-                                ->schema([
-                                    Select::make('apoderado_tipo_documento')
-                                        ->label('Tipo de documento del apoderado')
-                                        ->options(TipoDocumento::class)
-                                        ->live()
-                                        ->nullable(),
+                                TextInput::make('apellido_paterno')
+                                    ->required()
+                                    ->regex('/^[\pL\s]+$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
 
-                                    TextInput::make('apoderado_nro_documento')
-                                        ->label('N° documento del apoderado')
-                                        ->unique(Apoderado::class, 'nro_documento')
-                                        ->validationMessages([
-                                            'unique' => 'Este número de documento ya está registrado para otro apoderado.',
-                                        ])
-                                        ->maxLength(function (Get $get) {
-                                            $tipo = $get('apoderado_tipo_documento');
-                                            if (! $tipo instanceof TipoDocumento) {
-                                                $tipo = TipoDocumento::tryFrom($tipo);
-                                            }
-                                            return $tipo?->getMaxLength() ?? 8;
-                                        })
-                                        ->extraInputAttributes(function (Get $get) {
-                                            $tipo = $get('apoderado_tipo_documento');
-                                            if (! $tipo instanceof TipoDocumento) {
-                                                $tipo = TipoDocumento::tryFrom($tipo);
-                                            }
-                                            $isNumeric = $tipo?->isNumeric() ?? true;
-                                            $maxLength = $tipo?->getMaxLength() ?? 8;
-                                            
-                                            $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
-                                            
-                                            return [
-                                                'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
-                                            ];
-                                        }),
+                                TextInput::make('apellido_materno')
+                                    ->required()
+                                    ->regex('/^[\pL\s]+$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                
 
-                                    TextInput::make('apoderado_nombres')
-                                        ->label('Nombres del apoderado')
-                                        ->columnSpanFull()
-                                        ->regex('/^[\pL\s]*$/u')
-                                        ->validationMessages([
-                                            'regex' => 'Solo se permiten letras y espacios.',
-                                        ])
-                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                Select::make('distrito')
+                                    ->required()
+                                    ->options(DistritoLima::class),
+                            ]),
 
-                                    TextInput::make('apoderado_apellido_paterno')
-                                        ->label('Apellido paterno del apoderado')
-                                        ->regex('/^[\pL\s]*$/u')
-                                        ->validationMessages([
-                                            'regex' => 'Solo se permiten letras y espacios.',
-                                        ])
-                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                        Section::make('Datos adicionales')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('genero')
+                                    ->options(TipoGenero::class),
 
-                                    TextInput::make('apoderado_apellido_materno')
-                                        ->label('Apellido materno del apoderado')
-                                        ->regex('/^[\pL\s]*$/u')
-                                        ->validationMessages([
-                                            'regex' => 'Solo se permiten letras y espacios.',
-                                        ])
-                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                Select::make('estado_civil')
+                                    ->options(EstadoCivil::class),
 
-                                    TextInput::make('apoderado_telefono')
-                                        ->label('Teléfono del apoderado')
-                                        ->tel()
-                                        ->numeric()
-                                        ->maxLength(9)
-                                        ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"])
-                                        ->nullable(),
-                                ])
-                                ->columns(2),
-                        ])->skippable(),
+                                DatePicker::make('fecha_nacimiento'),
+
+                                TextInput::make('telefono')
+                                    ->tel()
+                                    ->numeric()
+                                    ->maxLength(9)
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"]),
+
+                                TextInput::make('email')
+                                    ->label('Email')
+                                    ->email(),
+
+                                TextInput::make('direccion'),
+
+                                Select::make('grado_instruccion')
+                                    ->options(GradoInstruccion::class),
+
+                                Select::make('provincia')
+                                    ->options(Provincia::class)
+                                    ->default('Lima'),
+                            ])
+                            ->collapsed(),
+
+                        Section::make('Apoderado (Opcional)')
+                            ->description('Solo si el estudiante requiere apoderado')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('apoderado_tipo_documento')
+                                    ->label('Tipo de documento del apoderado')
+                                    ->options(TipoDocumento::class)
+                                    ->live()
+                                    ->nullable(),
+
+                                TextInput::make('apoderado_nro_documento')
+                                    ->label('N° documento del apoderado')
+                                    ->unique(Apoderado::class, 'nro_documento')
+                                    ->validationMessages([
+                                        'unique' => 'Este número de documento ya está registrado para otro apoderado.',
+                                    ])
+                                    ->maxLength(function (Get $get) {
+                                        $tipo = $get('apoderado_tipo_documento');
+                                        if (! $tipo instanceof TipoDocumento) {
+                                            $tipo = TipoDocumento::tryFrom($tipo);
+                                        }
+                                        return $tipo?->getMaxLength() ?? 8;
+                                    })
+                                    ->extraInputAttributes(function (Get $get) {
+                                        $tipo = $get('apoderado_tipo_documento');
+                                        if (! $tipo instanceof TipoDocumento) {
+                                            $tipo = TipoDocumento::tryFrom($tipo);
+                                        }
+                                        $isNumeric = $tipo?->isNumeric() ?? true;
+                                        $maxLength = $tipo?->getMaxLength() ?? 8;
+                                        
+                                        $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
+                                        
+                                        return [
+                                            'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
+                                        ];
+                                    }),
+
+                                TextInput::make('apoderado_nombres')
+                                    ->label('Nombres del apoderado')
+                                    ->columnSpanFull()
+                                    ->regex('/^[\pL\s]*$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+
+                                TextInput::make('apoderado_apellido_paterno')
+                                    ->label('Apellido paterno del apoderado')
+                                    ->regex('/^[\pL\s]*$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+
+                                TextInput::make('apoderado_apellido_materno')
+                                    ->label('Apellido materno del apoderado')
+                                    ->regex('/^[\pL\s]*$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Solo se permiten letras y espacios.',
+                                    ])
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+
+                                TextInput::make('apoderado_telefono')
+                                    ->label('Teléfono del apoderado')
+                                    ->tel()
+                                    ->numeric()
+                                    ->maxLength(9)
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"])
+                                    ->nullable(),
+                            ])
+                            ->collapsed(),
                     ])
                     ->createOptionUsing(function (array $data): int {
                         return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
