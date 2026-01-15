@@ -19,10 +19,10 @@ class DatabaseSeeder extends Seeder
 
         // Ejecutar seeders en orden correcto
         $this->call([
-            AdminSetupSeeder::class, // Finalmente el usuario admin
+            RoleSeeder::class,     
+            PermisosSeeder::class,  
+            AdminSetupSeeder::class, 
             AlumnoRoleSeeder::class,
-            PermisosSeeder::class,  // Primero los permisos
-            RoleSeeder::class,      // Luego los roles
             RolProfesorSeeder::class,
         ]);
     }
