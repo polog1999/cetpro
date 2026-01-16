@@ -133,24 +133,14 @@ class RolDirectoraSeeder extends Seeder
             ]
         );
 
-        // Gestión Administrativa
-        $permisos[] = Permiso::firstOrCreate(
-            ['recurso' => 'empleados'],
-            [
-                'nombre' => 'Empleados',
-                'grupo' => 'Gestión Administrativa',
-                'descripcion' => 'Acceso completo al módulo de empleados',
-            ]
-        );
-
         // Asignar permisos al rol Directora
         $permisoIds = collect($permisos)->pluck('id')->toArray();
         $rolDirectora->permisos()->attach($permisoIds);
 
         $this->command->info('✅ Rol Directora creado exitosamente con ' . count($permisoIds) . ' permisos.');
         $this->command->info('   Módulos con acceso: Matrículas, Apoderados, Documentos, Estudiantes, Notas,');
-        $this->command->info('   Registrar Alumnos Antiguos, Cronogramas, Pagos, Docentes, Servicios TUSNE,');
-        $this->command->info('   Horarios, Programas, Empleados');
-        $this->command->info('   Sin acceso a: Roles y Usuarios');
+        $this->command->info('   Cronogramas, Pagos, Docentes, Servicios TUSNE, Horarios, Programas');
+        $this->command->info('   Sin acceso a: Roles, Usuarios y Empleados');
     }
 }
+

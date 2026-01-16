@@ -11,10 +11,13 @@ use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Filters\SelectFilter;
 use App\Enums\Turno;
 use App\Enums\Modalidad;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Horario;
+use App\Models\Programa;
+use App\Models\Docente;
 use App\Filament\Resources\Horarios\HorarioResource;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
@@ -86,7 +89,30 @@ class HorariosTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('id_programa')
+                    ->label('Programa')
+                    ->relationship('programa', 'nombre_programa')
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('id_docente')
+                    ->label('Docente')
+                    ->options(fn () => Docente::all()->pluck('nombre_completo', 'id'))
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('turno')
+                    ->label('Turno')
+                    ->options(Turno::class),
+
+                SelectFilter::make('aula')
+                    ->label('Aula')
+                    ->options(fn () => Horario::whereNotNull('aula')
+                        ->distinct()
+                        ->pluck('aula', 'aula')
+                        ->toArray()
+                    )
+                    ->searchable(),
             ])
             ->actions([
                 ViewAction::make('verAlumnos')
