@@ -40,6 +40,7 @@ class PagosTable
                 TextColumn::make('nro_cuota')
                     ->label('N° de cuota')
                     ->numeric()
+                    ->alignCenter()
                     ->sortable(),
                 TextColumn::make('cronograma.matricula.estudiante.nro_documento')
                     ->label('DNI')

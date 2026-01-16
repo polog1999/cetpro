@@ -121,15 +121,12 @@ class PagosRelationManager extends RelationManager
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nro_cuota')
-                    ->label('#')
+                    ->label('N° de cuota')
                     // ->sortable()
                     ->alignCenter()
                     ->width(40),
 
-                Tables\Columns\TextColumn::make('codigo')
-                    ->label('Código')
-                    ->searchable()
-                    ->copyable(),
+                
 
                 Tables\Columns\TextColumn::make('monto')
                     ->label('Monto')
