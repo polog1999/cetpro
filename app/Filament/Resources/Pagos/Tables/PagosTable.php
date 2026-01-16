@@ -38,20 +38,33 @@ class PagosTable
             ->columns([
                 // 🆕 Estudiante
                 TextColumn::make('nro_cuota')
-                    ->label('Nro. de cuota')
+                    ->label('N° de cuota')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('cronograma.matricula.estudiante.nro_documento')
+                    ->label('DNI')
+                    ->sortable()
+                    ->searchable(
+                        query: function (Builder $query, string $search): Builder {
+                            return $query->whereHas(
+                                'cronograma.matricula.estudiante',
+                                fn (Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
+                            );
+                        },
+                    ),
+                    
                 TextColumn::make('cronograma.matricula.estudiante.nombre_completo')
                     ->label('Estudiante')
                     ->sortable()
                     ->searchable(
-                        // Búsqueda personalizada sobre columnas reales
+                        // Búsqueda personalizada sobre DNI y nombre
                         query: function (Builder $query, string $search): Builder {
                             return $query->whereHas(
                                 'cronograma.matricula.estudiante',
                                 function (Builder $q) use ($search) {
                                     $q->where(function (Builder $q2) use ($search) {
-                                        $q2->where('nombres', 'ilike', "%{$search}%")
+                                        $q2->where('nro_documento', 'ilike', "%{$search}%")
+                                            ->orWhere('nombres', 'ilike', "%{$search}%")
                                             ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
                                             ->orWhere('apellido_materno', 'ilike', "%{$search}%");
                                     });

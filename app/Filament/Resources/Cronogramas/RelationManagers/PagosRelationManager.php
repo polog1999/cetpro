@@ -137,7 +137,13 @@ class PagosRelationManager extends RelationManager
                     ->sortable()
                     ->weight('bold'),
 
-                // ESTADO (String desde Oracle)
+                // N° LIQUIDACIÓN (primero)
+                Tables\Columns\TextColumn::make('num_liquidacion')
+                    ->label('N° Liquidación')
+                    ->searchable()
+                    ->copyable(),
+
+                // ESTADO (después de liquidación)
                 Tables\Columns\TextColumn::make('estado')
                     ->badge()
                     ->color(fn (string $state): string => match (true) {
@@ -149,13 +155,6 @@ class PagosRelationManager extends RelationManager
                     })
                     ->sortable()
                     ->searchable(),
-
-                // EVIDENCIA (Imagen pequeña, clic para ver grande)
-                Tables\Columns\ImageColumn::make('evidencia_path')
-                    ->label('Voucher')
-                    ->visibility('private') // Ajusta si usas disco público
-                    ->circular()
-                    ->stacked(),
 
                 // DETALLES DE PAGO
                 Tables\Columns\TextColumn::make('fecha_vencimiento')
@@ -174,11 +173,12 @@ class PagosRelationManager extends RelationManager
                     ->label('Método')
                     ->searchable(),
 
-                // DATOS DE LIQUIDACIÓN
-                Tables\Columns\TextColumn::make('num_liquidacion')
-                    ->label('Liquidación')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true), // Opcional: oculto por defecto para ahorrar espacio
+                // VOUCHER (movido al final)
+                Tables\Columns\ImageColumn::make('evidencia_path')
+                    ->label('Voucher')
+                    ->visibility('private')
+                    ->circular()
+                    ->stacked(),
 
                 Tables\Columns\TextColumn::make('fecha_liquidacion')
                     ->label('F. Liq.')
