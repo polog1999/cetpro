@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             AdminSetupSeeder::class, 
             AlumnoRoleSeeder::class,
             RolProfesorSeeder::class,
+            RolDirectoraSeeder::class,
         ]);
     }
 
