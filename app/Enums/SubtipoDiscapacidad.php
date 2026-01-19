@@ -6,6 +6,11 @@ use Filament\Support\Contracts\HasLabel;
 
 enum SubtipoDiscapacidad: string implements HasLabel
 {
+    // Subtipos para discapacidad INTELECTUAL
+    case RETARDO_LEVE = 'Retardo mental leve';
+    case RETARDO_MODERADO = 'Retardo mental moderado';
+    case RETARDO_SEVERO = 'Retardo mental severo';
+    
     // Subtipos para discapacidad AUDITIVA
     case HIPOACUSIA = 'Hipoacusia';
     case SORDERA_TOTAL = 'Sordera total';
@@ -25,6 +30,11 @@ enum SubtipoDiscapacidad: string implements HasLabel
     public static function getSubtiposPorTipo(TipoDiscapacidad $tipo): array
     {
         return match ($tipo) {
+            TipoDiscapacidad::INTELECTUAL => [
+                self::RETARDO_LEVE,
+                self::RETARDO_MODERADO,
+                self::RETARDO_SEVERO,
+            ],
             TipoDiscapacidad::AUDITIVA => [
                 self::HIPOACUSIA,
                 self::SORDERA_TOTAL,

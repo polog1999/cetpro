@@ -13,9 +13,6 @@ use App\Enums\TipoDiscapacidad;
 use App\Enums\SubtipoDiscapacidad;
 use App\Enums\TipoProgramaReparacion;
 use App\Enums\LenguaMaterna;
-use App\Enums\GradoInstruccionEBR;
-use App\Enums\CicloFormacion;
-use App\Enums\Turno;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -149,23 +146,33 @@ class EstudianteForm
                         Select::make('tipo_discapacidad')
                             ->label('Tipo de Discapacidad')
                             ->options(TipoDiscapacidad::class)
-                            ->default('Ninguna')
+                            ->default(TipoDiscapacidad::NINGUNA->value)
                             ->live()
-                            ->afterStateUpdated(fn (Select $component) => $component
-                                ->getContainer()
-                                ->getComponent('subtipo_discapacidad_component')
-                                ?->state(null)
-                            ),
+                            ->afterStateUpdated(function ($state, $set) {
+                                $set('subtipo_discapacidad', null);
+                            }),
                         Select::make('subtipo_discapacidad')
-                            ->key('subtipo_discapacidad_component')
                             ->label('Subtipo de Discapacidad')
-                            ->options(fn (Get $get) => SubtipoDiscapacidad::getOptionsPorTipo($get('tipo_discapacidad')))
-                            ->visible(fn (Get $get) => in_array($get('tipo_discapacidad'), [
-                                TipoDiscapacidad::AUDITIVA->value,
-                                TipoDiscapacidad::VISUAL->value,
-                                'Auditiva',
-                                'Visual',
-                            ])),
+                            ->options(function (Get $get) {
+                                $tipo = $get('tipo_discapacidad');
+                                if (!$tipo) return [];
+                                // Si ya es un enum, obtener el value
+                                if ($tipo instanceof TipoDiscapacidad) {
+                                    $tipo = $tipo->value;
+                                }
+                                return SubtipoDiscapacidad::getOptionsPorTipo($tipo);
+                            })
+                            ->hidden(function (Get $get) {
+                                $tipo = $get('tipo_discapacidad');
+                                if (!$tipo) return true;
+                                // Si ya es un enum, usarlo directamente
+                                if ($tipo instanceof TipoDiscapacidad) {
+                                    return !$tipo->tieneSubtipos();
+                                }
+                                // Si es string, convertir a enum
+                                $tipoEnum = TipoDiscapacidad::tryFrom($tipo);
+                                return !$tipoEnum || !$tipoEnum->tieneSubtipos();
+                            }),
                         
                         // Tabla 206: Situación de Vulnerabilidad
                         Select::make('tipo_programa_reparacion')
@@ -187,17 +194,6 @@ class EstudianteForm
                             ->maxValue(now()->year)
                             ->maxLength(4)
                             ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"]),
-                        Select::make('grado_instruccion_ebr')
-                            ->label('Grado de Instrucción (EBR)')
-                            ->options(GradoInstruccionEBR::class),
-                        
-                        // Tabla 208: Atributos de Matrícula
-                        Select::make('ciclo_formacion')
-                            ->label('Ciclo de Formación')
-                            ->options(CicloFormacion::class),
-                        Select::make('turno_matricula')
-                            ->label('Turno de Matrícula')
-                            ->options(Turno::class),
                     ])
                     ->columnSpan('full'),
             ]);

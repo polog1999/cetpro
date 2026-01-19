@@ -280,23 +280,33 @@ class MatriculaForm
                                 Select::make('tipo_discapacidad')
                                     ->label('Tipo de Discapacidad')
                                     ->options(\App\Enums\TipoDiscapacidad::class)
-                                    ->default('Ninguna')
+                                    ->default(\App\Enums\TipoDiscapacidad::NINGUNA->value)
                                     ->live()
-                                    ->afterStateUpdated(fn (Select $component) => $component
-                                        ->getContainer()
-                                        ->getComponent('modal_subtipo_discapacidad')
-                                        ?->state(null)
-                                    ),
+                                    ->afterStateUpdated(function ($state, $set) {
+                                        $set('subtipo_discapacidad', null);
+                                    }),
                                 Select::make('subtipo_discapacidad')
-                                    ->key('modal_subtipo_discapacidad')
                                     ->label('Subtipo de Discapacidad')
-                                    ->options(fn (Get $get) => \App\Enums\SubtipoDiscapacidad::getOptionsPorTipo($get('tipo_discapacidad')))
-                                    ->visible(fn (Get $get) => in_array($get('tipo_discapacidad'), [
-                                        \App\Enums\TipoDiscapacidad::AUDITIVA->value,
-                                        \App\Enums\TipoDiscapacidad::VISUAL->value,
-                                        'Auditiva',
-                                        'Visual',
-                                    ])),
+                                    ->options(function (Get $get) {
+                                        $tipo = $get('tipo_discapacidad');
+                                        if (!$tipo) return [];
+                                        // Si ya es un enum, obtener el value
+                                        if ($tipo instanceof \App\Enums\TipoDiscapacidad) {
+                                            $tipo = $tipo->value;
+                                        }
+                                        return \App\Enums\SubtipoDiscapacidad::getOptionsPorTipo($tipo);
+                                    })
+                                    ->hidden(function (Get $get) {
+                                        $tipo = $get('tipo_discapacidad');
+                                        if (!$tipo) return true;
+                                        // Si ya es un enum, usarlo directamente
+                                        if ($tipo instanceof \App\Enums\TipoDiscapacidad) {
+                                            return !$tipo->tieneSubtipos();
+                                        }
+                                        // Si es string, convertir a enum
+                                        $tipoEnum = \App\Enums\TipoDiscapacidad::tryFrom($tipo);
+                                        return !$tipoEnum || !$tipoEnum->tieneSubtipos();
+                                    }),
                                 
                                 Select::make('tipo_programa_reparacion')
                                     ->label('Programa de Reparación')
@@ -312,18 +322,6 @@ class MatriculaForm
                                     ->numeric()
                                     ->maxLength(4)
                                     ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"]),
-                                    
-                                Select::make('grado_instruccion_ebr')
-                                    ->label('Grado de Instrucción (EBR)')
-                                    ->options(\App\Enums\GradoInstruccionEBR::class),
-                                
-                                Select::make('ciclo_formacion')
-                                    ->label('Ciclo de Formación')
-                                    ->options(\App\Enums\CicloFormacion::class),
-                                    
-                                Select::make('turno_matricula')
-                                    ->label('Turno de Matrícula')
-                                    ->options(\App\Enums\Turno::class),
                             ])
                             ->collapsed(),
 
@@ -435,9 +433,7 @@ class MatriculaForm
                                 'tipo_programa_reparacion' => $data['tipo_programa_reparacion'] ?? null,
                                 'lengua_materna' => $data['lengua_materna'] ?? null,
                                 'anio_egreso_ebr' => $data['anio_egreso_ebr'] ?? null,
-                                'grado_instruccion_ebr' => $data['grado_instruccion_ebr'] ?? null,
-                                'ciclo_formacion' => $data['ciclo_formacion'] ?? null,
-                                'turno_matricula' => $data['turno_matricula'] ?? null,
+                                'ciclo_formacion' => \App\Enums\CicloFormacion::AUXILIAR_TECNICO->value, // Siempre es Auxiliar técnico
                             ];
                             
                             $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);

@@ -21,9 +21,6 @@ use App\Enums\TipoDiscapacidad;
 use App\Enums\SubtipoDiscapacidad;
 use App\Enums\TipoProgramaReparacion;
 use App\Enums\LenguaMaterna;
-use App\Enums\GradoInstruccionEBR;
-use App\Enums\CicloFormacion;
-use App\Enums\Turno;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -55,9 +52,6 @@ class Estudiante extends Model
         'tipo_programa_reparacion', // ENUM (TipoProgramaReparacion) - Tabla 206
         'lengua_materna',          // ENUM (LenguaMaterna) - Tabla 207
         'anio_egreso_ebr',         // INTEGER - Año de egreso EBR (Tabla 204)
-        'grado_instruccion_ebr',   // ENUM (GradoInstruccionEBR) - Tabla 203
-        'ciclo_formacion',         // ENUM (CicloFormacion) - Tabla 208
-        'turno_matricula',         // ENUM (Turno) - Tabla 208
     ];
 
     protected $casts = [
@@ -73,9 +67,6 @@ class Estudiante extends Model
         'subtipo_discapacidad'    => SubtipoDiscapacidad::class,
         'tipo_programa_reparacion' => TipoProgramaReparacion::class,
         'lengua_materna'          => LenguaMaterna::class,
-        'grado_instruccion_ebr'   => GradoInstruccionEBR::class,
-        'ciclo_formacion'         => CicloFormacion::class,
-        'turno_matricula'         => Turno::class,
         'anio_egreso_ebr'         => 'integer',
     ];
 
