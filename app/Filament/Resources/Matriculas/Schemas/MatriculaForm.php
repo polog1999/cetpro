@@ -168,6 +168,24 @@ class MatriculaForm
                         // Generar código de inscripción si todo está bien
                         static::generarCodigoInscripcion($set, $get);
                     })
+                    ->helperText(function (Get $get) {
+                        $status = $get('codigo_contribuyente_status');
+                        $tieneDeuda = $get('estudiante_tiene_deuda');
+                        
+                        if ($tieneDeuda) {
+                            return new \Illuminate\Support\HtmlString(
+                                '<span style="color: #ef4444;">⚠️ Tiene pagos vencidos. Debe regularizar sus deudas.</span>'
+                            );
+                        }
+                        
+                        if ($status === 'success') {
+                            return new \Illuminate\Support\HtmlString(
+                                '<span style="color: #10b981;">✓ Apto para matricular</span>'
+                            );
+                        }
+                        
+                        return null;
+                    })
                     ->createOptionForm([
                         Section::make('Información del Estudiante')
                             ->columns(2)
@@ -491,38 +509,6 @@ class MatriculaForm
                     ),
 
                 // ----------------------------------------
-                // MENSAJE DE VALIDACIÓN DE CÓDIGO CONTRIBUYENTE
-                // ----------------------------------------
-                Placeholder::make('codigo_contribuyente_validacion')
-                    ->label('')
-                    ->content(function (Get $get): string {
-                        $status = $get('codigo_contribuyente_status');
-                        
-                        if ($status === 'success') {
-                            return '✓ Apto para matricular';
-                        }
-                        
-                        return '';
-                    })
-                    ->visible(fn (Get $get) => $get('codigo_contribuyente_status') === 'success' && !$get('estudiante_tiene_deuda'))
-                    ->extraAttributes([
-                        'class' => 'text-success-600 font-semibold',
-                        'style' => 'color: #10b981; font-weight: 600; margin-top: -0.5rem;'
-                    ]),
-
-                // ----------------------------------------
-                // MENSAJE DE DEUDA PENDIENTE
-                // ----------------------------------------
-                Placeholder::make('deuda_pendiente_validacion')
-                    ->label('')
-                    ->content('⚠️ El estudiante tiene pagos vencidos. Debe regularizar sus deudas antes de matricularse.')
-                    ->visible(fn (Get $get) => $get('estudiante_tiene_deuda') === true)
-                    ->extraAttributes([
-                        'class' => 'text-danger-600 font-semibold',
-                        'style' => 'color: #ef4444; font-weight: 600; margin-top: -0.5rem;'
-                    ]),
-
-                // ----------------------------------------
                 // TIPO DE MATRÍCULA (ENUM REAL)
                 // ----------------------------------------
                 Select::make('tipo_matricula')
@@ -543,11 +529,13 @@ class MatriculaForm
                 // ----------------------------------------
                 // PROGRAMA INTERMEDIARIO (para Programa y Modulo)
                 // No se almacena, solo para filtrar
+                // Solo muestra programas completos (donde suma de cursos >= duración)
                 // ----------------------------------------
                 Select::make('programa_intermediario')
                     ->label('Seleccionar Programa')
                     ->options(function () {
                         return \App\Models\Programa::where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO)
+                            ->completos() // Solo programas completos
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();
@@ -594,11 +582,13 @@ class MatriculaForm
                 // ----------------------------------------
                 // FORMACION CONTINUA INTERMEDIARIA (para Formacion Continua y Curso)
                 // No se almacena, solo para filtrar
+                // Solo muestra formaciones continuas completas (donde suma de cursos >= duración)
                 // ----------------------------------------
                 Select::make('formacion_continua_intermediaria')
                     ->label('Seleccionar Formación Continua')
                     ->options(function () {
                         return \App\Models\Programa::where('tipo_programa', TipoPrograma::FORMACION_CONTINUA)
+                            ->completos() // Solo programas completos
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();
