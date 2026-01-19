@@ -8,10 +8,19 @@ use App\Enums\GradoInstruccion;
 use App\Enums\Provincia;
 use App\Enums\TipoDocumento;
 use App\Enums\TipoGenero;
+// Enums del Censo
+use App\Enums\TipoDiscapacidad;
+use App\Enums\SubtipoDiscapacidad;
+use App\Enums\TipoProgramaReparacion;
+use App\Enums\LenguaMaterna;
+use App\Enums\GradoInstruccionEBR;
+use App\Enums\CicloFormacion;
+use App\Enums\Turno;
+
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use App\Models\Apoderado;
@@ -128,6 +137,70 @@ class EstudianteForm
                         Select::make('grado_instruccion')
                             ->options(GradoInstruccion::class),
                     ]) ->columnSpan('full'),
+                
+                // ==================== SECCIÓN DEL CENSO ====================
+                Section::make('Información del Censo')
+                    ->description('Datos requeridos para el censo escolar (Tablas 201-208)')
+                    ->collapsible()
+                    ->collapsed()
+                    ->columns(2)
+                    ->components([
+                        // Tabla 205: Discapacidad
+                        Select::make('tipo_discapacidad')
+                            ->label('Tipo de Discapacidad')
+                            ->options(TipoDiscapacidad::class)
+                            ->default('Ninguna')
+                            ->live()
+                            ->afterStateUpdated(fn (Select $component) => $component
+                                ->getContainer()
+                                ->getComponent('subtipo_discapacidad_component')
+                                ?->state(null)
+                            ),
+                        Select::make('subtipo_discapacidad')
+                            ->key('subtipo_discapacidad_component')
+                            ->label('Subtipo de Discapacidad')
+                            ->options(fn (Get $get) => SubtipoDiscapacidad::getOptionsPorTipo($get('tipo_discapacidad')))
+                            ->visible(fn (Get $get) => in_array($get('tipo_discapacidad'), [
+                                TipoDiscapacidad::AUDITIVA->value,
+                                TipoDiscapacidad::VISUAL->value,
+                                'Auditiva',
+                                'Visual',
+                            ])),
+                        
+                        // Tabla 206: Situación de Vulnerabilidad
+                        Select::make('tipo_programa_reparacion')
+                            ->label('Programa de Reparación (Ley 28592)')
+                            ->options(TipoProgramaReparacion::class)
+                            ->default('Ninguno'),
+                        
+                        // Tabla 207: Lengua Materna
+                        Select::make('lengua_materna')
+                            ->label('Lengua Materna')
+                            ->options(LenguaMaterna::class),
+                        
+                        // Tabla 203/204: Trayectoria Académica
+                        TextInput::make('anio_egreso_ebr')
+                            ->label('Año de Egreso EBR')
+                            ->helperText('Año en que terminó el colegio')
+                            ->numeric()
+                            ->minValue(1950)
+                            ->maxValue(now()->year)
+                            ->maxLength(4)
+                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"]),
+                        Select::make('grado_instruccion_ebr')
+                            ->label('Grado de Instrucción (EBR)')
+                            ->options(GradoInstruccionEBR::class),
+                        
+                        // Tabla 208: Atributos de Matrícula
+                        Select::make('ciclo_formacion')
+                            ->label('Ciclo de Formación')
+                            ->options(CicloFormacion::class),
+                        Select::make('turno_matricula')
+                            ->label('Turno de Matrícula')
+                            ->options(Turno::class),
+                    ])
+                    ->columnSpan('full'),
             ]);
     }
 }
+

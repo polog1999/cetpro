@@ -273,6 +273,60 @@ class MatriculaForm
                             ])
                             ->collapsed(),
 
+                        Section::make('Información del Censo')
+                            ->description('Datos requeridos para el censo escolar')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('tipo_discapacidad')
+                                    ->label('Tipo de Discapacidad')
+                                    ->options(\App\Enums\TipoDiscapacidad::class)
+                                    ->default('Ninguna')
+                                    ->live()
+                                    ->afterStateUpdated(fn (Select $component) => $component
+                                        ->getContainer()
+                                        ->getComponent('modal_subtipo_discapacidad')
+                                        ?->state(null)
+                                    ),
+                                Select::make('subtipo_discapacidad')
+                                    ->key('modal_subtipo_discapacidad')
+                                    ->label('Subtipo de Discapacidad')
+                                    ->options(fn (Get $get) => \App\Enums\SubtipoDiscapacidad::getOptionsPorTipo($get('tipo_discapacidad')))
+                                    ->visible(fn (Get $get) => in_array($get('tipo_discapacidad'), [
+                                        \App\Enums\TipoDiscapacidad::AUDITIVA->value,
+                                        \App\Enums\TipoDiscapacidad::VISUAL->value,
+                                        'Auditiva',
+                                        'Visual',
+                                    ])),
+                                
+                                Select::make('tipo_programa_reparacion')
+                                    ->label('Programa de Reparación')
+                                    ->options(\App\Enums\TipoProgramaReparacion::class)
+                                    ->default('Ninguno'),
+                                
+                                Select::make('lengua_materna')
+                                    ->label('Lengua Materna')
+                                    ->options(\App\Enums\LenguaMaterna::class),
+                                
+                                TextInput::make('anio_egreso_ebr')
+                                    ->label('Año de Egreso EBR')
+                                    ->numeric()
+                                    ->maxLength(4)
+                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"]),
+                                    
+                                Select::make('grado_instruccion_ebr')
+                                    ->label('Grado de Instrucción (EBR)')
+                                    ->options(\App\Enums\GradoInstruccionEBR::class),
+                                
+                                Select::make('ciclo_formacion')
+                                    ->label('Ciclo de Formación')
+                                    ->options(\App\Enums\CicloFormacion::class),
+                                    
+                                Select::make('turno_matricula')
+                                    ->label('Turno de Matrícula')
+                                    ->options(\App\Enums\Turno::class),
+                            ])
+                            ->collapsed(),
+
                         Section::make('Apoderado (Opcional)')
                             ->description('Solo si el estudiante requiere apoderado')
                             ->columns(2)
@@ -375,6 +429,15 @@ class MatriculaForm
                                 'grado_instruccion' => $data['grado_instruccion'] ?? null,
                                 'provincia' => $data['provincia'] ?? null,
                                 'distrito' => $data['distrito'] ?? null,
+                                // Campos del Censo Escolar
+                                'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
+                                'subtipo_discapacidad' => $data['subtipo_discapacidad'] ?? null,
+                                'tipo_programa_reparacion' => $data['tipo_programa_reparacion'] ?? null,
+                                'lengua_materna' => $data['lengua_materna'] ?? null,
+                                'anio_egreso_ebr' => $data['anio_egreso_ebr'] ?? null,
+                                'grado_instruccion_ebr' => $data['grado_instruccion_ebr'] ?? null,
+                                'ciclo_formacion' => $data['ciclo_formacion'] ?? null,
+                                'turno_matricula' => $data['turno_matricula'] ?? null,
                             ];
                             
                             $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);

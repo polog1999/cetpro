@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\Carbon;
 
 use App\Models\Apoderado;
 use App\Models\Nota;
@@ -15,6 +16,14 @@ use App\Enums\TipoDocumento;
 use App\Enums\GradoInstruccion;
 use App\Enums\Provincia;
 use App\Enums\DistritoLima;
+// Enums del Censo Escolar
+use App\Enums\TipoDiscapacidad;
+use App\Enums\SubtipoDiscapacidad;
+use App\Enums\TipoProgramaReparacion;
+use App\Enums\LenguaMaterna;
+use App\Enums\GradoInstruccionEBR;
+use App\Enums\CicloFormacion;
+use App\Enums\Turno;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -40,6 +49,15 @@ class Estudiante extends Model
         'provincia',           // ENUM (Provincia) - solo Lima
         'distrito',            // ENUM (DistritoLima)
         'apoderado_id',
+        // Campos del Censo Escolar
+        'tipo_discapacidad',       // ENUM (TipoDiscapacidad) - Tabla 205
+        'subtipo_discapacidad',    // ENUM (SubtipoDiscapacidad) - Sub-tipos para AUDITIVA/VISUAL
+        'tipo_programa_reparacion', // ENUM (TipoProgramaReparacion) - Tabla 206
+        'lengua_materna',          // ENUM (LenguaMaterna) - Tabla 207
+        'anio_egreso_ebr',         // INTEGER - Año de egreso EBR (Tabla 204)
+        'grado_instruccion_ebr',   // ENUM (GradoInstruccionEBR) - Tabla 203
+        'ciclo_formacion',         // ENUM (CicloFormacion) - Tabla 208
+        'turno_matricula',         // ENUM (Turno) - Tabla 208
     ];
 
     protected $casts = [
@@ -50,10 +68,19 @@ class Estudiante extends Model
         'tipo_documento'    => TipoDocumento::class,
         'provincia'         => Provincia::class,
         'distrito'          => DistritoLima::class,
+        // Casts para campos del Censo
+        'tipo_discapacidad'       => TipoDiscapacidad::class,
+        'subtipo_discapacidad'    => SubtipoDiscapacidad::class,
+        'tipo_programa_reparacion' => TipoProgramaReparacion::class,
+        'lengua_materna'          => LenguaMaterna::class,
+        'grado_instruccion_ebr'   => GradoInstruccionEBR::class,
+        'ciclo_formacion'         => CicloFormacion::class,
+        'turno_matricula'         => Turno::class,
+        'anio_egreso_ebr'         => 'integer',
     ];
 
-    // Para poder acceder a $estudiante->edad
-    protected $appends = ['edad'];
+    // Para poder acceder a $estudiante->edad y $estudiante->edad_al_31_marzo
+    protected $appends = ['edad', 'edad_al_31_marzo'];
 
     
 
@@ -67,6 +94,20 @@ class Estudiante extends Model
         return $this->fecha_nacimiento
             ? $this->fecha_nacimiento->age
             : null;
+    }
+
+    /**
+     * Calcula la edad del estudiante al 31 de marzo del año actual
+     * Útil para reportes del censo escolar (Tabla 201)
+     */
+    public function getEdadAl31MarzoAttribute(): ?int
+    {
+        if (!$this->fecha_nacimiento) {
+            return null;
+        }
+        
+        $fechaCorte = Carbon::create(now()->year, 3, 31);
+        return $this->fecha_nacimiento->diffInYears($fechaCorte);
     }
 
     public function apoderado(): BelongsTo
@@ -100,3 +141,4 @@ class Estudiante extends Model
         return $this->hasOne(Usuario::class, 'estudiante_id');
     }
 }
+

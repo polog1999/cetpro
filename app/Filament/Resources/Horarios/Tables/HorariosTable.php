@@ -65,6 +65,15 @@ class HorariosTable
                         return $state;
                     }),
 
+                TextColumn::make('hora_inicio')
+                    ->label('Hora')
+                    ->formatStateUsing(function ($state, $record) {
+                        $inicio = $record->hora_inicio ? \Carbon\Carbon::parse($record->hora_inicio)->format('H:i') : '--:--';
+                        $fin = $record->hora_fin ? \Carbon\Carbon::parse($record->hora_fin)->format('H:i') : '--:--';
+                        return "{$inicio} - {$fin}";
+                    })
+                    ->sortable(),
+
                 TextColumn::make('aula')
                     ->label('Aula')
                     ->toggleable(),
