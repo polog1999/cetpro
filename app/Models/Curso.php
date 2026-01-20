@@ -37,4 +37,29 @@ class Curso extends Model
     {
         return $this->hasMany(Nota::class, 'curso_id', 'id_curso');
     }
+
+    /**
+     * Relación con Unidades (para módulos de Programa de Estudio).
+     */
+    public function unidades()
+    {
+        return $this->hasMany(Unidad::class, 'id_curso', 'id_curso')->orderBy('orden');
+    }
+
+    /**
+     * Verifica si este curso/módulo tiene unidades asociadas.
+     */
+    public function tieneUnidades(): bool
+    {
+        return $this->unidades()->exists();
+    }
+
+    /**
+     * Verifica si el programa padre es de tipo PROGRAMA_ESTUDIO.
+     * En ese caso, este curso actúa como "módulo".
+     */
+    public function esModulo(): bool
+    {
+        return $this->programa?->tipo_programa === \App\Enums\TipoPrograma::PROGRAMA_ESTUDIO;
+    }
 }

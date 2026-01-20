@@ -451,7 +451,6 @@ class MatriculaForm
                                 'tipo_programa_reparacion' => $data['tipo_programa_reparacion'] ?? null,
                                 'lengua_materna' => $data['lengua_materna'] ?? null,
                                 'anio_egreso_ebr' => $data['anio_egreso_ebr'] ?? null,
-                                'ciclo_formacion' => \App\Enums\CicloFormacion::AUXILIAR_TECNICO->value, // Siempre es Auxiliar técnico
                             ];
                             
                             $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
