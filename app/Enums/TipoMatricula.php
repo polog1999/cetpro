@@ -11,6 +11,7 @@ enum TipoMatricula: string implements HasLabel, HasColor
     case FORMACION_CONTINUA = 'Formación continua';
     case CURSO              = 'Curso';
     case MODULO             = 'Módulo';
+    case UNIDAD             = 'Unidad';
 
     public function getLabel(): string
     {
@@ -24,6 +25,7 @@ enum TipoMatricula: string implements HasLabel, HasColor
             self::FORMACION_CONTINUA => 'success',
             self::CURSO              => 'info',
             self::MODULO             => 'warning',
+            self::UNIDAD             => 'gray',
         };
     }
 }

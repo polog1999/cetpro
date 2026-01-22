@@ -16,6 +16,7 @@ use App\Enums\TipoGenero;
 use App\Models\Estudiante;
 use App\Models\Horario;
 use App\Models\Curso;
+use App\Models\Unidad;
 use App\Models\Apoderado;
 
 use App\Services\OracleTusneService;
@@ -532,9 +533,20 @@ class MatriculaForm
                 // ----------------------------------------
                 Select::make('programa_intermediario')
                     ->label('Seleccionar Programa')
-                    ->options(function () {
-                        return \App\Models\Programa::where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO)
-                            ->completos() // Solo programas completos
+                    ->options(function (Get $get) {
+                        $tipoMatricula = $get('tipo_matricula');
+                        $query = \App\Models\Programa::where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO);
+
+                        // Solo filtrar completos si es matrícula por PROGRAMA completo.
+                        // Para MODULO o UNIDAD, permitimos programas "incompletos" siempre que tengan cursos.
+                        if ($tipoMatricula === TipoMatricula::PROGRAMA) {
+                            $query->completos();
+                        } else {
+                            // Para MODULO/UNIDAD, al menos debe tener algún curso/módulo definido
+                            $query->has('cursos');
+                        }
+
+                        return $query
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')
                             ->toArray();
@@ -544,10 +556,10 @@ class MatriculaForm
                     ->live()
                     ->dehydrated(false) // No se guarda en BD
                     ->visible(fn (Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO])
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     ->required(fn (Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO])
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     ->afterStateUpdated(function ($state, Set $set) {
                         $set('horario_id', null);
@@ -652,7 +664,7 @@ class MatriculaForm
                             $query->with('programa');
 
                             // Filtrar por programa intermediario seleccionado
-                            if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
+                            if (in_array($tipoMatricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])) {
                                 $programaId = $get('programa_intermediario');
                                 if ($programaId) {
                                     $query->where('id_programa', $programaId);
@@ -715,8 +727,8 @@ class MatriculaForm
                             return true;
                         }
                         
-                        // Para Programa y Módulo, requiere programa_intermediario
-                        if ($tipoMatricula === TipoMatricula::PROGRAMA || $tipoMatricula === TipoMatricula::MODULO) {
+                        // Para Programa y Módulo y Unidad, requiere programa_intermediario
+                        if (in_array($tipoMatricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])) {
                             return ! $get('programa_intermediario');
                         }
                         
@@ -855,18 +867,55 @@ class MatriculaForm
                     ->helperText('Solo puede matricularse en el curso con fecha de inicio más próxima. Los cursos que ya iniciaron están deshabilitados.')
                     ->searchable()
                     ->live()
-                    // visible solo para CURSO y MODULO
+                    // visible solo para CURSO y MODULO y UNIDAD
                     ->visible(fn (Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO])
+                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     // deshabilitado si no hay horario
                     ->disabled(fn (Get $get) =>
                         ! $get('horario_id')
                     )
-                    // requerido solo si es CURSO o MODULO
+                    // requerido solo si es CURSO o MODULO o UNIDAD
                     ->required(fn (Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO])
-                    ),
+                        in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
+                    )
+                    ->afterStateUpdated(function (Set $set) {
+                        $set('id_unidad', null);
+                    }),
+                    
+                // ----------------------------------------
+                // UNIDAD (PARA UNIDAD)
+                // ----------------------------------------
+                Select::make('id_unidad')
+                    ->label('Unidad')
+                    ->options(function (Get $get) {
+                        $cursoId = $get('id_curso');
+                        if (!$cursoId) {
+                            return [];
+                        }
+                        
+                        return Unidad::where('id_curso', $cursoId)
+                            ->ordenado()
+                            ->pluck('nombre_unidad', 'id_unidad');
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    // visible solo para UNIDAD
+                    ->visible(fn (Get $get) =>
+                        $get('tipo_matricula') === TipoMatricula::UNIDAD
+                    )
+                    // deshabilitado si no hay curso
+                    ->disabled(fn (Get $get) =>
+                        ! $get('id_curso')
+                    )
+                    // requerido solo si es UNIDAD
+                    ->required(fn (Get $get) =>
+                        $get('tipo_matricula') === TipoMatricula::UNIDAD
+                    )
+                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                        // Opcional: acciones adicionales al seleccionar unidad
+                    }),
             ]);
     }
 

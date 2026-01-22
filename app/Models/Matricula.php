@@ -10,6 +10,7 @@ use Carbon\Carbon;
 
 use App\Models\Estudiante;
 use App\Models\Horario;
+use App\Models\Unidad;
 
 use App\Models\Curso;
 use App\Models\Cronograma;
@@ -36,6 +37,7 @@ class Matricula extends Model
         'estado',
         'tipo_matricula',
         'id_curso',
+        'id_unidad',
         'motivo_anulacion',
         'fecha_anulacion',
         'documento_path',
@@ -61,6 +63,11 @@ class Matricula extends Model
     public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class, 'id_curso', 'id_curso');
+    }
+
+    public function unidad(): BelongsTo
+    {
+        return $this->belongsTo(Unidad::class, 'id_unidad', 'id_unidad');
     }
 
     public function cronograma(): HasOne
@@ -91,21 +98,22 @@ class Matricula extends Model
     public function generarCronograma(): ?Cronograma
     {
         $duracion     = null;
+        $numCuotas    = null;
         $especialidad = null;
 
-        // 1) CURSO -> duración del curso
-        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO], true)) {
+        // 1) CURSO / MODULO / UNIDAD -> PAGO ÚNICO (Total por el curso/unidad)
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
             $curso = $this->curso;
 
             if (! $curso) {
                 return null; // no hay curso asociado
             }
 
-            $duracion     = $curso->duracion;                // p.ej. en meses o nº de cuotas
+            $numCuotas    = 1;
             $especialidad = $curso->programa?->especialidad; // programa del curso -> especialidad
         }
 
-        // 2) PROGRAMA o FORMACION_CONTINUA -> duración del programa
+        // 2) PROGRAMA o FORMACION_CONTINUA -> DURACIÓN DEL PROGRAMA (Pagos mensuales)
         if (in_array($this->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA], true)) {
             $programa = $this->horario?->programa;
 
@@ -113,18 +121,17 @@ class Matricula extends Model
                 return null;
             }
 
-            $duracion     = $programa->duracion;     // p.ej. en meses o nº de cuotas
+            $duracion     = $programa->duracion;     // Duración global en meses
+            $numCuotas    = (int) $duracion;         // 1 cuota por mes
             $especialidad = $programa->especialidad;
         }
 
-        if (! $duracion || ! $especialidad) {
+        if (! $numCuotas || ! $especialidad) {
             return null;
         }
 
-        // num_cuotas = duración
-        $numCuotas  = (int) $duracion;
-
-        // monto_total = costo_mensual * duración
+        // monto_total = costo_mensual * num_cuotas
+        // Para cursos únicos, se asume costo mensual por ahora (o se ajustará lógica futura)
         $montoTotal = $numCuotas * $especialidad->costo_mensual;
 
         // Crear cronograma
@@ -195,7 +202,9 @@ class Matricula extends Model
             // 2. Obtener especialidad y mapear a código B000X
             $especialidad = null;
             
-            if ($this->tipo_matricula === TipoMatricula::CURSO) {
+            if ($this->tipo_matricula === TipoMatricula::CURSO || 
+                $this->tipo_matricula === TipoMatricula::MODULO ||
+                $this->tipo_matricula === TipoMatricula::UNIDAD) {
                 $especialidad = $this->curso?->programa?->especialidad;
             } else {
                 $especialidad = $this->horario?->programa?->especialidad;
@@ -342,64 +351,48 @@ class Matricula extends Model
     {
         $fechas = [];
 
-        // Caso CURSO LIBRE: generar fechas según la duración del curso
-        if ($this->tipo_matricula === TipoMatricula::CURSO) {
+        // CASO 1: Pago Único (Curso / Módulo / Unidad)
+        // Se genera una sola fecha basada en el inicio del curso o la fecha actual
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
             $curso = $this->curso;
 
             if ($curso && $curso->fecha_inicio) {
-                $inicio = Carbon::parse($curso->fecha_inicio);
-                $duracion = (int) $curso->duracion; // duración en meses
-                
-                // Generar una fecha de vencimiento por cada mes del curso
-                for ($i = 0; $i < $duracion; $i++) {
-                    $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
-                }
+                $fechas[] = Carbon::parse($curso->fecha_inicio)->endOfMonth();
+            } else {
+                $fechas[] = Carbon::today()->endOfMonth();
             }
-        } else {
-            // Programa de estudio / formación continua
+        } 
+        // CASO 2: Programa Completo (Mensualidades)
+        // Se generan N fechas mensuales consecutivas desde el inicio del programa
+        else {
             $programa = $this->horario?->programa;
+            $inicio = Carbon::today(); // Default
 
+            // Obtener fecha de inicio real del programa (min fecha inicio de cursos)
             if ($programa) {
-                $cursos = $programa->cursos()
-                    ->orderBy('fecha_inicio')
-                    ->get();
-
-                // Para cada curso, generar tantas fechas como su duración indique
-                foreach ($cursos as $curso) {
-                    if ($curso->fecha_inicio) {
-                        $inicio = Carbon::parse($curso->fecha_inicio);
-                        $duracion = (int) $curso->duracion; // duración en meses
-                        
-                        // Generar una fecha de vencimiento por cada mes del curso
-                        for ($i = 0; $i < $duracion; $i++) {
-                            $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
-                        }
-                    }
+                $minFechaCurso = $programa->cursos()->min('fecha_inicio');
+                if ($minFechaCurso) {
+                    $inicio = Carbon::parse($minFechaCurso);
                 }
             }
-        }
 
-        $actual = count($fechas);
-
-        // Sin fechas de cursos => fallback: usar meses desde hoy
-        if ($actual === 0) {
-            $inicio = Carbon::today();
-
+            // Generar cuotas mensuales consecutivas
             for ($i = 0; $i < $numCuotas; $i++) {
                 $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
             }
         }
-        // Si hay menos fechas que cuotas, completar meses desde la última fecha
-        elseif ($actual < $numCuotas) {
-            $ultima = end($fechas);
+
+        // Fallback robusto por si acaso
+        $actual = count($fechas);
+
+        if ($actual < $numCuotas) {
+            $ultima = count($fechas) > 0 ? end($fechas) : Carbon::today();
             $ultima = $ultima instanceof Carbon ? $ultima : Carbon::parse($ultima);
 
             for ($i = 1; $i <= $numCuotas - $actual; $i++) {
                 $fechas[] = $ultima->copy()->addMonths($i)->endOfMonth();
             }
-        }
-        // Si hay más fechas que cuotas, nos quedamos con las primeras
-        elseif ($actual > $numCuotas) {
+        } elseif ($actual > $numCuotas) {
             $fechas = array_slice($fechas, 0, $numCuotas);
         }
 
@@ -475,9 +468,12 @@ class Matricula extends Model
         if ($matricula->tipo_matricula === TipoMatricula::PROGRAMA || 
             $matricula->tipo_matricula === TipoMatricula::FORMACION_CONTINUA) {
             self::validarDuplicadoPrograma($matricula);
-        } elseif ($matricula->tipo_matricula === TipoMatricula::CURSO) {
+        } elseif ($matricula->tipo_matricula === TipoMatricula::CURSO || $matricula->tipo_matricula === TipoMatricula::MODULO) {
             self::validarIntegridadCurso($matricula);
             self::validarDuplicadoCurso($matricula);
+        } elseif ($matricula->tipo_matricula === TipoMatricula::UNIDAD) {
+            self::validarIntegridadUnidad($matricula);
+            self::validarDuplicadoUnidad($matricula);
         }
     }
 
@@ -517,24 +513,43 @@ class Matricula extends Model
     }
 
     /**
-     * Valida que no exista una matrícula duplicada para el mismo curso.
-     * 
-     * Solo bloquea si ya existe una matrícula de tipo CURSO para el mismo curso exacto.
-     * Permite múltiples matrículas de tipo CURSO en diferentes cursos del mismo programa.
-     *
-     * @throws \Illuminate\Validation\ValidationException Si el estudiante ya está matriculado en el curso
+     * Valida que no exista una matrícula duplicada para el mismo curso/módulo.
      */
     private static function validarDuplicadoCurso(Matricula $matricula): void
     {
         $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
             ->where('id_curso', $matricula->id_curso)
-            ->where('tipo_matricula', TipoMatricula::CURSO->value)
+            ->whereIn('tipo_matricula', [TipoMatricula::CURSO->value, TipoMatricula::MODULO->value])
             ->where('estado', '!=', EstadoMatricula::ANULADO)
             ->exists();
         
         if ($exists) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_curso' => 'El estudiante ya está matriculado en este curso.',
+                'id_curso' => 'El estudiante ya está matriculado en este curso/módulo.',
+            ]);
+        }
+    }
+
+    private static function validarIntegridadUnidad(Matricula $matricula): void
+    {
+        if (!$matricula->id_curso || !$matricula->id_unidad) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_unidad' => 'Debe seleccionar un curso y una unidad.',
+            ]);
+        }
+    }
+
+    private static function validarDuplicadoUnidad(Matricula $matricula): void
+    {
+        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
+            ->where('id_unidad', $matricula->id_unidad)
+            ->where('tipo_matricula', TipoMatricula::UNIDAD->value)
+            ->where('estado', '!=', EstadoMatricula::ANULADO)
+            ->exists();
+        
+        if ($exists) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_unidad' => 'El estudiante ya está matriculado en esta unidad.',
             ]);
         }
     }
