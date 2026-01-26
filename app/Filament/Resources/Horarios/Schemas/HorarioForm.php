@@ -308,12 +308,25 @@ class HorarioForm
                                 $dias = $get('dias');
                                 $horaInicio = $get('hora_inicio');
                                 $horaFin = $value;
+                                $programaId = $get('id_programa');
 
                                 if (! $docenteId || ! $dias || ! $horaInicio || ! $horaFin) {
                                     return;
                                 }
 
-                                $query = \App\Models\Horario::query();
+                                // Obtener fechas del programa actual (min fecha_inicio y max fecha_termino de sus cursos)
+                                $fechasActual = null;
+                                if ($programaId) {
+                                    $programa = \App\Models\Programa::with('cursos')->find($programaId);
+                                    if ($programa && $programa->cursos->isNotEmpty()) {
+                                        $fechasActual = [
+                                            'inicio' => $programa->cursos->min('fecha_inicio'),
+                                            'fin' => $programa->cursos->max('fecha_termino'),
+                                        ];
+                                    }
+                                }
+
+                                $query = \App\Models\Horario::with('programa.cursos');
 
                                 if ($record) {
                                     $query->where('id_horario', '!=', $record->id_horario);
@@ -341,8 +354,44 @@ class HorarioForm
                                       ->where('hora_fin', '>', $horaInicio);
                                 });
 
-                                if ($query->exists()) {
-                                    $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
+                                // Obtener horarios que coinciden en días y horas
+                                $horariosConflicto = $query->get();
+
+                                // Si no hay fechas del programa actual, verificar conflicto sin fechas
+                                if (!$fechasActual || !$fechasActual['inicio'] || !$fechasActual['fin']) {
+                                    if ($horariosConflicto->isNotEmpty()) {
+                                        $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
+                                    }
+                                    return;
+                                }
+
+                                // Verificar si hay solapamiento de fechas con cada horario encontrado
+                                foreach ($horariosConflicto as $horarioExistente) {
+                                    $programaExistente = $horarioExistente->programa;
+                                    
+                                    if (!$programaExistente || $programaExistente->cursos->isEmpty()) {
+                                        // Sin fechas del programa existente, consideramos conflicto
+                                        $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
+                                        return;
+                                    }
+
+                                    $fechasExistente = [
+                                        'inicio' => $programaExistente->cursos->min('fecha_inicio'),
+                                        'fin' => $programaExistente->cursos->max('fecha_termino'),
+                                    ];
+
+                                    // Verificar solapamiento de fechas
+                                    // Hay solapamiento si: inicio1 <= fin2 AND inicio2 <= fin1
+                                    if ($fechasExistente['inicio'] && $fechasExistente['fin']) {
+                                        $haySolapamientoFechas = 
+                                            $fechasActual['inicio'] <= $fechasExistente['fin'] && 
+                                            $fechasExistente['inicio'] <= $fechasActual['fin'];
+
+                                        if ($haySolapamientoFechas) {
+                                            $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
+                                            return;
+                                        }
+                                    }
                                 }
                             };
                         },
