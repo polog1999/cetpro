@@ -182,6 +182,7 @@ class CursosRelationManager extends RelationManager
                                 ->reorderable()
                                 ->orderColumn('orden')
                                 ->collapsible()
+                                ->collapsed()
                                 ->itemLabel(fn (array $state): ?string => $state['nombre_unidad'] ?? 'Nueva Unidad')
                                 ->default(function () use ($record) {
                                     return $record->unidades->map(fn ($unidad) => [

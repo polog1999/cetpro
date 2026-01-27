@@ -60,7 +60,7 @@ class ProgramasTable
                     ->sortable(),
 
                 TextColumn::make('matriculas_count')
-                    ->label('Total alumnos')
+                    ->label('N° alumnos')
                     ->getStateUsing(function (Programa $record): int {
                         return $record->horarios()
                             ->withCount('matriculas')
