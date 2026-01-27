@@ -158,7 +158,7 @@ class CursosRelationManager extends RelationManager
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('duracion')
-                                        ->label('Duración (hrs)')
+                                        ->label('Duración (mes)')
                                         ->numeric()
                                         ->integer()
                                         ->nullable(),

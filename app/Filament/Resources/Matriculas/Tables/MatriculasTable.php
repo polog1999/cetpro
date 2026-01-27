@@ -34,8 +34,13 @@ class MatriculasTable
 
                 TextColumn::make('estudiante.nombre_completo')
                     ->label('Estudiante')
-                    // ->sortable(['estudiante.nombres', 'estudiante.apellido_paterno', 'estudiante.apellido_materno'])
-                    ->searchable(['estudiante.nombres', 'estudiante.apellido_paterno', 'estudiante.apellido_materno']),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('estudiante', function (Builder $q) use ($search) {
+                            $q->where('nombres', 'ilike', "%{$search}%")
+                                ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                        });
+                    }),
 
                 TextColumn::make('estado')
                     ->label('Estado')

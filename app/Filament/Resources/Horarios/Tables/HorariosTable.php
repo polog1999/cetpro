@@ -40,7 +40,13 @@ class HorariosTable
 
                 TextColumn::make('docente.nombre_completo')
                     ->label('Docente')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('docente', function (Builder $q) use ($search) {
+                            $q->where('nombres', 'ilike', "%{$search}%")
+                                ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
+                                ->orWhere('apellido_materno', 'ilike', "%{$search}%");
+                        });
+                    })
                     ->sortable(),
 
                 TextColumn::make('turno')
