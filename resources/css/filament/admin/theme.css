@@ -230,3 +230,88 @@ body:has(.fi-sidebar) .fi-sidebar img.fi-logo {
 .fi-simple-main {
     animation: fadeInUp 0.5s ease-out;
 }
+
+/* ============================================
+   HORIZONTAL SCROLLBAR FOR TABLES
+   Permite desplazamiento horizontal en tablas
+   cuando el contenido excede el ancho disponible
+   ============================================ */
+
+/* Contenedor principal de tabla con scroll horizontal */
+.fi-ta-content-ctn {
+    overflow-x: auto !important;
+    scrollbar-width: auto;
+    scrollbar-color: #3b82f6 #e5e7eb;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Asegurar que la tabla tenga ancho mínimo para forzar scroll */
+.fi-ta-table {
+    min-width: max-content;
+}
+
+/* ====== SCROLLBAR STYLING (WebKit browsers: Chrome, Edge, Safari) ====== */
+
+/* Scrollbar horizontal */
+.fi-ta-content-ctn::-webkit-scrollbar {
+    height: 14px !important;
+    width: 14px !important;
+}
+
+/* Track (fondo) de la scrollbar - GRIS VISIBLE */
+.fi-ta-content-ctn::-webkit-scrollbar-track {
+    background: #d1d5db !important;
+    border-radius: 7px !important;
+}
+
+/* Thumb (deslizador) - AZUL BRILLANTE */
+.fi-ta-content-ctn::-webkit-scrollbar-thumb {
+    background: #3b82f6 !important;
+    border-radius: 7px !important;
+    border: 3px solid #d1d5db !important;
+}
+
+.fi-ta-content-ctn::-webkit-scrollbar-thumb:hover {
+    background: #1d4ed8 !important;
+}
+
+/* Corner */
+.fi-ta-content-ctn::-webkit-scrollbar-corner {
+    background: #d1d5db !important;
+}
+
+/* ====== DARK MODE ====== */
+.dark .fi-ta-content-ctn {
+    scrollbar-color: #60a5fa #374151;
+}
+
+.dark .fi-ta-content-ctn::-webkit-scrollbar-track {
+    background: #374151 !important;
+}
+
+.dark .fi-ta-content-ctn::-webkit-scrollbar-thumb {
+    background: #60a5fa !important;
+    border: 3px solid #374151 !important;
+}
+
+.dark .fi-ta-content-ctn::-webkit-scrollbar-thumb:hover {
+    background: #93c5fd !important;
+}
+
+.dark .fi-ta-content-ctn::-webkit-scrollbar-corner {
+    background: #374151 !important;
+}
+
+/* ====== RELATION MANAGERS Y MODALES ====== */
+.fi-modal .fi-ta-content-ctn,
+.fi-section .fi-ta-content-ctn,
+.fi-relation-manager .fi-ta-content-ctn {
+    overflow-x: auto !important;
+    max-width: 100%;
+}
+
+/* Asegurar que las columnas no se compriman demasiado */
+.fi-ta-header-cell,
+.fi-ta-cell {
+    white-space: nowrap;
+}
