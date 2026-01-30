@@ -251,15 +251,17 @@ class PagosTable
 
         ->recordActions([
                 Action::make('ver_evidencia')
-                    ->label('Ver evidencia')
+                    ->label('')
+                    ->tooltip('Ver evidencia')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
                     ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
                     ->openUrlInNewTab(),
 
-                        Action::make('subir_evidencia')
-                    ->label('Subir Evidencia')
+                Action::make('subir_evidencia')
+                    ->label('')
+                    ->tooltip('Subir evidencia')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->color('success')
                     ->visible(fn (Pago $record): bool => empty($record->evidencia_path))

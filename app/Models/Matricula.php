@@ -465,100 +465,66 @@ class Matricula extends Model
             return;
         }
 
-        if ($matricula->tipo_matricula === TipoMatricula::PROGRAMA || 
-            $matricula->tipo_matricula === TipoMatricula::FORMACION_CONTINUA) {
-            self::validarDuplicadoPrograma($matricula);
-        } elseif ($matricula->tipo_matricula === TipoMatricula::CURSO || $matricula->tipo_matricula === TipoMatricula::MODULO) {
-            self::validarIntegridadCurso($matricula);
-            self::validarDuplicadoCurso($matricula);
-        } elseif ($matricula->tipo_matricula === TipoMatricula::UNIDAD) {
-            self::validarIntegridadUnidad($matricula);
-            self::validarDuplicadoUnidad($matricula);
+        // Usar el servicio centralizado para validar duplicados
+        $service = app(\App\Services\MatriculaService::class);
+        
+        $resultado = $service->validarDuplicado(
+            $matricula->estudiante_id,
+            $matricula->horario_id,
+            null, // matriculaIdIgnorar (es creación, no edición)
+            $matricula->tipo_matricula,
+            $matricula->id_curso,
+            $matricula->id_unidad
+        );
+        
+        if (!$resultado['valido']) {
+            // Determinar el campo correcto para el mensaje de error según el tipo
+            $campo = match ($matricula->tipo_matricula) {
+                TipoMatricula::UNIDAD => 'id_unidad',
+                TipoMatricula::CURSO, TipoMatricula::MODULO => 'id_curso',
+                default => 'horario_id',
+            };
+            
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $campo => $resultado['mensaje'],
+            ]);
         }
+        
+        // Validaciones de integridad (campos requeridos)
+        self::validarIntegridadSegunTipo($matricula);
     }
 
     /**
-     * Valida que no exista una matrícula duplicada para PROGRAMA o FORMACION_CONTINUA.
+     * Valida que los campos requeridos estén presentes según el tipo de matrícula.
      *
-     * @throws \Illuminate\Validation\ValidationException Si el estudiante ya está matriculado
+     * @throws \Illuminate\Validation\ValidationException Si faltan campos requeridos
      */
-    private static function validarDuplicadoPrograma(Matricula $matricula): void
+    private static function validarIntegridadSegunTipo(Matricula $matricula): void
     {
-        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
-            ->where('horario_id', $matricula->horario_id)
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->whereIn('tipo_matricula', [TipoMatricula::PROGRAMA->value, TipoMatricula::FORMACION_CONTINUA->value])
-            ->exists();
+        if (in_array($matricula->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO])) {
+            if (!$matricula->id_curso) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'id_curso' => 'Debe seleccionar un curso para matrículas de tipo CURSO/MODULO.',
+                ]);
+            }
+        }
         
-        if ($exists) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'horario_id' => 'El estudiante ya está matriculado en este programa o formación continua.',
-            ]);
-        }
-    }
-
-    /**
-     * Valida la integridad de datos para matrículas de tipo CURSO.
-     * Asegura que id_curso siempre exista cuando tipo_matricula es CURSO.
-     *
-     * @throws \Illuminate\Validation\ValidationException Si id_curso no está presente
-     */
-    private static function validarIntegridadCurso(Matricula $matricula): void
-    {
-        if (!$matricula->id_curso) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_curso' => 'Debe seleccionar un curso para matrículas de tipo CURSO.',
-            ]);
-        }
-    }
-
-    /**
-     * Valida que no exista una matrícula duplicada para el mismo curso/módulo.
-     */
-    private static function validarDuplicadoCurso(Matricula $matricula): void
-    {
-        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
-            ->where('id_curso', $matricula->id_curso)
-            ->whereIn('tipo_matricula', [TipoMatricula::CURSO->value, TipoMatricula::MODULO->value])
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->exists();
-        
-        if ($exists) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_curso' => 'El estudiante ya está matriculado en este curso/módulo.',
-            ]);
-        }
-    }
-
-    private static function validarIntegridadUnidad(Matricula $matricula): void
-    {
-        if (!$matricula->id_curso || !$matricula->id_unidad) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_unidad' => 'Debe seleccionar un curso y una unidad.',
-            ]);
-        }
-    }
-
-    private static function validarDuplicadoUnidad(Matricula $matricula): void
-    {
-        $exists = Matricula::where('estudiante_id', $matricula->estudiante_id)
-            ->where('id_unidad', $matricula->id_unidad)
-            ->where('tipo_matricula', TipoMatricula::UNIDAD->value)
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->exists();
-        
-        if ($exists) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_unidad' => 'El estudiante ya está matriculado en esta unidad.',
-            ]);
+        if ($matricula->tipo_matricula === TipoMatricula::UNIDAD) {
+            if (!$matricula->id_curso || !$matricula->id_unidad) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'id_unidad' => 'Debe seleccionar un curso y una unidad.',
+                ]);
+            }
         }
     }
 
     /**
      * Genera el código de inscripción para la matrícula.
      * 
-     * Formato: AñoDNIHorarioID (sin guiones)
-     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
+     * Formato depende del tipo de matrícula:
+     * - PROGRAMA/FORMACION_CONTINUA: AñoDNIHorarioID
+     * - CURSO/MODULO: AñoDNIHorarioIDCursoID
+     * - UNIDAD: AñoDNIHorarioIDCursoIDUnidadID
      */
     private static function generarCodigoInscripcion(Matricula $matricula, ?Horario $horario): void
     {
@@ -575,8 +541,20 @@ class Matricula extends Model
         // Obtener ID del horario
         $horarioId = $horario?->id_horario ?? $matricula->horario_id ?? '0';
         
-        // Formato: AñoDNIHorarioID (sin guiones)
-        $matricula->codigo_inscripcion = "{$year}{$dni}{$horarioId}";
+        // Formato base: AñoDNIHorarioID
+        $codigo = "{$year}{$dni}{$horarioId}";
+        
+        // Añadir ID del curso/módulo si existe
+        if ($matricula->id_curso) {
+            $codigo .= $matricula->id_curso;
+        }
+        
+        // Añadir ID de la unidad si existe
+        if ($matricula->id_unidad) {
+            $codigo .= $matricula->id_unidad;
+        }
+        
+        $matricula->codigo_inscripcion = $codigo;
     }
 
     /**

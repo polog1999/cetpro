@@ -26,7 +26,7 @@ class EstudiantesTable
                     ->searchable(),
                 
                 TextColumn::make('codigo_contribuyente')
-                    ->label('Cód. Contribuyente')
+                    ->label('Cód. Contrib.')
                     ->getStateUsing(function ($record): string {
                         return !empty($record->codigo_contribuyente) 
                             ? $record->codigo_contribuyente 
@@ -47,19 +47,25 @@ class EstudiantesTable
                 TextColumn::make('apellido_materno')
                     ->searchable(),
                 TextColumn::make('genero')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('estado_civil')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('fecha_nacimiento')
                     ->date()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('telefono')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('direccion')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('email')
                     ->label('Email address')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                     
                 // Columna de matrículas
                 TextColumn::make('matriculas_count')
@@ -87,11 +93,14 @@ class EstudiantesTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('apoderado.nombre_completo'),
                 TextColumn::make('grado_instruccion')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('provincia')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('distrito')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Filter::make('nro_documento')

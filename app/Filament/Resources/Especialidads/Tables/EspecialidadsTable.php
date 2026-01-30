@@ -24,15 +24,10 @@ class EspecialidadsTable
                     ->formatStateUsing(fn ($state) => number_format($state, 2)),
                 TextColumn::make('num_resolucion')
                     ->searchable(),
-                TextColumn::make('fecha_registro')
-                    ->date()
-                    ->sortable(),
                 TextColumn::make('fecha_inicio_vigencia')
-                    ->date()
-                    ->sortable(),
+                    ->date(),
                 TextColumn::make('fecha_fin_vigencia')
-                    ->date()
-                    ->sortable(),
+                    ->date(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

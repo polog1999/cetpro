@@ -750,10 +750,11 @@ class MatriculaForm
                                 return;
                             }
                             
-                            // 2. Validar matrícula no duplicada (con tipo y curso)
+                            // 2. Validar matrícula no duplicada (con tipo, curso y unidad)
                             $estudianteId = $get('estudiante_id');
                             $tipoMatricula = $get('tipo_matricula');
                             $cursoId = $get('id_curso');
+                            $unidadId = $get('id_unidad');
                             
                             if ($estudianteId) {
                                 $validacion = $service->validarDuplicado(
@@ -761,7 +762,8 @@ class MatriculaForm
                                     $value,
                                     null, // matriculaIdIgnorar
                                     $tipoMatricula,
-                                    $cursoId
+                                    $cursoId,
+                                    $unidadId
                                 );
                                 if (!$validacion['valido']) {
                                     $fail($validacion['mensaje']);
@@ -879,8 +881,9 @@ class MatriculaForm
                     ->required(fn (Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
-                    ->afterStateUpdated(function (Set $set) {
+                    ->afterStateUpdated(function (Set $set, Get $get) {
                         $set('id_unidad', null);
+                        static::generarCodigoInscripcion($set, $get);
                     }),
                     
                 // ----------------------------------------
@@ -914,7 +917,7 @@ class MatriculaForm
                         $get('tipo_matricula') === TipoMatricula::UNIDAD
                     )
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                        // Opcional: acciones adicionales al seleccionar unidad
+                        static::generarCodigoInscripcion($set, $get);
                     }),
             ]);
     }
@@ -938,13 +941,17 @@ class MatriculaForm
     }
 
     /**
-     * Genera el código de inscripción en formato: AñoDNIHorarioID (sin guiones)
-     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
+     * Genera el código de inscripción basado en tipo de matrícula:
+     * - PROGRAMA/FORMACION_CONTINUA: AñoDNIHorarioID
+     * - CURSO/MODULO: AñoDNIHorarioIDCursoID
+     * - UNIDAD: AñoDNIHorarioIDCursoIDUnidadID
      */
     protected static function generarCodigoInscripcion(Set $set, Get $get): void
     {
         $horarioId = $get('horario_id');
         $estudianteId = $get('estudiante_id');
+        $cursoId = $get('id_curso');
+        $unidadId = $get('id_unidad');
 
         if (! $horarioId) {
             $set('codigo_inscripcion', null);
@@ -952,7 +959,7 @@ class MatriculaForm
         }
 
         $service = app(\App\Services\MatriculaService::class);
-        $codigo = $service->generarCodigoInscripcion($horarioId, $estudianteId);
+        $codigo = $service->generarCodigoInscripcion($horarioId, $estudianteId, $cursoId, $unidadId);
 
         $set('codigo_inscripcion', $codigo);
     }

@@ -29,10 +29,6 @@ class DocumentosTable
                     ->label('Nombre Completo')
                     ->searchable(['nombres', 'apellido_paterno', 'apellido_materno'])
                     ->sortable(['apellido_paterno']),
-                
-                TextColumn::make('telefono')
-                    ->label('Teléfono')
-                    ->searchable(),
 
                 TextColumn::make('matriculas_con_documento')
                     ->label('Documentos')

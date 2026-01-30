@@ -78,14 +78,16 @@ class MatriculaService
         int $horarioId, 
         ?int $matriculaIdIgnorar = null,
         ?TipoMatricula $tipoMatricula = null,
-        ?int $cursoId = null
+        ?int $cursoId = null,
+        ?int $unidadId = null
     ): array {
         $existe = $this->tieneMatriculaDuplicada(
             $estudianteId, 
             $horarioId,
             $tipoMatricula,
             $cursoId,
-            $matriculaIdIgnorar
+            $matriculaIdIgnorar,
+            $unidadId
         );
         
         if ($existe) {
@@ -101,6 +103,13 @@ class MatriculaService
                 return [
                     'valido' => false,
                     'mensaje' => 'El estudiante ya está matriculado en este módulo.'
+                ];
+            }
+            
+            if ($tipoMatricula === TipoMatricula::UNIDAD) {
+                return [
+                    'valido' => false,
+                    'mensaje' => 'El estudiante ya está matriculado en esta unidad.'
                 ];
             }
             
@@ -147,15 +156,28 @@ class MatriculaService
     /**
      * Genera un código de inscripción único para la matrícula.
      * 
-     * Formato: AñoDNIHorarioID (sin guiones)
-     * Ejemplo: 2026123456781 (año 2026 + DNI 12345678 + horario ID 1)
+     * Formato depende del tipo de matrícula:
+     * - PROGRAMA/FORMACION_CONTINUA: AñoDNIHorarioID
+     * - CURSO/MODULO: AñoDNIHorarioIDCursoID
+     * - UNIDAD: AñoDNIHorarioIDCursoIDUnidadID
+     * 
+     * Ejemplos:
+     * - Programa: 2026123456781 (año + DNI + horario 1)
+     * - Módulo: 202612345678142 (año + DNI + horario 1 + curso 42)
+     * - Unidad: 20261234567814215 (año + DNI + horario 1 + curso 42 + unidad 15)
      *
      * @param int $horarioId
      * @param int|null $estudianteId
+     * @param int|null $cursoId ID del curso/módulo (opcional)
+     * @param int|null $unidadId ID de la unidad (opcional)
      * @return string|null
      */
-    public function generarCodigoInscripcion(int $horarioId, ?int $estudianteId = null): ?string
-    {
+    public function generarCodigoInscripcion(
+        int $horarioId, 
+        ?int $estudianteId = null,
+        ?int $cursoId = null,
+        ?int $unidadId = null
+    ): ?string {
         $horario = $this->horarios->find($horarioId);
         
         if (!$horario) {
@@ -174,8 +196,20 @@ class MatriculaService
         // Obtener ID del horario
         $horarioIdStr = $horario->id_horario ?? $horarioId;
         
-        // Formato: AñoDNIHorarioID (sin guiones)
-        return "{$year}{$dni}{$horarioIdStr}";
+        // Formato base: AñoDNIHorarioID
+        $codigo = "{$year}{$dni}{$horarioIdStr}";
+        
+        // Añadir ID del curso/módulo si existe
+        if ($cursoId) {
+            $codigo .= $cursoId;
+        }
+        
+        // Añadir ID de la unidad si existe
+        if ($unidadId) {
+            $codigo .= $unidadId;
+        }
+        
+        return $codigo;
     }
     
     /**
@@ -210,7 +244,9 @@ class MatriculaService
         if (empty($data['codigo_inscripcion'])) {
             $data['codigo_inscripcion'] = $this->generarCodigoInscripcion(
                 $data['horario_id'], 
-                $data['estudiante_id'] ?? null
+                $data['estudiante_id'] ?? null,
+                $data['id_curso'] ?? null,
+                $data['id_unidad'] ?? null
             );
         }
         
@@ -371,12 +407,15 @@ class MatriculaService
      * La lógica de duplicado varía según el tipo:
      * - PROGRAMA/FORMACION_CONTINUA: Duplicado si existe una del mismo tipo en el mismo horario
      * - CURSO: Duplicado solo si existe una para el mismo curso específico
+     * - MODULO: Duplicado solo si existe una para el mismo módulo específico
+     * - UNIDAD: Duplicado solo si existe una para la misma unidad específica (permite cualquier orden)
      *
      * @param int $estudianteId
      * @param int $horarioId
      * @param TipoMatricula|null $tipoMatricula
      * @param int|null $cursoId
      * @param int|null $matriculaIdIgnorar ID de matrícula a ignorar (para edición)
+     * @param int|null $unidadId ID de la unidad (para tipo UNIDAD)
      * @return bool
      */
     public function tieneMatriculaDuplicada(
@@ -384,7 +423,8 @@ class MatriculaService
         int $horarioId,
         ?TipoMatricula $tipoMatricula = null,
         ?int $cursoId = null,
-        ?int $matriculaIdIgnorar = null
+        ?int $matriculaIdIgnorar = null,
+        ?int $unidadId = null
     ): bool {
         $query = Matricula::where('estudiante_id', $estudianteId)
             ->where('estado', '!=', EstadoMatricula::ANULADO);
@@ -409,6 +449,15 @@ class MatriculaService
             return $query
                 ->where('id_curso', $cursoId)
                 ->where('tipo_matricula', TipoMatricula::MODULO->value)
+                ->exists();
+        }
+        
+        // UNIDAD: permite matricularse en cualquier unidad sin restricción de orden
+        // Solo es duplicado si ya existe matrícula en la misma unidad exacta
+        if ($tipoMatricula === TipoMatricula::UNIDAD && $unidadId) {
+            return $query
+                ->where('id_unidad', $unidadId)
+                ->where('tipo_matricula', TipoMatricula::UNIDAD->value)
                 ->exists();
         }
         

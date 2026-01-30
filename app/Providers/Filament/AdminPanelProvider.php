@@ -91,6 +91,7 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => \App\Filament\Pages\Auth\ChangePassword::getUrl())
                     ->icon('heroicon-o-key'),
             ])
+            ->globalSearch(false) // Buscador universal desactivado
             ->spa(); // Navegación fluida tipo app
     }
 }
