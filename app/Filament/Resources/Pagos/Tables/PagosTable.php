@@ -38,7 +38,7 @@ class PagosTable
             ->columns([
                 // 🆕 Estudiante
                 TextColumn::make('nro_cuota')
-                    ->label('N° de cuota')
+                    ->label('Nro de recibo')
                     ->numeric()
                     ->alignCenter()
                     ->sortable(),

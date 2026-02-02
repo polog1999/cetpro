@@ -56,7 +56,7 @@
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
                                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Cuota
+                                            Nro de recibo
                                         </th>
                                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Código
@@ -79,7 +79,7 @@
                                     @foreach($matricula->cronograma->pagos as $pago)
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700">
                                             <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                Cuota {{ $pago->nro_cuota }}
+                                                Recibo {{ $pago->nro_cuota }}
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-xs font-mono text-gray-600 dark:text-gray-400">
                                                 {{ $pago->num_liquidacion }}
@@ -119,7 +119,7 @@
                                         </td>
                                         <td colspan="3" class="px-4 py-3">
                                             <div class="text-xs text-gray-500 dark:text-gray-400">
-                                                <span class="font-medium">{{ $matricula->cronograma->num_cuotas }}</span> cuota(s) en total
+                                                <span class="font-medium">{{ $matricula->cronograma->num_cuotas }}</span> recibo(s) en total
                                             </div>
                                         </td>
                                     </tr>

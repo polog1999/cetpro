@@ -6,7 +6,7 @@
 <!-- Header -->
 <div class="mb-6">
     <h1 class="text-2xl font-semibold text-slate-900">Mis Pagos</h1>
-    <p class="mt-1 text-slate-600">Detalle de cuotas y estado de pagos</p>
+    <p class="mt-1 text-slate-600">Detalle de recibos y estado de pagos</p>
 </div>
 
 @if($pagos->isEmpty())
@@ -41,7 +41,7 @@
             <thead class="bg-slate-50">
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Cuota
+                        Nro de recibo
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         N° Liquidación

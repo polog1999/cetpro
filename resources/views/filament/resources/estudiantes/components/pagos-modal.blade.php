@@ -17,7 +17,7 @@
             <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                        <th scope="col" class="px-6 py-3">Cuota</th>
+                        <th scope="col" class="px-6 py-3">Nro de recibo</th>
                         <th scope="col" class="px-6 py-3">Vencimiento</th>
                         <th scope="col" class="px-6 py-3">Monto</th>
                         <th scope="col" class="px-6 py-3">Estado</th>
@@ -56,7 +56,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center">No hay cuotas registradas.</td>
+                            <td colspan="5" class="px-6 py-4 text-center">No hay recibos registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>
