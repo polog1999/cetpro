@@ -65,61 +65,75 @@ class CreateMatricula extends CreateRecord
         $oracle = app(OracleTusneService::class);
         $codigoContribuyente = null;
         
-        // 1. Verificar si ya existe en Oracle (puede existir pero no estar guardado localmente)
-        try {
-            $codigoContribuyente = $oracle->verificarContribuyenteExistente($estudiante->nro_documento);
-            
-            if ($codigoContribuyente && empty($estudiante->codigo_contribuyente)) {
-                // Actualizar localmente si existe en Oracle pero no localmente
-                $estudiante->codigo_contribuyente = $codigoContribuyente;
-                $estudiante->save();
-            }
-        } catch (\Exception $e) {
-            Log::warning('Error verificando contribuyente existente', [
+        // 1. VERIFICACIÓN LOCAL PRIMERO - Si ya tiene código guardado, usarlo directamente
+        if (!empty($estudiante->codigo_contribuyente)) {
+            $codigoContribuyente = $estudiante->codigo_contribuyente;
+            Log::info('Usando código de contribuyente existente (local)', [
                 'estudiante_id' => $estudiante->id,
-                'error' => $e->getMessage(),
+                'codigo' => $codigoContribuyente,
             ]);
-        }
-        
-        // 2. Si no existe en Oracle, crear nuevo contribuyente
-        if (!$codigoContribuyente) {
+        } else {
+            // 2. Si no tiene código local, verificar en Oracle (puede existir pero no guardado)
             try {
-                $codigoContribuyente = $oracle->crearContribuyente($estudiante);
+                $codigoContribuyente = $oracle->verificarContribuyenteExistente($estudiante->nro_documento);
                 
                 if ($codigoContribuyente) {
+                    // Actualizar localmente si existe en Oracle pero no localmente
                     $estudiante->codigo_contribuyente = $codigoContribuyente;
                     $estudiante->save();
                     
-                    Notification::make()
-                        ->success()
-                        ->title('Contribuyente creado')
-                        ->body("Código: {$codigoContribuyente}")
-                        ->send();
-                        
-                    Log::info('Contribuyente creado al matricular', [
+                    Log::info('Código de contribuyente sincronizado desde Oracle', [
                         'estudiante_id' => $estudiante->id,
-                        'matricula_id' => $this->record->id,
                         'codigo' => $codigoContribuyente,
                     ]);
                 }
             } catch (\Exception $e) {
-                Log::error('Error al crear contribuyente al matricular', [
+                Log::warning('Error verificando contribuyente existente', [
                     'estudiante_id' => $estudiante->id,
-                    'matricula_id' => $this->record->id,
                     'error' => $e->getMessage(),
                 ]);
-                
-                Notification::make()
-                    ->warning()
-                    ->title('Matrícula creada sin código contribuyente')
-                    ->body('No se pudo conectar con Oracle')
-                    ->send();
+            }
+            
+            // 3. Si no existe en Oracle, crear nuevo contribuyente
+            if (!$codigoContribuyente) {
+                try {
+                    $codigoContribuyente = $oracle->crearContribuyente($estudiante);
                     
-                return; // No podemos generar liquidaciones sin contribuyente
+                    if ($codigoContribuyente) {
+                        $estudiante->codigo_contribuyente = $codigoContribuyente;
+                        $estudiante->save();
+                        
+                        Notification::make()
+                            ->success()
+                            ->title('Contribuyente creado')
+                            ->body("Código: {$codigoContribuyente}")
+                            ->send();
+                            
+                        Log::info('Contribuyente creado al matricular', [
+                            'estudiante_id' => $estudiante->id,
+                            'matricula_id' => $this->record->id,
+                            'codigo' => $codigoContribuyente,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error al crear contribuyente al matricular', [
+                        'estudiante_id' => $estudiante->id,
+                        'matricula_id' => $this->record->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    
+                    Notification::make()
+                        ->warning()
+                        ->title('Matrícula creada sin código contribuyente')
+                        ->body('No se pudo conectar con Oracle')
+                        ->send();
+                        
+                    return; // No podemos generar liquidaciones sin contribuyente
+                }
             }
         }
         
-        // 3. IMPORTANTE: Regenerar liquidaciones para pagos que no tienen
+        // 4. IMPORTANTE: Regenerar liquidaciones para pagos que no tienen
         if ($codigoContribuyente) {
             $this->regenerarLiquidacionesPendientes($oracle, $codigoContribuyente);
         }

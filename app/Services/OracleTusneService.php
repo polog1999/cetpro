@@ -33,27 +33,31 @@ class OracleTusneService
     protected ?string $lastError = null;
 
     /**
-     * Crea la conexión OCI8 a Oracle.
-     *
+     * Obtiene la conexión a Oracle. Lanza excepción si falla.
      * @return resource
      * @throws Exception
      */
     protected function getConnection()
     {
-        if ($this->connection !== null) {
+        // Verificar si hay una conexión válida (recurso, no null ni false)
+        if ($this->connection !== null && $this->connection !== false) {
             return $this->connection;
         }
 
         $host = config('database.connections.oracle.host');
         $port = config('database.connections.oracle.port', '1521');
+        // $sid = config('database.connections.oracle.sid');
         $serviceName = config('database.connections.oracle.service_name');
         $database = config('database.connections.oracle.database');
         $username = config('database.connections.oracle.username');
         $password = config('database.connections.oracle.password');
         $charset = config('database.connections.oracle.charset', 'AL32UTF8');
 
-        // Construir connection string para Oracle usando SERVICE_NAME
-        // Formato: //host:port/service_name
+        // Construir connection string para Oracle usando SID
+        // Formato: (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host)(PORT=port))(CONNECT_DATA=(SID=sid)))
+        // $connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
+        
+        // Alternativa usando SERVICE_NAME (descomentar si se necesita):
         $connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
 
         $this->connection = @oci_connect($username, $password, $connectionString, $charset);
@@ -62,6 +66,7 @@ class OracleTusneService
             $error = oci_error();
             $message = $error ? $error['message'] : 'Error desconocido al conectar a Oracle';
             $this->lastError = $message;
+            $this->connection = null; // Resetear a null para permitir reintentos
             throw new Exception($message);
         }
 
@@ -662,26 +667,21 @@ class OracleTusneService
 
     /**
      * Verifica si existe un contribuyente en Oracle por número de documento.
-     * Usa la vista VU_CETPRO_BUS.
+     * Busca directamente en SMACARNOM sin requerir pagos previos.
      *
      * @param string $numDoc Número de documento
-     * @return string|null Código de contribuyente (CODCON) o null si no existe
+     * @return string|null Código de contribuyente (MCNCONTRIB) o null si no existe
      */
     public function verificarContribuyenteExistente(string $numDoc): ?string
     {
         try {
             // Buscamos en SMACARNOM el código más reciente (por fecha registro)
-            // PERO SOLO si tiene relación con el CETPRO (existe en VU_BUSCA_TUSNE_PER_Pen)
+            // Sin requerir que exista en VU_BUSCA_TUSNE_PER_Pen para evitar duplicados
             $sql = "
-                SELECT A.MCNCONTRIB
-                FROM SMACARNOM A
-                WHERE TRIM(A.MCNNRODI) = :numdoc
-                AND EXISTS (
-                    SELECT 1
-                    FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen B
-                    WHERE B.CODIGO = A.MCNCONTRIB
-                )
-                ORDER BY A.MCNFECHREG DESC
+                SELECT MCNCONTRIB
+                FROM SMACARNOM
+                WHERE TRIM(MCNNRODI) = :numdoc
+                ORDER BY MCNFECHREG DESC
                 FETCH FIRST 1 ROWS ONLY
             ";
 
@@ -689,7 +689,7 @@ class OracleTusneService
             $codigo = $resultado->first()?->MCNCONTRIB;
             
             if ($codigo) {
-                Log::info('Contribuyente encontrado con historial en CETPRO', [
+                Log::info('Contribuyente existente encontrado en SMACARNOM', [
                     'codigo' => trim($codigo),
                     'nro_documento' => $numDoc,
                 ]);
@@ -801,7 +801,7 @@ class OracleTusneService
      */
     public function cerrarConexion(): void
     {
-        if ($this->connection !== null) {
+        if ($this->connection !== null && $this->connection !== false) {
             oci_close($this->connection);
             $this->connection = null;
         }
