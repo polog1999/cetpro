@@ -11,6 +11,8 @@ use Filament\Notifications\Notification;
 class ListPagos extends ListRecords
 {
     protected static string $resource = PagoResource::class;
+    
+    public ?int $estudianteId = null;
 
     /**
      * Sincroniza estados de pago desde Oracle cuando se carga la página.
@@ -19,7 +21,26 @@ class ListPagos extends ListRecords
     {
         parent::mount();
         
+        // Capturar el estudiante_id del query parameter
+        $this->estudianteId = request()->query('estudiante_id');
+        
         $this->sincronizarConOracle();
+    }
+    
+    /**
+     * Modifica la query de la tabla para filtrar por estudiante si viene el parámetro.
+     */
+    protected function getTableQuery(): ?\Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getTableQuery();
+        
+        if ($this->estudianteId) {
+            $query->whereHas('cronograma.matricula', function ($q) {
+                $q->where('estudiante_id', $this->estudianteId);
+            });
+        }
+        
+        return $query;
     }
 
     /**

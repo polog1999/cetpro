@@ -29,6 +29,7 @@ use App\Models\Horario;
 use App\Models\Curso;
 
 use App\Models\Pago;
+use App\Models\Estudiante;
 
 class PagosTable
 {
@@ -246,6 +247,29 @@ class PagosTable
 
                     return null;
                 }),
+
+                // Filtro por estudiante
+                SelectFilter::make('estudiante')
+                    ->label('Estudiante')
+                    ->options(fn () =>
+                        Estudiante::query()
+                            ->whereHas('matriculas.cronograma.pagos')
+                            ->get()
+                            ->mapWithKeys(fn (Estudiante $est) => [
+                                $est->id => $est->nombre_completo . ' - ' . $est->nro_documento
+                            ])
+                            ->toArray()
+                    )
+                    ->searchable()
+                    ->preload()
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        ! empty($data['value'])
+                            ? $query->whereHas(
+                                'cronograma.matricula',
+                                fn (Builder $q) => $q->where('estudiante_id', $data['value'])
+                            )
+                            : $query
+                    ),
             ])
 
 

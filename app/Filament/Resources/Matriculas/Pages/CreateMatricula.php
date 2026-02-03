@@ -11,6 +11,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use App\Filament\Resources\Pagos\PagoResource;
 
 class CreateMatricula extends CreateRecord
 {
@@ -239,5 +240,16 @@ class CreateMatricula extends CreateRecord
         ];
         
         return $mapeo[$nombreNormalizado] ?? null;
+    }
+
+    /**
+     * Redirige a la lista de pagos filtrada por el estudiante de la matrícula.
+     */
+    protected function getRedirectUrl(): string
+    {
+        $estudianteId = $this->record->estudiante_id;
+        
+        // Redirigir a la lista de pagos con filtro por estudiante
+        return PagoResource::getUrl('index') . '?estudiante_id=' . $estudianteId;
     }
 }
