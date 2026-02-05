@@ -263,9 +263,6 @@
         <td>HORARIO</td>
         <td colspan="3">
             {{ is_array($horario?->dias) ? implode(', ', $horario->dias) : $horario?->dias }} 
-<<<<<<< HEAD
-            | {{ $horario?->hora_inicio ? \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i') : '' }} - {{ $horario?->hora_fin ? \Carbon\Carbon::parse($horario->hora_fin)->format('H:i') : '' }}
-=======
             @if($horario?->hora_inicio && $horario?->hora_fin)
                 | {{ $horario->hora_inicio->format('H:i') }} - {{ $horario->hora_fin->format('H:i') }}
             @endif
@@ -288,10 +285,32 @@
                 };
             @endphp
             {{ $grado }}
->>>>>>> 6b2a58e (improved_matricula_pdf_adding_horario&docente&censo)
         </td>
     </tr>
     
+</table>
+
+</table>
+
+<br>
+
+{{-- DATOS DEL CENSO --}}
+<table>
+    <tr class="section-title">
+        <td colspan="4">DATOS DEL CENSO</td>
+    </tr>
+    <tr>
+        <td style="width: 20%;">TIPO DE DISCAPACIDAD</td>
+        <td style="width: 30%;">{{ $est?->tipo_discapacidad?->value ?? '-' }}</td>
+        <td style="width: 20%;">PROGRAMA DE REPARACIÓN</td>
+        <td style="width: 30%;">{{ $est?->tipo_programa_reparacion?->value ?? '-' }}</td>
+    </tr>
+    <tr>
+        <td>LENGUA MATERNA</td>
+        <td>{{ $est?->lengua_materna?->value ?? '-' }}</td>
+        <td>AÑO EGRESO EBR</td>
+        <td>{{ $est?->anio_egreso_ebr ?? '-' }}</td>
+    </tr>
 </table>
 
 </table>
