@@ -73,7 +73,19 @@ class MatriculasRelationManager extends RelationManager
                     ->label('Ver Pagos')
                     ->icon('heroicon-o-currency-dollar')
                     ->color('success')
-                    ->modalHeading(fn (Matricula $record) => "Pagos - Matrícula {$record->codigo_inscripcion}")
+                    ->modalHeading(function (Matricula $record) {
+                        $nombre = $record->estudiante ? "{$record->estudiante->nombres} {$record->estudiante->apellido_paterno}" : 'Sin nombre';
+                        
+                        $programa = match($record->tipo_matricula) {
+                            \App\Enums\TipoMatricula::PROGRAMA => $record->horario?->programa?->nombre_programa,
+                            \App\Enums\TipoMatricula::FORMACION_CONTINUA => $record->horario?->programa?->nombre_programa,
+                            \App\Enums\TipoMatricula::CURSO => $record->curso?->nombre_curso,
+                            \App\Enums\TipoMatricula::MODULO => $record->curso?->nombre_curso,
+                            default => 'N/A'
+                        };
+
+                        return "Pagos - Matrícula {$record->codigo_inscripcion} | {$nombre} | {$programa}";
+                    })
                     ->modalContent(function (Matricula $record) {
                         $pagos = $record->cronograma?->pagos()->orderBy('nro_cuota')->get() ?? collect();
                         

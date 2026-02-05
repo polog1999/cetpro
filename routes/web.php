@@ -19,6 +19,9 @@ Route::middleware(['web', 'auth'])->group(function () {
 Route::get('/matriculas/{matricula}/pdf', [MatriculaPdfController::class, 'show'])
     ->name('matriculas.pdf');
 
+Route::get('/matriculas/{matricula}/cronograma-pdf', [MatriculaPdfController::class, 'downloadCronograma'])
+    ->name('matriculas.cronograma-pdf');
+
 Route::get('/matriculas/{matricula}/cursos-pdf', [MatriculaCursosPdfController::class, 'show'])
     ->name('matriculas.cursos-pdf');
 

@@ -1,5 +1,19 @@
 <div>
     @if($cronograma)
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Detalle de Pagos</h3>
+            <x-filament::button
+                tag="a"
+                href="{{ route('matriculas.cronograma-pdf', ['matricula' => $cronograma->matricula_id]) }}"
+                target="_blank"
+                icon="heroicon-o-arrow-down-tray"
+                color="primary"
+                size="sm"
+            >
+                Descargar PDF
+            </x-filament::button>
+        </div>
+
         <div class="mb-4">
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -8,7 +22,7 @@
                 </div>
                 <div>
                     <span class="font-bold text-gray-500">Saldo Pendiente:</span>
-                    <span class="font-medium text-red-600">S/. {{ number_format($pagos->where('estado.value', 'pendiente')->sum('monto'), 2) }}</span>
+                    <span class="font-medium text-red-600">S/. {{ number_format($pagos->filter(fn($p) => str_contains(strtolower($p->estado ?? ''), 'pendiente'))->sum('monto'), 2) }}</span>
                 </div>
             </div>
         </div>
@@ -18,6 +32,7 @@
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                     <tr>
                         <th scope="col" class="px-6 py-3">Nro de recibo</th>
+                        <th scope="col" class="px-6 py-3">Nro Liquidación</th>
                         <th scope="col" class="px-6 py-3">Vencimiento</th>
                         <th scope="col" class="px-6 py-3">Monto</th>
                         <th scope="col" class="px-6 py-3">Estado</th>
@@ -31,6 +46,9 @@
                                 {{ $pago->nro_cuota }}
                             </td>
                             <td class="px-6 py-4">
+                                {{ $pago->num_liquidacion ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4">
                                 {{ $pago->fecha_vencimiento?->format('d/m/Y') }}
                             </td>
                             <td class="px-6 py-4">
@@ -38,16 +56,17 @@
                             </td>
                             <td class="px-6 py-4">
                                 @php
-                                    $color = match($pago->estado->value) {
-                                        'pagado' => 'text-green-600 bg-green-100',
-                                        'pendiente' => 'text-yellow-600 bg-yellow-100',
-                                        'vencido' => 'text-red-600 bg-red-100',
-                                        'anulado' => 'text-gray-600 bg-gray-100',
+                                    $estado = strtolower($pago->estado ?? '');
+                                    $color = match(true) {
+                                        str_contains($estado, 'pagado') || str_contains($estado, 'cancelado') => 'text-green-600 bg-green-100',
+                                        str_contains($estado, 'pendiente') => 'text-yellow-600 bg-yellow-100',
+                                        str_contains($estado, 'vencido') => 'text-red-600 bg-red-100',
+                                        str_contains($estado, 'anulado') => 'text-gray-600 bg-gray-100',
                                         default => 'text-gray-600 bg-gray-100'
                                     };
                                 @endphp
                                 <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $color }}">
-                                    {{ $pago->estado->getLabel() }}
+                                    {{ $pago->estado }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
@@ -56,7 +75,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center">No hay recibos registrados.</td>
+                            <td colspan="6" class="px-6 py-4 text-center">No hay recibos registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>

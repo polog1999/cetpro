@@ -269,9 +269,7 @@ class CreateMatricula extends CreateRecord
      */
     protected function getRedirectUrl(): string
     {
-        $estudianteId = $this->record->estudiante_id;
-        
-        // Redirigir a la lista de pagos con filtro por estudiante
-        return PagoResource::getUrl('index') . '?estudiante_id=' . $estudianteId;
+        // Redirigir a la vista de edición del estudiante (donde está el historial de matrículas)
+        return \App\Filament\Resources\Estudiantes\EstudianteResource::getUrl('edit', ['record' => $this->record->estudiante_id]);
     }
 }
