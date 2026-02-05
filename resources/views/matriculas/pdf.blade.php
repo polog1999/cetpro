@@ -199,6 +199,33 @@
 
 <br>
 
+{{-- DATOS DEL CENSO ESCOLAR --}}
+<table>
+    <tr class="section-title">
+        <td colspan="8">DATOS DEL CENSO ESCOLAR</td>
+    </tr>
+    <tr>
+        <td>TIPO DISCAPACIDAD</td>
+        <td colspan="3">{{ $est?->tipo_discapacidad?->getLabel() ?? 'Ninguna' }}</td>
+        <td>SUBTIPO DISCAPACIDAD</td>
+        <td colspan="3">{{ $est?->subtipo_discapacidad?->getLabel() ?? '-' }}</td>
+    </tr>
+    <tr>
+        <td>PROGRAMA REPARACIÓN</td>
+        <td colspan="3">{{ $est?->tipo_programa_reparacion?->getLabel() ?? 'Ninguno' }}</td>
+        <td>LENGUA MATERNA</td>
+        <td colspan="3">{{ $est?->lengua_materna?->getLabel() ?? '-' }}</td>
+    </tr>
+    <tr>
+        <td>AÑO EGRESO EBR</td>
+        <td colspan="3">{{ $est?->anio_egreso_ebr ?? '-' }}</td>
+        <td>EDAD AL 31 MARZO</td>
+        <td colspan="3">{{ $est?->edad_al_31_marzo ?? '-' }} años</td>
+    </tr>
+</table>
+
+<br>
+
 {{-- DATOS ACADÉMICOS --}}
 <table>
     <tr class="section-title">
@@ -236,29 +263,21 @@
         <td>HORARIO</td>
         <td colspan="3">
             {{ is_array($horario?->dias) ? implode(', ', $horario->dias) : $horario?->dias }} 
-            | {{ $horario?->horario }}
+            | {{ $horario?->hora_inicio ? \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i') : '' }} - {{ $horario?->hora_fin ? \Carbon\Carbon::parse($horario->hora_fin)->format('H:i') : '' }}
         </td>
     </tr>
-    <tr>
-        <td>GRADO ACADÉMICO</td>
-        <td colspan="7">
-            @php
-                $grado = match ($matricula->tipo_matricula) {
-                    TipoMatricula::FORMACION_CONTINUA => 'Certificado de Estudio',
-                    TipoMatricula::PROGRAMA => 'Título Auxiliar Técnico',
-                    TipoMatricula::CURSO => 'Certificado',
-                    TipoMatricula::MODULO => 'Certificado del Módulo',
-                    default => 'N/A',
-                };
-            @endphp
-            {{ $grado }}
-        </td>
-    </tr>
+    
 </table>
 
 <br><br>
 
 <table class="no-border">
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
     <tr>
         <td class="text-center">
             _______________________________<br>
