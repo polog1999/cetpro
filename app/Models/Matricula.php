@@ -521,10 +521,7 @@ class Matricula extends Model
     /**
      * Genera el código de inscripción para la matrícula.
      * 
-     * Formato depende del tipo de matrícula:
-     * - PROGRAMA/FORMACION_CONTINUA: AñoDNIHorarioID
-     * - CURSO/MODULO: AñoDNIHorarioIDCursoID
-     * - UNIDAD: AñoDNIHorarioIDCursoIDUnidadID
+     * Delega la lógica al servicio para evitar duplicidad.
      */
     private static function generarCodigoInscripcion(Matricula $matricula, ?Horario $horario): void
     {
@@ -532,29 +529,12 @@ class Matricula extends Model
             return;
         }
 
-        $year = now()->format('Y');
-        
-        // Obtener DNI del estudiante
-        $estudiante = Estudiante::find($matricula->estudiante_id);
-        $dni = $estudiante?->nro_documento ?? '00000000';
-        
-        // Obtener ID del horario
-        $horarioId = $horario?->id_horario ?? $matricula->horario_id ?? '0';
-        
-        // Formato base: AñoDNIHorarioID
-        $codigo = "{$year}{$dni}{$horarioId}";
-        
-        // Añadir ID del curso/módulo si existe
-        if ($matricula->id_curso) {
-            $codigo .= $matricula->id_curso;
-        }
-        
-        // Añadir ID de la unidad si existe
-        if ($matricula->id_unidad) {
-            $codigo .= $matricula->id_unidad;
-        }
-        
-        $matricula->codigo_inscripcion = $codigo;
+        // Delegar al servicio centralizado
+        // Pasamos 0 como horarioId por defecto si no hay, solo para cumplir la firma del método
+        $service = app(\App\Services\MatriculaService::class);
+        $matricula->codigo_inscripcion = $service->generarCodigoInscripcion(
+            $horario?->id_horario ?? 0
+        );
     }
 
     /**

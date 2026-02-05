@@ -172,44 +172,39 @@ class MatriculaService
      * @param int|null $unidadId ID de la unidad (opcional)
      * @return string|null
      */
+    /**
+     * Genera un código de inscripción único para la matrícula.
+     * 
+     * Nuevo Formato: YYYY + Correlativo (4 dígitos)
+     * Ejemplo: 20260000, 20260001, ..., 20269999
+     *
+     * @param int $horarioId (No usado en lógica actual pero mantenido por compatibilidad)
+     * @param int|null $estudianteId (No usado)
+     * @param int|null $cursoId (No usado)
+     * @param int|null $unidadId (No usado)
+     * @return string|null
+     */
     public function generarCodigoInscripcion(
         int $horarioId, 
         ?int $estudianteId = null,
         ?int $cursoId = null,
         ?int $unidadId = null
     ): ?string {
-        $horario = $this->horarios->find($horarioId);
-        
-        if (!$horario) {
-            return null;
+        $year = now()->year;
+
+        // Buscar el último código de este año
+        $ultimo = Matricula::where('codigo_inscripcion', 'like', "{$year}%")
+            ->orderBy('codigo_inscripcion', 'desc')
+            ->value('codigo_inscripcion');
+
+        if ($ultimo) {
+            $correlativo = (int) substr($ultimo, 4);
+            $nuevoCorrelativo = $correlativo + 1;
+        } else {
+            $nuevoCorrelativo = 0;
         }
 
-        $year = now()->format('Y');
-        
-        // Obtener DNI del estudiante
-        $dni = '00000000';
-        if ($estudianteId) {
-            $estudiante = Estudiante::find($estudianteId);
-            $dni = $estudiante?->nro_documento ?? '00000000';
-        }
-        
-        // Obtener ID del horario
-        $horarioIdStr = $horario->id_horario ?? $horarioId;
-        
-        // Formato base: AñoDNIHorarioID
-        $codigo = "{$year}{$dni}{$horarioIdStr}";
-        
-        // Añadir ID del curso/módulo si existe
-        if ($cursoId) {
-            $codigo .= $cursoId;
-        }
-        
-        // Añadir ID de la unidad si existe
-        if ($unidadId) {
-            $codigo .= $unidadId;
-        }
-        
-        return $codigo;
+        return $year . str_pad($nuevoCorrelativo, 4, '0', STR_PAD_LEFT);
     }
     
     /**

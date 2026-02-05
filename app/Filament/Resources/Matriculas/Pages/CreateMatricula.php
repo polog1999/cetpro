@@ -34,6 +34,7 @@ class CreateMatricula extends CreateRecord
                 ->modalDescription('¿Está seguro que desea crear esta matrícula? Esta acción generará el cronograma de pagos y las liquidaciones correspondientes.')
                 ->modalSubmitActionLabel('Sí, crear matrícula')
                 ->modalCancelActionLabel('Cancelar')
+                ->mountUsing(fn () => $this->form->validate())
                 ->action(fn () => $this->create()),
         ];
     }
