@@ -23,7 +23,9 @@ class MatriculaPdfController extends Controller
     }
     public function downloadCronograma(Matricula $matricula)
     {
-        $matricula->load(['estudiante', 'horario.programa', 'curso', 'cronograma.pagos']);
+        $matricula->load(['estudiante', 'horario.programa', 'curso', 'cronograma.pagos' => function ($query) {
+            $query->orderBy('nro_cuota', 'asc');
+        }]);
 
         $pdf = Pdf::loadView('matriculas.cronograma-pdf', [
                 'matricula' => $matricula,
@@ -32,6 +34,9 @@ class MatriculaPdfController extends Controller
 
         $fileName = 'cronograma-pagos-' . ($matricula->codigo_inscripcion ?? $matricula->id) . '.pdf';
 
-        return $pdf->download($fileName);
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
     }
 }

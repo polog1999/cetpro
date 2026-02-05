@@ -269,7 +269,23 @@ class CreateMatricula extends CreateRecord
      */
     protected function getRedirectUrl(): string
     {
-        // Redirigir a la vista de edición del estudiante (donde está el historial de matrículas)
-        return \App\Filament\Resources\Estudiantes\EstudianteResource::getUrl('edit', ['record' => $this->record->estudiante_id]);
+        // Redirigir al listado de matrículas
+        return MatriculaResource::getUrl('index');
+    }
+
+    protected function getCreatedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->success()
+            ->title('Matrícula creada correctamente')
+            ->body('El cronograma de pagos se ha generado. Puedes descargarlo aquí:')
+            ->actions([
+                Action::make('descargar')
+                    ->label('📥 Descargar Cronograma PDF')
+                    ->button()
+                    ->color('success')
+                    ->url(route('matriculas.cronograma-pdf', ['matricula' => $this->record->id]), shouldOpenInNewTab: true),
+            ])
+            ->persistent();
     }
 }
