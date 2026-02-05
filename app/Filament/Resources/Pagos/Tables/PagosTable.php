@@ -94,6 +94,53 @@ class PagosTable
                         default => 'info',
                     }),
 
+                TextColumn::make('cronograma.matricula.detalle_matricula')
+                    ->label('Detalle Matrícula')
+                    ->getStateUsing(function ($record) {
+                        $matricula = $record->cronograma?->matricula;
+                        if (!$matricula) {
+                            return 'Sin matrícula';
+                        }
+                        
+                        $tipo = $matricula->tipo_matricula?->value ?? $matricula->tipo_matricula ?? '';
+                        
+                        // Para UNIDAD: mostrar nombre de la unidad
+                        if ($tipo === 'Unidad' && $matricula->unidad) {
+                            return $matricula->unidad->nombre_unidad;
+                        }
+                        
+                        // Para CURSO o MODULO: mostrar nombre del curso
+                        if (in_array($tipo, ['Curso', 'Módulo']) && $matricula->curso) {
+                            return $matricula->curso->nombre_curso;
+                        }
+                        
+                        // Para PROGRAMA o FORMACION_CONTINUA: mostrar nombre del programa
+                        if (in_array($tipo, ['Programa', 'Formación continua']) && $matricula->horario?->programa) {
+                            return $matricula->horario->programa->nombre_programa;
+                        }
+                        
+                        return 'Sin detalle';
+                    })
+                    ->wrap()
+                    ->searchable(
+                        query: function (Builder $query, string $search): Builder {
+                            return $query->where(function (Builder $q) use ($search) {
+                                // Buscar en nombre de programa
+                                $q->whereHas('cronograma.matricula.horario.programa', function ($subQ) use ($search) {
+                                    $subQ->where('nombre_programa', 'ilike', "%{$search}%");
+                                })
+                                // Buscar en nombre de curso
+                                ->orWhereHas('cronograma.matricula.curso', function ($subQ) use ($search) {
+                                    $subQ->where('nombre_curso', 'ilike', "%{$search}%");
+                                })
+                                // Buscar en nombre de unidad
+                                ->orWhereHas('cronograma.matricula.unidad', function ($subQ) use ($search) {
+                                    $subQ->where('nombre_unidad', 'ilike', "%{$search}%");
+                                });
+                            });
+                        },
+                    ),
+
                 TextColumn::make('fecha_vencimiento')
                     ->label('Fecha de vencimiento')
                     ->date()
