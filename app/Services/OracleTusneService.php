@@ -33,31 +33,30 @@ class OracleTusneService
     protected ?string $lastError = null;
 
     /**
-     * Obtiene la conexión a Oracle. Lanza excepción si falla.
+     * Crea la conexión OCI8 a Oracle.
+     *
      * @return resource
      * @throws Exception
      */
     protected function getConnection()
     {
-        // Verificar si hay una conexión válida (recurso, no null ni false)
-        if ($this->connection !== null && $this->connection !== false) {
+        if ($this->connection !== null) {
             return $this->connection;
         }
 
         $host = config('database.connections.oracle.host');
         $port = config('database.connections.oracle.port', '1521');
-        // $sid = config('database.connections.oracle.sid');
+        #$sid = config('database.connections.oracle.sid');
         $serviceName = config('database.connections.oracle.service_name');
         $database = config('database.connections.oracle.database');
         $username = config('database.connections.oracle.username');
         $password = config('database.connections.oracle.password');
         $charset = config('database.connections.oracle.charset', 'AL32UTF8');
 
-        // Construir connection string para Oracle usando SID
-        // Formato: (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host)(PORT=port))(CONNECT_DATA=(SID=sid)))
-        // $connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
+        // Construir connection string para Oracle usando SERVICE_NAME
+        // Formato: //host:port/service_name
+        #$connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
         
-        // Alternativa usando SERVICE_NAME (descomentar si se necesita):
         $connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
 
         $this->connection = @oci_connect($username, $password, $connectionString, $charset);
@@ -66,7 +65,6 @@ class OracleTusneService
             $error = oci_error();
             $message = $error ? $error['message'] : 'Error desconocido al conectar a Oracle';
             $this->lastError = $message;
-            $this->connection = null; // Resetear a null para permitir reintentos
             throw new Exception($message);
         }
 
@@ -667,21 +665,26 @@ class OracleTusneService
 
     /**
      * Verifica si existe un contribuyente en Oracle por número de documento.
-     * Busca directamente en SMACARNOM sin requerir pagos previos.
+     * Usa la vista VU_CETPRO_BUS.
      *
      * @param string $numDoc Número de documento
-     * @return string|null Código de contribuyente (MCNCONTRIB) o null si no existe
+     * @return string|null Código de contribuyente (CODCON) o null si no existe
      */
     public function verificarContribuyenteExistente(string $numDoc): ?string
     {
         try {
             // Buscamos en SMACARNOM el código más reciente (por fecha registro)
-            // Sin requerir que exista en VU_BUSCA_TUSNE_PER_Pen para evitar duplicados
+            // PERO SOLO si tiene relación con el CETPRO (existe en VU_BUSCA_TUSNE_PER_Pen)
             $sql = "
-                SELECT MCNCONTRIB
-                FROM SMACARNOM
-                WHERE TRIM(MCNNRODI) = :numdoc
-                ORDER BY MCNFECHREG DESC
+                SELECT A.MCNCONTRIB
+                FROM SMACARNOM A
+                WHERE TRIM(A.MCNNRODI) = :numdoc
+                AND EXISTS (
+                    SELECT 1
+                    FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen B
+                    WHERE B.CODIGO = A.MCNCONTRIB
+                )
+                ORDER BY A.MCNFECHREG DESC
                 FETCH FIRST 1 ROWS ONLY
             ";
 
@@ -689,7 +692,7 @@ class OracleTusneService
             $codigo = $resultado->first()?->MCNCONTRIB;
             
             if ($codigo) {
-                Log::info('Contribuyente existente encontrado en SMACARNOM', [
+                Log::info('Contribuyente encontrado con historial en CETPRO', [
                     'codigo' => trim($codigo),
                     'nro_documento' => $numDoc,
                 ]);
@@ -773,13 +776,23 @@ class OracleTusneService
                 ':nrodi' => $estudiante->nro_documento,
                 ':telefono' => $estudiante->telefono,
                 ':email' => $estudiante->email,
-                ':dni' => $estudiante->nro_documento,
+                // MCNDNI es una columna legacy CHAR(8) que solo acepta DNIs.
+                // Si es otro documento (CE, Pasaporte) con > 8 dígitos, enviamos NULL
+                ':dni' => (strlen($estudiante->nro_documento) <= 8) ? $estudiante->nro_documento : null,
                 ':distrito' => $codigoDistrito,
                 ':fecnac' => $fechaNacimiento,
                 ':sexo' => $sexo,
             ];
             
-            $this->executeInsert($sql, $params);
+            Log::info('Intentando crear contribuyente en Oracle', $params);
+
+            try {
+                $this->executeInsert($sql, $params);
+            } catch (Exception $e) {
+                Log::error('Excepción OCI al insertar contribuyente: ' . $e->getMessage());
+                // Relanzar para que el catch externo lo maneje pero ya con log detallado
+                throw $e;
+            }
             
             Log::info('Contribuyente creado en Oracle', [
                 'codigo' => $codigoContribuyente,
@@ -788,9 +801,10 @@ class OracleTusneService
             
             return $codigoContribuyente;
         } catch (Exception $e) {
-            Log::error('Error al crear contribuyente en Oracle: ' . $e->getMessage(), [
+            Log::error('Error general al crear contribuyente en Oracle: ' . $e->getMessage(), [
                 'estudiante_id' => $estudiante->id,
                 'nro_documento' => $estudiante->nro_documento,
+                'trace' => $e->getTraceAsString()
             ]);
             return null;
         }
@@ -801,7 +815,7 @@ class OracleTusneService
      */
     public function cerrarConexion(): void
     {
-        if ($this->connection !== null && $this->connection !== false) {
+        if ($this->connection !== null) {
             oci_close($this->connection);
             $this->connection = null;
         }
