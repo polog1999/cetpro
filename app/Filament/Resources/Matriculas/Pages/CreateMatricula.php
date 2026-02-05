@@ -12,10 +12,31 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use App\Filament\Resources\Pagos\PagoResource;
+use Filament\Actions\Action;
 
 class CreateMatricula extends CreateRecord
 {
     protected static string $resource = MatriculaResource::class;
+
+    /**
+     * Configura las acciones del formulario con doble confirmación.
+     */
+    protected function getFormActions(): array
+    {
+        return [
+            Action::make('create')
+                ->label('Crear Matrícula')
+                ->color('primary')
+                ->requiresConfirmation()
+                ->modalIcon('heroicon-o-exclamation-triangle')
+                ->modalIconColor('warning')
+                ->modalHeading('Confirmar Matrícula')
+                ->modalDescription('¿Está seguro que desea crear esta matrícula? Esta acción generará el cronograma de pagos y las liquidaciones correspondientes.')
+                ->modalSubmitActionLabel('Sí, crear matrícula')
+                ->modalCancelActionLabel('Cancelar')
+                ->action(fn () => $this->create()),
+        ];
+    }
 
     /**
      * Maneja la creación del registro usando el servicio.
