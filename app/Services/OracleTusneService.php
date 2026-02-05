@@ -231,6 +231,8 @@ class OracleTusneService
      * 
      * Retorna únicamente el código con la fecha de emisión (EMITIDO) más reciente,
      * realizando un JOIN entre VU_CETPRO_BUS y VU_BUSCA_TUSNE_PER_Pen.
+     * 
+     * IMPORTANTE: Solo considera códigos que empiecen con 'C'.
      *
      * @param string $numDoc Número de documento
      * @return object|null Objeto con CODIGO, EMITIDO y CONCEPTO, o null si no existe
@@ -250,6 +252,8 @@ class OracleTusneService
                     {$this->schema}.VU_BUSCA_TUSNE_PER_Pen l ON p.CODCON = l.CODIGO
                 WHERE 
                     p.NUMDOC = :numdoc
+                AND 
+                    l.CODIGO LIKE 'C%'
                 ORDER BY 
                     TO_DATE(l.EMITIDO, 'DD/MM/YYYY') DESC
                 FETCH FIRST 1 ROWS ONLY
@@ -668,6 +672,9 @@ class OracleTusneService
     /**
      * Verifica si existe un contribuyente en Oracle por número de documento.
      * Busca directamente en SMACARNOM sin requerir pagos previos.
+     * 
+     * Solo considera códigos que empiecen con "C" (Generados por sistema nuevo).
+     * Ignora códigos antiguos con prefijo "S".
      *
      * @param string $numDoc Número de documento
      * @return string|null Código de contribuyente (MCNCONTRIB) o null si no existe
@@ -676,11 +683,12 @@ class OracleTusneService
     {
         try {
             // Buscamos en SMACARNOM el código más reciente (por fecha registro)
-            // Sin requerir que exista en VU_BUSCA_TUSNE_PER_Pen para evitar duplicados
+            // IMPORTANTE: Solo buscamos códigos que empiecen con 'C'
             $sql = "
                 SELECT MCNCONTRIB
                 FROM SMACARNOM
                 WHERE TRIM(MCNNRODI) = :numdoc
+                AND MCNCONTRIB LIKE 'C%' 
                 ORDER BY MCNFECHREG DESC
                 FETCH FIRST 1 ROWS ONLY
             ";
@@ -689,7 +697,7 @@ class OracleTusneService
             $codigo = $resultado->first()?->MCNCONTRIB;
             
             if ($codigo) {
-                Log::info('Contribuyente existente encontrado en SMACARNOM', [
+                Log::info('Contribuyente existente (tipo C) encontrado en SMACARNOM', [
                     'codigo' => trim($codigo),
                     'nro_documento' => $numDoc,
                 ]);
