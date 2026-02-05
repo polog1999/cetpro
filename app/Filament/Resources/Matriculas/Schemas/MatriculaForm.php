@@ -660,8 +660,8 @@ class MatriculaForm
                                 return;
                             }
 
-                            // Cargar relaciones necesarias
-                            $query->with('programa');
+                            // Cargar relaciones necesarias (programa y docente)
+                            $query->with(['programa', 'docente']);
 
                             // Filtrar por programa intermediario seleccionado
                             if (in_array($tipoMatricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])) {
@@ -688,6 +688,7 @@ class MatriculaForm
                     )
                     ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
                         $programa  = $horario->programa?->nombre_programa ?? 'Sin programa';
+                        $docente   = $horario->docente?->nombre_completo ?? 'Sin docente';
 
                         $turno     = $horario->turno?->value ?? $horario->turno;
                         $modalidad = $horario->modalidad?->value ?? $horario->modalidad;
@@ -715,7 +716,7 @@ class MatriculaForm
                             }
                         }
 
-                        return "{$programa} | Turno: {$turno} | Días: {$dias} | Hora: {$horarioTexto} | Modalidad: {$modalidad}";
+                        return "{$programa} | {$docente} | {$turno} | {$dias} | {$horarioTexto} | {$modalidad}";
                     })
                     ->searchable()
                     ->preload()
