@@ -55,12 +55,7 @@ class HorariosTable
                     ->formatStateUsing(fn (?Turno $state) => $state?->getLabel())
                     ->color(fn (?Turno $state) => 'primary'),
 
-                TextColumn::make('modalidad')
-                    ->label('Modalidad')
-                    ->badge()
-                    ->formatStateUsing(fn (?Modalidad $state) => $state?->getLabel())
-                    ->color(fn (?Modalidad $state) => $state?->getColor()),
-
+                
                 TextColumn::make('dias')
                     ->label('Días')
                     ->formatStateUsing(function ($state) {
@@ -80,16 +75,22 @@ class HorariosTable
                     })
                     ->sortable(),
 
-                TextColumn::make('aula')
-                    ->label('Aula')
-                    ->toggleable(),
-
                 TextColumn::make('matriculas_count')
                     ->label('Inscritos')
                     ->counts('matriculas')
                     ->badge()
                     ->color('success')
                     ->sortable(),
+
+                TextColumn::make('modalidad')
+                    ->label('Modalidad')
+                    ->badge()
+                    ->formatStateUsing(fn (?Modalidad $state) => $state?->getLabel())
+                    ->color(fn (?Modalidad $state) => $state?->getColor()),
+
+                TextColumn::make('aula')
+                    ->label('Aula')
+                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
