@@ -126,7 +126,7 @@
                 <span class="info-label">Turno: </span>{{ $horario->turno?->getLabel() ?? '-' }}
             </div>
             <div class="info-item">
-                <span class="info-label">Horas: </span>{{ $horario->horario ?? '-' }}
+                <span class="info-label">Horas: </span>{{ $horario->hora_inicio && $horario->hora_fin ? $horario->hora_inicio->format('H:i') . ' - ' . $horario->hora_fin->format('H:i') : '-' }}
             </div>
             <div class="info-item">
                 <span class="info-label">Días: </span>{{ is_array($horario->dias) ? implode(', ', $horario->dias) : $horario->dias }}

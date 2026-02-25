@@ -139,7 +139,7 @@
         <td>LUGAR</td>
         <td>LA MOLINA</td>
         <td>DIRECCIÓN</td>
-        <td colspan="5">CALLE LOS ALMENDROS CIUDAD A (ejemplo)</td>
+        <td colspan="5">Calle Los Mangos  N°145, Urbanización ampliación Residencial Monterrico</td>
     </tr>
 </table>
 

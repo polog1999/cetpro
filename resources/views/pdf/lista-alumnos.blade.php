@@ -105,7 +105,9 @@
     </div>
     
     <div class="dias-estudio">
-        Días de estudio: {{ $dias_estudio }}
+        Días de estudio: {{ $dias_estudio }} <br>
+        Horas: {{ $horario->hora_inicio && $horario->hora_fin ? $horario->hora_inicio->format('H:i') . ' - ' . $horario->hora_fin->format('H:i') : '-' }} <br>
+        Profesor: {{ $horario->docente->nombre_completo ?? '-' }}
     </div>
     
     <table class="alumnos-table">
