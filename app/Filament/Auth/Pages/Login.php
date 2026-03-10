@@ -6,8 +6,31 @@ use Filament\Auth\Pages\Login as BaseLogin; // <-- v4
 use Filament\Forms\Components\TextInput;
 // HasCustomLayout trait removido - plugin AuthUIEnhancer deshabilitado
 
+//Captcha
+use Filament\Schemas\Schema;
+
+use MarcoGermani87\FilamentCaptcha\Forms\Components\CaptchaField;
+
 class Login extends BaseLogin
 {
+
+     public function form(Schema $schema): Schema
+{
+    return parent::form($schema)
+        ->components([
+            $this->getEmailFormComponent(),
+            $this->getPasswordFormComponent(),
+            $this->getRememberFormComponent(),
+
+            CaptchaField::make('captcha')
+    ->label('Verificación de seguridad')
+    ->extraAttributes([
+        'class' => 'w-full'
+    ])
+        ]);
+}
+   
+
     // Trait HasCustomLayout removido
     
     /**
@@ -83,4 +106,6 @@ class Login extends BaseLogin
 
         return app(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class);
     }
+
+    
 }

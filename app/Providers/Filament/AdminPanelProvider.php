@@ -23,6 +23,8 @@ use DiogoGPinto\AuthUIEnhancer\AuthUIEnhancerPlugin;
 
 use App\Filament\Auth\Pages\Login as CustomLogin;
 
+use MarcoGermani87\FilamentCaptcha\FilamentCaptcha;
+
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -92,6 +94,8 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-key'),
             ])
             ->globalSearch(false) // Buscador universal desactivado
-            ->spa(); // Navegación fluida tipo app
+            ->spa() // Navegación fluida tipo app
+
+            ->plugin(FilamentCaptcha::make());
     }
 }

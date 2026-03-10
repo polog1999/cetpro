@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1ef02f380570c79c1c71205c0df007a4",
+    "content-hash": "42277c4204258b51fd315f45837b0d0a",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2398,6 +2398,64 @@
             "time": "2024-07-20T21:45:45+00:00"
         },
         {
+            "name": "gregwar/captcha",
+            "version": "v1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Gregwar/Captcha.git",
+                "reference": "4edbcd09fde4353b94ce550f43460eba73baf2cc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Gregwar/Captcha/zipball/4edbcd09fde4353b94ce550f43460eba73baf2cc",
+                "reference": "4edbcd09fde4353b94ce550f43460eba73baf2cc",
+                "shasum": ""
+            },
+            "require": {
+                "ext-fileinfo": "*",
+                "ext-gd": "*",
+                "ext-mbstring": "*",
+                "php": ">=5.3.0",
+                "symfony/finder": "*"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.35 || ^5.7.21 || ^6.4 || ^7.0 || ^8.0 || ^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Gregwar\\": "src/Gregwar"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Grégoire Passault",
+                    "email": "g.passault@gmail.com",
+                    "homepage": "http://www.gregwar.com/"
+                },
+                {
+                    "name": "Jeremy Livingston",
+                    "email": "jeremy.j.livingston@gmail.com"
+                }
+            ],
+            "description": "Captcha generator",
+            "homepage": "https://github.com/Gregwar/Captcha",
+            "keywords": [
+                "bot",
+                "captcha",
+                "spam"
+            ],
+            "support": {
+                "issues": "https://github.com/Gregwar/Captcha/issues",
+                "source": "https://github.com/Gregwar/Captcha/tree/v1.3.0"
+            },
+            "time": "2025-06-23T12:25:54+00:00"
+        },
+        {
             "name": "guzzlehttp/guzzle",
             "version": "7.10.0",
             "source": {
@@ -4297,6 +4355,87 @@
                 }
             ],
             "time": "2025-07-17T11:15:13+00:00"
+        },
+        {
+            "name": "marcogermani87/filament-captcha",
+            "version": "v2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/marcogermani87/filament-captcha.git",
+                "reference": "22bc115690cb87c0bd02a21e2357969f430c1952"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/marcogermani87/filament-captcha/zipball/22bc115690cb87c0bd02a21e2357969f430c1952",
+                "reference": "22bc115690cb87c0bd02a21e2357969f430c1952",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gd": "*",
+                "filament/filament": "^4.0|^5.0",
+                "gregwar/captcha": "^1.2",
+                "illuminate/contracts": "^11.0|^12.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "larastan/larastan": "^2.0|^3.0",
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^7.9|^8.0",
+                "orchestra/testbench": "^8.0|^9.0|^10.0",
+                "pestphp/pest": "^2.0|^3.7",
+                "pestphp/pest-plugin-arch": "^2.0|^3.0",
+                "pestphp/pest-plugin-laravel": "^2.0|^3.1",
+                "pestphp/pest-plugin-livewire": "^2.1|^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "FilamentCaptcha": "MarcoGermani87\\FilamentCaptcha\\Facades\\FilamentCaptcha"
+                    },
+                    "providers": [
+                        "MarcoGermani87\\FilamentCaptcha\\FilamentCaptchaServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "MarcoGermani87\\FilamentCaptcha\\": "src/",
+                    "MarcoGermani87\\FilamentCaptcha\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Marco Germani",
+                    "email": "info@marcogermani.it",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Easy Captcha image integrations for Filament",
+            "homepage": "https://github.com/marcogermani87/filament-captcha",
+            "keywords": [
+                "captcha",
+                "filament",
+                "laravel",
+                "marcogermani87",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/marcogermani87/filament-captcha/issues",
+                "source": "https://github.com/marcogermani87/filament-captcha/tree/v2.2.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/MarcoGermani87",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-01-21T20:57:16+00:00"
         },
         {
             "name": "markbaker/complex",
