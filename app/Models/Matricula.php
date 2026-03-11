@@ -101,8 +101,8 @@ class Matricula extends Model
         $numCuotas    = null;
         $especialidad = null;
 
-        // 1) CURSO / MODULO / UNIDAD -> PAGO ÚNICO (Total por el curso/unidad)
-        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
+        // 1) CURSO / UNIDAD -> PAGO ÚNICO (Total por el curso/unidad)
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::UNIDAD], true)) {
             $curso = $this->curso;
 
             if (! $curso) {
@@ -110,10 +110,23 @@ class Matricula extends Model
             }
 
             $numCuotas    = 1;
-            $especialidad = $curso->programa?->especialidad; // programa del curso -> especialidad
+            $especialidad = $curso->programa?->especialidad;
         }
 
-        // 2) PROGRAMA o FORMACION_CONTINUA -> DURACIÓN DEL PROGRAMA (Pagos mensuales)
+        // 2) MODULO (Formación Continua) -> PAGOS MENSUALES según duración del módulo
+        if ($this->tipo_matricula === TipoMatricula::MODULO) {
+            $curso = $this->curso;
+
+            if (! $curso) {
+                return null;
+            }
+
+            // Usar la duración del módulo (en meses) como número de cuotas
+            $numCuotas    = max(1, (int) $curso->duracion);
+            $especialidad = $curso->programa?->especialidad;
+        }
+
+        // 3) PROGRAMA o FORMACION_CONTINUA -> DURACIÓN DEL PROGRAMA (Pagos mensuales)
         if (in_array($this->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA], true)) {
             $programa = $this->horario?->programa;
 
@@ -351,9 +364,9 @@ class Matricula extends Model
     {
         $fechas = [];
 
-        // CASO 1: Pago Único (Curso / Módulo / Unidad)
+        // CASO 1: Pago Único (Curso / Unidad)
         // Se genera una sola fecha basada en el inicio del curso o la fecha actual
-        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::UNIDAD], true)) {
             $curso = $this->curso;
 
             if ($curso && $curso->fecha_inicio) {
@@ -361,8 +374,19 @@ class Matricula extends Model
             } else {
                 $fechas[] = Carbon::today()->endOfMonth();
             }
-        } 
-        // CASO 2: Programa Completo (Mensualidades)
+        }
+        // CASO 2: Módulo (Formación Continua) -> Mensualidades según fechas del módulo
+        elseif ($this->tipo_matricula === TipoMatricula::MODULO) {
+            $curso = $this->curso;
+            $inicio = ($curso && $curso->fecha_inicio)
+                ? Carbon::parse($curso->fecha_inicio)
+                : Carbon::today();
+
+            for ($i = 0; $i < $numCuotas; $i++) {
+                $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
+            }
+        }
+        // CASO 3: Programa Completo (Mensualidades)
         // Se generan N fechas mensuales consecutivas desde el inicio del programa
         else {
             $programa = $this->horario?->programa;
