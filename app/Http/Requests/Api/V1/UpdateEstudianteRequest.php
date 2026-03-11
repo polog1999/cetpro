@@ -25,7 +25,7 @@ class UpdateEstudianteRequest extends FormRequest
             'estado_civil' => 'nullable|string|max:20',
             'fecha_nacimiento' => 'nullable|date',
             'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100|unique:estudiantes,email,' . $estudianteId,
+            'email' => 'nullable|email|max:100',
             'direccion' => 'nullable|string|max:200',
             'grado_instruccion' => 'nullable|string',
             'provincia' => 'nullable|string',

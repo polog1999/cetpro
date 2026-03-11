@@ -34,7 +34,7 @@ class StoreEstudianteRequest extends FormRequest
             'estado_civil' => 'nullable|string|max:20',
             'fecha_nacimiento' => 'nullable|date',
             'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100|unique:estudiantes,email',
+            'email' => 'nullable|email|max:100',
             'direccion' => 'nullable|string|max:200',
             
             // Campos adicionales
