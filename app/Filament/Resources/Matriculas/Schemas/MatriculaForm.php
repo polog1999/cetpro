@@ -821,53 +821,24 @@ class MatriculaForm
                             return [];
                         }
 
-                        $hoy = now()->startOfDay();
+
 
                         // Obtener cursos ordenados por fecha de inicio
                         return $horario->programa
                             ->cursos()
                             ->orderBy('fecha_inicio', 'asc')
                             ->get()
-                            ->mapWithKeys(function ($curso) use ($hoy) {
+                            ->mapWithKeys(function ($curso) {
                                 $fechaInicio = $curso->fecha_inicio ? \Carbon\Carbon::parse($curso->fecha_inicio) : null;
-                                $estado = '';
-                                
-                                if ($fechaInicio && $fechaInicio < $hoy) {
-                                    $estado = ' [YA INICIÓ]';
-                                }
-                                
                                 $fechaTexto = $fechaInicio ? $fechaInicio->format('d/m/Y') : 'Sin fecha';
                                 
                                 return [
-                                    $curso->id_curso => $curso->nombre_curso . ' | Inicio: ' . $fechaTexto . $estado
+                                    $curso->id_curso => $curso->nombre_curso . ' | Inicio: ' . $fechaTexto
                                 ];
                             })
                             ->toArray();
                     })
-                    ->disableOptionWhen(function (string $value, Get $get) {
-                        $horarioId = $get('horario_id');
-                        if (!$horarioId) return true;
-
-                        $horario = Horario::with('programa.cursos')->find($horarioId);
-                        if (!$horario || !$horario->programa) return true;
-
-                        $hoy = now()->startOfDay();
-                        
-                        // Obtener el primer curso cuya fecha de inicio sea >= hoy
-                        $primerCursoDisponible = $horario->programa
-                            ->cursos()
-                            ->whereNotNull('fecha_inicio')
-                            ->whereDate('fecha_inicio', '>=', $hoy)
-                            ->orderBy('fecha_inicio', 'asc')
-                            ->first();
-                        
-                        // Si no hay cursos disponibles, deshabilitar todo
-                        if (!$primerCursoDisponible) return true;
-                        
-                        // Solo habilitar el primer curso disponible
-                        return (int) $value !== $primerCursoDisponible->id_curso;
-                    })
-                    ->helperText('Solo puede matricularse en el curso con fecha de inicio más próxima. Los cursos que ya iniciaron están deshabilitados.')
+                    ->helperText('Seleccione el curso o módulo en el que desea matricularse.')
                     ->searchable()
                     ->live()
                     // visible solo para CURSO y MODULO y UNIDAD
