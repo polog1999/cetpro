@@ -23,3 +23,13 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+config/database.php
+config/mail.php
+config/services.php
+config/sanctum.php
+config/session.php
+config/view.php
+bootstrap/cache/*.php
+storage/*.log
+storage/*.key
+storage/app/public
