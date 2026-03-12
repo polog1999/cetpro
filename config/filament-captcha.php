@@ -10,7 +10,7 @@ return [
     'length' => 5,
 
     // solo caracteres fáciles de distinguir
-    'charset' => '1 23456789',
+    'charset' => '123456789',
 
     'background_color' => [255, 255, 255],
 
