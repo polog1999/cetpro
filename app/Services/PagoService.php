@@ -70,6 +70,22 @@ class PagoService
             ]);
         }
 
+        // Intentar anular también en Oracle si existe num_liquidacion
+        if (!empty($pago->num_liquidacion)) {
+            try {
+                $oracleService = app(OracleTusneService::class);
+
+                if ($oracleService->verificarConexion()) {
+                    $oracleService->anularLiquidacion($pago->num_liquidacion);
+                } else {
+                    \Log::warning('Oracle no disponible al anular pago', ['pago_id' => $pago->id, 'num_liquidacion' => $pago->num_liquidacion]);
+                }
+            } catch (\Exception $e) {
+                // No detener el flujo local por fallos en Oracle, solo loguear
+                \Log::error('Error al anular liquidación en Oracle: ' . $e->getMessage(), ['pago_id' => $pago->id, 'num_liquidacion' => $pago->num_liquidacion]);
+            }
+        }
+
         $this->pagos->update($pago, [
             'estado' => 'Anulado',
         ]);

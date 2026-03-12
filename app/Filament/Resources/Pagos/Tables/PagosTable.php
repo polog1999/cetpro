@@ -434,7 +434,7 @@ class PagosTable
                     ->action(function (Pago $record) {
                         $service = app(\App\Services\PagoService::class);
                         try {
-                            $service->anularPagoCompleto($record);
+                            $service->anularPago($record);
                             \Filament\Notifications\Notification::make()
                                 ->title('Pago anulado correctamente')
                                 ->success()
