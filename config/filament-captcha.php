@@ -4,19 +4,13 @@ use Filament\Support\Enums\Size;
 
 return [
 
-    // optional, default is 5
-    // 'length' => 4,
+    'width' => 180,
+    'height' => 50,
 
-    // optional, default is 'abcdefghijklmnpqrstuvwxyz123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    // 'charset' => '123456789',
-
-    // Tamaño de la imagen CAPTCHA
-    'width' => 380,    // ancho igual que los inputs
-    'height' => 80,   // alto suficiente para que no se corte el texto
-
-    // Opciones adicionales
     'length' => 5,
-    'charset' => 'abcdefghijklmnpqrstuvwxyz123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+
+    // solo caracteres fáciles de distinguir
+    'charset' => '1 23456789',
 
     'background_color' => [255, 255, 255],
 
