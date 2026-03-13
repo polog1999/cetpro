@@ -56,7 +56,7 @@ class PagoResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Filament::auth()->user();
-        return $user?->role?->es_admin || $user?->canAccessResource('pagos') || false;
+        return $user?->esAdmin() || $user?->canAccessResource('pagos') || false;
     }
 
     public static function canCreate(): bool

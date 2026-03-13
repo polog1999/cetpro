@@ -92,6 +92,14 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
+     * Verificar si el usuario es administrador
+     */
+    public function esAdmin(): bool
+    {
+        return $this->role?->es_admin ?? false;
+    }
+
+    /**
      * Verificar si el usuario puede acceder a un recurso
      */
     public function canAccessResource(string $recurso): bool

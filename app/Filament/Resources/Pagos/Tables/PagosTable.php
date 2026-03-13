@@ -425,7 +425,7 @@ class PagosTable
                     ->color('danger')
                     ->visible(fn (Pago $record): bool => 
                         strtolower($record->estado) === 'pendiente' && 
-                        (auth()->user()->role?->es_admin ?? false)
+                        auth()->user()->esAdmin()
                     )
                     ->requiresConfirmation()
                     ->modalHeading('¿Seguro que desea anular este pago?')
