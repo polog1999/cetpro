@@ -46,8 +46,8 @@ class OracleTusneService
 
         $host = config('database.connections.oracle.host');
         $port = config('database.connections.oracle.port', '1521');
-        $sid = config('database.connections.oracle.sid');
-        #$serviceName = config('database.connections.oracle.service_name');
+        #$sid = config('database.connections.oracle.sid');
+        $serviceName = config('database.connections.oracle.service_name');
         $database = config('database.connections.oracle.database');
         $username = config('database.connections.oracle.username');
         $password = config('database.connections.oracle.password');
@@ -55,9 +55,9 @@ class OracleTusneService
 
         // Construir connection string para Oracle usando SERVICE_NAME
         // Formato: //host:port/service_name
-        $connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
+        #$connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
         
-        #$connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
+        $connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
 
         $this->connection = @oci_connect($username, $password, $connectionString, $charset);
 
