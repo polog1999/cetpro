@@ -17,11 +17,25 @@ class TopMorosidadTable extends BaseWidget
     protected static ?int $sort = 6;
     protected int | string | array $columnSpan = 'full';
     
+    public function rendering(): void
+    {
+        $this->getTable();
+    }
+
     public function table(Table $table): Table
     {
         $dashboardService = app(DashboardService::class);
         
         $filters = [];
+        
+        if ($this->filters['desde'] ?? null) {
+            $filters['desde'] = \Carbon\Carbon::parse($this->filters['desde']);
+        }
+        
+        if ($this->filters['hasta'] ?? null) {
+            $filters['hasta'] = \Carbon\Carbon::parse($this->filters['hasta']);
+        }
+
         if ($this->filters['programa_id'] ?? null) {
             $filters['programa_id'] = $this->filters['programa_id'];
         }
