@@ -38,6 +38,7 @@ class StudentPortalController extends Controller
         $pagos = \App\Models\Pago::whereHas('cronograma.matricula', function ($query) use ($estudiante) {
             $query->where('estudiante_id', $estudiante->id);
         })
+        ->whereRaw("LOWER(estado) NOT LIKE '%anulado%'")
         ->with(['cronograma.matricula.horario.programa'])
         ->orderBy('nro_cuota', 'asc')
         ->get();

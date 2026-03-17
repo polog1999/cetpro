@@ -72,12 +72,13 @@
                             @if($matricula->cronograma && $matricula->cronograma->pagos->count() > 0)
                                 <div class="flex items-center space-x-1">
                                     @php
-                                        $pagados = $matricula->cronograma->pagos->filter(fn($p) => str_contains(strtolower($p->estado ?? ''), 'cancelado'))->count();
-                                        $total = $matricula->cronograma->pagos->count();
+                                        $pagosActivos = $matricula->cronograma->pagos->filter(fn($p) => !str_contains(strtolower($p->estado ?? ''), 'anulado'));
+                                        $pagados = $pagosActivos->filter(fn($p) => str_contains(strtolower($p->estado ?? ''), 'cancelado'))->count();
+                                        $total = $pagosActivos->count();
                                     @endphp
                                     <span class="text-sm text-slate-600">{{ $pagados }}/{{ $total }}</span>
                                     <div class="w-16 bg-slate-200 rounded-full h-1.5">
-                                        <div class="bg-primary-600 h-1.5 rounded-full" style="width: {{ ($pagados / $total) * 100 }}%"></div>
+                                        <div class="bg-primary-600 h-1.5 rounded-full" style="width: {{ $total > 0 ? ($pagados / $total) * 100 : 0 }}%"></div>
                                     </div>
                                 </div>
                             @else
