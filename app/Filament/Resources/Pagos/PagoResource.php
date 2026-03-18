@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Pagos;
 use App\Filament\Resources\Pagos\Pages\CreatePago;
 use App\Filament\Resources\Pagos\Pages\EditPago;
 use App\Filament\Resources\Pagos\Pages\ListPagos;
+use App\Filament\Resources\Pagos\Pages\ReasignarPagos;
 use App\Filament\Resources\Pagos\Schemas\PagoForm;
 use App\Filament\Resources\Pagos\Tables\PagosTable;
 use App\Models\Pago;
@@ -49,6 +50,7 @@ class PagoResource extends Resource
             'index' => ListPagos::route('/'),
             'create' => CreatePago::route('/create'),
             'edit' => EditPago::route('/{record}/edit'),
+            'reasignar' => ReasignarPagos::route('/reasignar'),
         ];
     }
 

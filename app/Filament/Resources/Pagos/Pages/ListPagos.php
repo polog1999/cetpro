@@ -121,6 +121,11 @@ class ListPagos extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            \Filament\Actions\Action::make('reasignar_pagos')
+                ->label('Reasignar pagos')
+                ->color('danger')
+                ->url(fn (): string => PagoResource::getUrl('reasignar'))
+                ->visible(fn (): bool => \Filament\Facades\Filament::auth()->user()?->esAdmin() ?? false),
             // Botón de crear deshabilitado porque los pagos se generan automáticamente
         ];
     }
