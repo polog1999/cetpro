@@ -70,7 +70,6 @@ class Dashboard extends BaseDashboard
             
             // 4. Tablas (full width)
             \App\Filament\Widgets\ActividadRecienteTable::class,
-            \App\Filament\Widgets\TopMorosidadTable::class,
             
             // 5. Widget para profesores
             \App\Filament\Widgets\NotasSummaryWidget::class,
