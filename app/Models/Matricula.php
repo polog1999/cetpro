@@ -136,6 +136,16 @@ class Matricula extends Model
 
             $duracion     = $programa->duracion;     // Duración global en meses
             $numCuotas    = (int) $duracion;         // 1 cuota por mes
+            
+            // Restar meses transcurridos desde el inicio del programa
+            $minFechaCurso = $programa->cursos()->min('fecha_inicio');
+            $mesesTranscurridos = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
+            
+            if ($mesesTranscurridos > 0) {
+                // Dejamos al menos 1 cuota si ya se pasó toda la duración
+                $numCuotas = max(1, $numCuotas - $mesesTranscurridos);
+            }
+            
             $especialidad = $programa->especialidad;
         }
 
@@ -391,18 +401,25 @@ class Matricula extends Model
         else {
             $programa = $this->horario?->programa;
             $inicio = Carbon::today(); // Default
+            
+            $mesesOffset = 0;
 
             // Obtener fecha de inicio real del programa (min fecha inicio de cursos)
             if ($programa) {
                 $minFechaCurso = $programa->cursos()->min('fecha_inicio');
                 if ($minFechaCurso) {
                     $inicio = Carbon::parse($minFechaCurso);
+                    
+                    // Solo aplicar el offset de meses transcurridos si es Programa o Formacion Continua
+                    if (in_array($this->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA], true)) {
+                        $mesesOffset = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
+                    }
                 }
             }
 
             // Generar cuotas mensuales consecutivas
             for ($i = 0; $i < $numCuotas; $i++) {
-                $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
+                $fechas[] = $inicio->copy()->addMonths($i + $mesesOffset)->endOfMonth();
             }
         }
 
@@ -421,6 +438,30 @@ class Matricula extends Model
         }
 
         return $fechas;
+    }
+
+    /**
+     * Calcula los meses transcurridos desde el inicio del programa hasta hoy,
+     * para descontar cuotas.
+     */
+    protected function calcularMesesTranscurridosParaDescuento(?string $fechaInicio): int
+    {
+        if (!$fechaInicio) {
+            return 0;
+        }
+        
+        $inicio = Carbon::parse($fechaInicio);
+        $hoy = Carbon::today();
+        
+        if ($hoy->format('Y-m') >= $inicio->format('Y-m')) {
+            $diffMeses = ($hoy->year - $inicio->year) * 12 + ($hoy->month - $inicio->month);
+            
+            // Si se ha pasado el día 5 del mes presente, se considera que ese mes también transcurrió
+            $meses = ($hoy->day > 5) ? $diffMeses + 1 : $diffMeses;
+            return max(0, $meses);
+        }
+        
+        return 0;
     }
 
     /**

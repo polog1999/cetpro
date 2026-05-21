@@ -77,10 +77,13 @@ class MatriculaService
         int $estudianteId, 
         int $horarioId, 
         ?int $matriculaIdIgnorar = null,
-        ?TipoMatricula $tipoMatricula = null,
+        string|TipoMatricula|null $tipoMatricula = null,
         ?int $cursoId = null,
         ?int $unidadId = null
     ): array {
+        if (is_string($tipoMatricula)) {
+            $tipoMatricula = TipoMatricula::tryFrom($tipoMatricula);
+        }
         $existe = $this->tieneMatriculaDuplicada(
             $estudianteId, 
             $horarioId,
@@ -416,11 +419,14 @@ class MatriculaService
     public function tieneMatriculaDuplicada(
         int $estudianteId, 
         int $horarioId,
-        ?TipoMatricula $tipoMatricula = null,
+        string|TipoMatricula|null $tipoMatricula = null,
         ?int $cursoId = null,
         ?int $matriculaIdIgnorar = null,
         ?int $unidadId = null
     ): bool {
+        if (is_string($tipoMatricula)) {
+            $tipoMatricula = TipoMatricula::tryFrom($tipoMatricula);
+        }
         $query = Matricula::where('estudiante_id', $estudianteId)
             ->where('estado', '!=', EstadoMatricula::ANULADO);
         
@@ -430,7 +436,8 @@ class MatriculaService
         }
         
         // Lógica diferenciada según tipo de matrícula
-        if ($tipoMatricula === TipoMatricula::CURSO && $cursoId) {
+        if ($tipoMatricula === TipoMatricula::CURSO) {
+            if (!$cursoId) return false;
             // Para CURSO: solo es duplicado si es el mismo curso exacto
             return $query
                 ->where('id_curso', $cursoId)
@@ -439,7 +446,8 @@ class MatriculaService
         }
         
         // MODULO se comporta igual que CURSO: permite múltiples módulos diferentes
-        if ($tipoMatricula === TipoMatricula::MODULO && $cursoId) {
+        if ($tipoMatricula === TipoMatricula::MODULO) {
+            if (!$cursoId) return false;
             // Para MODULO: solo es duplicado si es el mismo módulo exacto
             return $query
                 ->where('id_curso', $cursoId)
@@ -449,7 +457,8 @@ class MatriculaService
         
         // UNIDAD: permite matricularse en cualquier unidad sin restricción de orden
         // Solo es duplicado si ya existe matrícula en la misma unidad exacta
-        if ($tipoMatricula === TipoMatricula::UNIDAD && $unidadId) {
+        if ($tipoMatricula === TipoMatricula::UNIDAD) {
+            if (!$unidadId) return false;
             return $query
                 ->where('id_unidad', $unidadId)
                 ->where('tipo_matricula', TipoMatricula::UNIDAD->value)
