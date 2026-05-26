@@ -386,7 +386,21 @@ class RegistrarAlumnosAntiguos extends Page implements HasForms
             }
         }
         
-        $fechaNac = !empty($datos['MCNFECNAC']) ? Carbon::parse($datos['MCNFECNAC'])->format('Y-m-d') : null;
+        // Parsear fecha en formato DD/MM/YY de Oracle
+        $fechaNac = null;
+        if (!empty($datos['MCNFECNAC'])) {
+            try {
+                // Oracle devuelve fechas como "DD/MM/YY", e.g., "26/04/05"
+                $fechaNac = Carbon::createFromFormat('d/m/y', $datos['MCNFECNAC'])->format('Y-m-d');
+            } catch (\Exception $e) {
+                // Si falla, intentar parsearlo de otra forma
+                try {
+                    $fechaNac = Carbon::parse($datos['MCNFECNAC'])->format('Y-m-d');
+                } catch (\Exception $e2) {
+                    $fechaNac = null;
+                }
+            }
+        }
 
         // DEBUG: Mostrar notificación para confirmar que entra aquí
         Notification::make()
