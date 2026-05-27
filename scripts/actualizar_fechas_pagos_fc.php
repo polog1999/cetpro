@@ -26,14 +26,28 @@ use Carbon\Carbon;
 // =====================================================
 // CONFIGURACIÓN: Especificar el programa a actualizar
 // =====================================================
-// Puedes buscar por nombre (parcial) o por ID del programa.
-// Descomentar y ajustar la opción deseada:
+// Antes de ejecutar, define la variable $busqueda o $programaId en Tinker:
+//
+//   $busqueda = 'CASACAS PARA DAMA'; require 'scripts/actualizar_fechas_pagos_fc.php';
+//
+// O por ID:
+//   $programaId = 1; require 'scripts/actualizar_fechas_pagos_fc.php';
+//
 
-// OPCIÓN 1: Buscar por nombre (busca coincidencia parcial)
-$busqueda = 'CASACAS PARA DAMA';
-
-// OPCIÓN 2: Buscar por ID del programa
-// $programaId = 1;
+if (!isset($busqueda) && !isset($programaId)) {
+    echo "❌ Debes especificar el programa antes de ejecutar el script.\n\n";
+    echo "   Uso:\n";
+    echo "   \$busqueda = 'NOMBRE DEL PROGRAMA'; require 'scripts/actualizar_fechas_pagos_fc.php';\n";
+    echo "   \$programaId = 1; require 'scripts/actualizar_fechas_pagos_fc.php';\n\n";
+    echo "   Programas de Formación Continua disponibles:\n";
+    Programa::where('tipo_programa', TipoPrograma::FORMACION_CONTINUA)
+        ->get()
+        ->each(function ($p) {
+            echo "   - [{$p->id_programa}] {$p->nombre_programa} (Duración: {$p->duracion} meses)\n";
+        });
+    echo "\n";
+    return;
+}
 
 // =====================================================
 
