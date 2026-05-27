@@ -63,6 +63,20 @@ class LegacyRegistrationService
         
         $estudiante = Estudiante::where('nro_documento', $nroDocumento)->first();
 
+        // Parsear fecha en formato DD/MM/YY de Oracle
+        $fechaNac = null;
+        if (!empty($data['MCNFECNAC'])) {
+            try {
+                $fechaNac = Carbon::createFromFormat('d/m/y', $data['MCNFECNAC']);
+            } catch (\Exception $e) {
+                try {
+                    $fechaNac = Carbon::parse($data['MCNFECNAC']);
+                } catch (\Exception $e2) {
+                    $fechaNac = null;
+                }
+            }
+        }
+
         $estudianteData = [
             'tipo_documento'    => $tipoDocStr,
             'nro_documento'     => $nroDocumento,
@@ -70,7 +84,7 @@ class LegacyRegistrationService
             'apellido_paterno'  => trim($data['MCNAPEPAT'] ?? ''),
             'apellido_materno'  => trim($data['MCNAPEMAT'] ?? ''),
             'genero'            => $data['SEXO'] === 'F' ? TipoGenero::FEMENINO : TipoGenero::MASCULINO,
-            'fecha_nacimiento'  => !empty($data['MCNFECNAC']) ? Carbon::parse($data['MCNFECNAC']) : null,
+            'fecha_nacimiento'  => $fechaNac,
             'telefono'          => $data['MCNROTELE'] ?? $data['MCNTELE'] ?? null,
             'direccion'         => $data['MCNDIRE'] ?? null,
             'email'             => $data['MCNEMAIL'] ?? null,

@@ -77,17 +77,26 @@ class ListPagos extends ListRecords
                         // Actualizar fecha de pago
                         if (!empty($datosOracle->PAGADO)) {
                             try {
-                                $fechaPago = \Carbon\Carbon::createFromFormat('d/m/Y', $datosOracle->PAGADO);
+                                // Intentar primero con 2 dígitos de año (d/m/y)
+                                $fechaPago = \Carbon\Carbon::createFromFormat('d/m/y', $datosOracle->PAGADO);
                                 if ($pago->fecha_pago != $fechaPago) {
                                     $cambios['fecha_pago'] = $fechaPago;
                                 }
                             } catch (\Exception $e) {
                                 try {
-                                    $fechaPago = \Carbon\Carbon::parse($datosOracle->PAGADO);
+                                    // Intentar con 4 dígitos de año (d/m/Y)
+                                    $fechaPago = \Carbon\Carbon::createFromFormat('d/m/Y', $datosOracle->PAGADO);
                                     if ($pago->fecha_pago != $fechaPago) {
                                         $cambios['fecha_pago'] = $fechaPago;
                                     }
-                                } catch (\Exception $e2) {}
+                                } catch (\Exception $e2) {
+                                    try {
+                                        $fechaPago = \Carbon\Carbon::parse($datosOracle->PAGADO);
+                                        if ($pago->fecha_pago != $fechaPago) {
+                                            $cambios['fecha_pago'] = $fechaPago;
+                                        }
+                                    } catch (\Exception $e3) {}
+                                }
                             }
                         } else {
                             // Oracle tiene NULL, limpiar en PostgreSQL

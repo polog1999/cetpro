@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
+use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 /**
  * Servicio para consultas a base de datos Oracle externa (TUSNE).
- * 
+ *
  * Consulta las vistas:
  * - ds_valores.VU_CETPRO_BUS (búsqueda de personas)
  * - DS_VALORES.VU_BUSCA_TUSNE_PER_Pen (personas pendientes)
- * 
+ *
  * Usa la extensión OCI8 nativa de PHP para conectar a Oracle.
  */
 class OracleTusneService
@@ -36,6 +36,7 @@ class OracleTusneService
      * Crea la conexión OCI8 a Oracle.
      *
      * @return resource
+     *
      * @throws Exception
      */
     protected function getConnection()
@@ -44,9 +45,13 @@ class OracleTusneService
             return $this->connection;
         }
 
+        // if (!function_exists('oci_connect')) {
+        //     throw new Exception('La extensión OCI8 no está instalada o habilitada en PHP.');
+        // }
+
         $host = config('database.connections.oracle.host');
         $port = config('database.connections.oracle.port', '1521');
-        #$sid = config('database.connections.oracle.sid');
+        // $sid = config('database.connections.oracle.sid');
         $serviceName = config('database.connections.oracle.service_name');
         $database = config('database.connections.oracle.database');
         $username = config('database.connections.oracle.username');
@@ -55,13 +60,13 @@ class OracleTusneService
 
         // Construir connection string para Oracle usando SERVICE_NAME
         // Formato: //host:port/service_name
-        #$connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
-        
+        // $connectionString = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$sid})))";
+
         $connectionString = "//{$host}:{$port}/" . ($serviceName ?: $database);
 
         $this->connection = @oci_connect($username, $password, $connectionString, $charset);
 
-        if (!$this->connection) {
+        if (! $this->connection) {
             $error = oci_error();
             $message = $error ? $error['message'] : 'Error desconocido al conectar a Oracle';
             $this->lastError = $message;
@@ -73,29 +78,28 @@ class OracleTusneService
 
     /**
      * Verifica si la conexión Oracle está disponible.
-     *
-     * @return bool
      */
     public function verificarConexion(): bool
     {
         try {
             $this->getConnection();
+
             return true;
         } catch (Exception $e) {
-            Log::error('Error de conexión Oracle: ' . $e->getMessage());
+            Log::error('Error de conexión Oracle: '.$e->getMessage());
+
             return false;
         }
     }
 
     /**
      * Obtiene mensaje de error de conexión.
-     *
-     * @return string|null
      */
     public function obtenerErrorConexion(): ?string
     {
         try {
             $this->getConnection();
+
             return null;
         } catch (Exception $e) {
             return $e->getMessage();
@@ -105,9 +109,9 @@ class OracleTusneService
     /**
      * Ejecuta una consulta y retorna los resultados como Collection.
      *
-     * @param string $sql Consulta SQL
-     * @param array $params Parámetros nombrados [:param => value]
-     * @return Collection
+     * @param  string  $sql  Consulta SQL
+     * @param  array  $params  Parámetros nombrados [:param => value]
+     *
      * @throws Exception
      */
     protected function executeQuery(string $sql, array $params = []): Collection
@@ -115,7 +119,7 @@ class OracleTusneService
         $conn = $this->getConnection();
         $stmt = oci_parse($conn, $sql);
 
-        if (!$stmt) {
+        if (! $stmt) {
             $error = oci_error($conn);
             throw new Exception($error['message'] ?? 'Error al parsear SQL');
         }
@@ -131,7 +135,7 @@ class OracleTusneService
         // Por ejemplo, la función fu_digito_generar puede hacer INSERTs internamente
         $result = @oci_execute($stmt, OCI_COMMIT_ON_SUCCESS);
 
-        if (!$result) {
+        if (! $result) {
             $error = oci_error($stmt);
             throw new Exception($error['message'] ?? 'Error al ejecutar consulta');
         }
@@ -148,16 +152,16 @@ class OracleTusneService
 
     /**
      * Busca personas en la vista VU_CETPRO_BUS.
-     * 
+     *
      * Permite búsqueda por:
      * - Nombre (búsqueda parcial con LIKE)
      * - Número de documento (búsqueda exacta)
      * - Código (búsqueda exacta)
      *
-     * @param string|null $nombre Nombre a buscar (parcial)
-     * @param string|null $numDoc Número de documento (exacto)
-     * @param string|null $codigo Código (exacto)
-     * @return Collection
+     * @param  string|null  $nombre  Nombre a buscar (parcial)
+     * @param  string|null  $numDoc  Número de documento (exacto)
+     * @param  string|null  $codigo  Código (exacto)
+     *
      * @throws Exception Si hay error en la consulta
      */
     public function buscarPersona(
@@ -169,18 +173,18 @@ class OracleTusneService
             $conditions = [];
             $params = [];
 
-            if (!empty($nombre)) {
-                $conditions[] = "NOMBRE LIKE :nombre";
-                $params[':nombre'] = '%' . strtoupper($nombre) . '%';
+            if (! empty($nombre)) {
+                $conditions[] = 'NOMBRE LIKE :nombre';
+                $params[':nombre'] = '%'.strtoupper($nombre).'%';
             }
 
-            if (!empty($numDoc)) {
-                $conditions[] = "NUMDOC = :numdoc";
+            if (! empty($numDoc)) {
+                $conditions[] = 'NUMDOC = :numdoc';
                 $params[':numdoc'] = $numDoc;
             }
 
-            if (!empty($codigo)) {
-                $conditions[] = "CODIGO = :codigo";
+            if (! empty($codigo)) {
+                $conditions[] = 'CODIGO = :codigo';
                 $params[':codigo'] = strtoupper($codigo);
             }
 
@@ -193,7 +197,7 @@ class OracleTusneService
 
             return $this->executeQuery($sql, $params);
         } catch (Exception $e) {
-            Log::error('Error en buscarPersona Oracle: ' . $e->getMessage(), [
+            Log::error('Error en buscarPersona Oracle: '.$e->getMessage(), [
                 'nombre' => $nombre,
                 'numDoc' => $numDoc,
                 'codigo' => $codigo,
@@ -205,8 +209,8 @@ class OracleTusneService
     /**
      * Busca personas pendientes por código en la vista VU_BUSCA_TUSNE_PER_Pen.
      *
-     * @param string $codigo Código de la persona
-     * @return Collection
+     * @param  string  $codigo  Código de la persona
+     *
      * @throws Exception Si hay error en la consulta
      */
     public function buscarPersonaPendiente(string $codigo): Collection
@@ -214,10 +218,10 @@ class OracleTusneService
         try {
             $sql = "SELECT * FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen WHERE CODIGO = :codigo";
             $codigoUpper = strtoupper($codigo);
-            
+
             return $this->executeQuery($sql, [':codigo' => $codigoUpper]);
         } catch (Exception $e) {
-            Log::error('Error en buscarPersonaPendiente Oracle: ' . $e->getMessage(), [
+            Log::error('Error en buscarPersonaPendiente Oracle: '.$e->getMessage(), [
                 'codigo' => $codigo,
             ]);
             throw $e;
@@ -226,14 +230,15 @@ class OracleTusneService
 
     /**
      * Obtiene el código de contribuyente más reciente por número de documento.
-     * 
+     *
      * Retorna únicamente el código con la fecha de emisión (EMITIDO) más reciente,
      * realizando un JOIN entre VU_CETPRO_BUS y VU_BUSCA_TUSNE_PER_Pen.
-     * 
+     *
      * IMPORTANTE: Solo considera códigos que empiecen con 'C'.
      *
-     * @param string $numDoc Número de documento
+     * @param  string  $numDoc  Número de documento
      * @return object|null Objeto con CODIGO, EMITIDO y CONCEPTO, o null si no existe
+     *
      * @throws Exception Si hay error en la consulta
      */
     public function obtenerCodigoContribuyenteMasReciente(string $numDoc): ?object
@@ -256,11 +261,12 @@ class OracleTusneService
                     TO_DATE(l.EMITIDO, 'DD/MM/YYYY') DESC
                 FETCH FIRST 1 ROWS ONLY
             ";
-            
+
             $resultados = $this->executeQuery($sql, [':numdoc' => $numDoc]);
+
             return $resultados->first();
         } catch (Exception $e) {
-            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: ' . $e->getMessage(), [
+            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: '.$e->getMessage(), [
                 'numDoc' => $numDoc,
             ]);
             throw $e;
@@ -269,13 +275,14 @@ class OracleTusneService
 
     /**
      * Genera un código de liquidación usando la función Oracle fu_digito_generar.
-     * 
+     *
      * Esta función Oracle genera códigos únicos de liquidación para los pagos
      * de estudiantes matriculados.
      *
-     * @param string $codigoEspecialidad Código B000X según especialidad (B0001, B0002, B0003)
-     * @param string $codigoContribuyente Código de contribuyente del estudiante
+     * @param  string  $codigoEspecialidad  Código B000X según especialidad (B0001, B0002, B0003)
+     * @param  string  $codigoContribuyente  Código de contribuyente del estudiante
      * @return string|null Código de liquidación generado o null si falla
+     *
      * @throws Exception Si hay error en la consulta
      */
     public function generarCodigoLiquidacion(
@@ -293,15 +300,15 @@ class OracleTusneService
                 ) AS LIQUIDACION
                 FROM DUAL
             ";
-            
+
             $resultado = $this->executeQuery($sql, [
                 ':codigo_especialidad' => $codigoEspecialidad,
                 ':codigo_contribuyente' => $codigoContribuyente,
             ]);
-            
+
             return $resultado->first()?->LIQUIDACION;
         } catch (Exception $e) {
-            Log::error('Error generando código de liquidación Oracle: ' . $e->getMessage(), [
+            Log::error('Error generando código de liquidación Oracle: '.$e->getMessage(), [
                 'codigo_especialidad' => $codigoEspecialidad,
                 'codigo_contribuyente' => $codigoContribuyente,
             ]);
@@ -311,25 +318,26 @@ class OracleTusneService
 
     /**
      * Obtiene el estado de una liquidación desde Oracle.
-     * 
+     *
      * Consulta la vista VU_BUSCA_TUSNE_PER_Pen para obtener el estado
      * de un número de liquidación específico.
      *
-     * @param string $numLiquidacion Número de liquidación (ej: 1312202605662284)
+     * @param  string  $numLiquidacion  Número de liquidación (ej: 1312202605662284)
      * @return string|null Estado de la liquidación (ej: 'Pendiente 2026') o null si no existe
      */
     public function obtenerEstadoLiquidacion(string $numLiquidacion): ?string
     {
         try {
             $sql = "SELECT ESTADO FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen WHERE LIQUIDACION = :liquidacion";
-            
+
             $resultado = $this->executeQuery($sql, [':liquidacion' => $numLiquidacion]);
-            
+
             return $resultado->first()?->ESTADO;
         } catch (Exception $e) {
-            Log::warning('Error obteniendo estado de liquidación Oracle: ' . $e->getMessage(), [
+            Log::warning('Error obteniendo estado de liquidación Oracle: '.$e->getMessage(), [
                 'num_liquidacion' => $numLiquidacion,
             ]);
+
             return null;
         }
     }
@@ -337,14 +345,14 @@ class OracleTusneService
     /**
      * Busca una persona por su número de documento.
      *
-     * @param string $numDoc Número de documento
+     * @param  string  $numDoc  Número de documento
      * @return object|null Primera coincidencia o null
      */
     public function buscarPorDocumento(string $numDoc): ?object
     {
         $resultados = $this->buscarPersona(numDoc: $numDoc);
         $persona = $resultados->first();
-        
+
         if ($persona) {
             // Si encontramos a la persona, también buscamos sus pagos
             // Usamos el campo CODCON (o MCNCONTRIB dependiendo de la vista)
@@ -355,16 +363,15 @@ class OracleTusneService
                 $persona->PAGOS = collect([]);
             }
         }
-        
+
         return $persona;
     }
 
     /**
      * Obtiene los datos completos de una persona desde Oracle SMACARNOM.
      * Incluye datos personales y su historial de pagos.
-     * 
-     * @param string $nroDoc Número de documento (DNI)
-     * @return object|null 
+     *
+     * @param  string  $nroDoc  Número de documento (DNI)
      */
     public function obtenerDatosCompletosPersona(string $nroDoc): ?object
     {
@@ -372,21 +379,21 @@ class OracleTusneService
             $nroDoc = trim($nroDoc);
 
             // 1. Intentar búsqueda directa en SMACARNOM
-            $sqlPersona = "SELECT * FROM SMACARNOM WHERE TRIM(MCNNRODI) = :nrodi";
+            $sqlPersona = 'SELECT * FROM SMACARNOM WHERE TRIM(MCNNRODI) = :nrodi';
             $persona = $this->executeQuery($sqlPersona, [':nrodi' => $nroDoc])->first();
 
             // 2. Si no encuentra, intentar por VU_CETPRO_BUS (puede mapear DNI a CODCON)
-            if (!$persona) {
+            if (! $persona) {
                 $enBusqueda = $this->buscarPorDocumento($nroDoc);
                 $codigo = $enBusqueda->CODCON ?? $enBusqueda->MCNCONTRIB ?? null;
 
                 if ($codigo) {
-                    $sqlPersonaCod = "SELECT * FROM SMACARNOM WHERE MCNCONTRIB = :codigo";
+                    $sqlPersonaCod = 'SELECT * FROM SMACARNOM WHERE MCNCONTRIB = :codigo';
                     $persona = $this->executeQuery($sqlPersonaCod, [':codigo' => $codigo])->first();
                 }
             }
 
-            if (!$persona) {
+            if (! $persona) {
                 return null;
             }
 
@@ -400,7 +407,7 @@ class OracleTusneService
 
             return $persona;
         } catch (Exception $e) {
-            Log::error('Error en obtenerDatosCompletosPersona Oracle: ' . $e->getMessage(), [
+            Log::error('Error en obtenerDatosCompletosPersona Oracle: '.$e->getMessage(), [
                 'nroDoc' => $nroDoc,
             ]);
             throw $e;
@@ -410,28 +417,28 @@ class OracleTusneService
     /**
      * Busca una persona por su código.
      *
-     * @param string $codigo Código de la persona
+     * @param  string  $codigo  Código de la persona
      * @return object|null Primera coincidencia o null
      */
     public function buscarPorCodigo(string $codigo): ?object
     {
         $resultados = $this->buscarPersona(codigo: $codigo);
+
         return $resultados->first();
     }
 
     /**
      * Busca historial completo (datos + pagos/liquidaciones) por DNI.
      * Agrupa los resultados por Código de Contribuyente.
-     * 
-     * @param string $dni
+     *
      * @return array [ 'C001' => ['datos' => [...], 'pagos' => [...]], ... ]
      */
     public function buscarHistorialPorDni(string $dni): array
     {
         try {
             $dni = trim($dni);
-            
-            $sql = "
+
+            $sql = '
                 SELECT 
                     a.MCNAPENOMB, 
                     a.MCNNRODI, 
@@ -456,53 +463,53 @@ class OracleTusneService
                   ON a.DISTRICODI = d.DISTRICODI -- Join para distrito
                 WHERE TRIM(a.MCNNRODI) = :dni
                 ORDER BY b.EMITIDO DESC
-            ";
+            ';
 
             $resultados = $this->executeQuery($sql, [':dni' => $dni]);
-            
+
             // Agrupar por código de contribuyente
             $historial = [];
-            
+
             foreach ($resultados as $row) {
                 // Usamos el código que viene del pago (que es el nexo), o el de la persona
                 $codigoRaw = $row->CODIGO_PAGO ?? $row->CODIGO_ORIGEN;
-                $codigo = trim((string)$codigoRaw); 
-                
-                if (!isset($historial[$codigo])) {
+                $codigo = trim((string) $codigoRaw);
+
+                if (! isset($historial[$codigo])) {
                     $historial[$codigo] = [
                         'datos_personales' => [ // Array asociativo
-                            'MCNAPENOMB' => trim((string)$row->MCNAPENOMB),
-                            'MCNNRODI' => trim((string)$row->MCNNRODI),
+                            'MCNAPENOMB' => trim((string) $row->MCNAPENOMB),
+                            'MCNNRODI' => trim((string) $row->MCNNRODI),
                             'MCNCONTRIB' => $codigo,
                             'MCNFECNAC' => $row->MCNFECNAC,
-                            'SEXO'       => trim((string)$row->SEXO),
-                            'MCNAPEPAT'  => trim((string)$row->MCNAPEPAT), 
-                            'MCNAPEMAT'  => trim((string)$row->MCNAPEMAT),
-                            'MCNNOMBRE'  => trim((string)$row->MCNNOMBRE),
-                            'DISTRIDESC' => trim((string)$row->DISTRIDESC),
+                            'SEXO' => trim((string) $row->SEXO),
+                            'MCNAPEPAT' => trim((string) $row->MCNAPEPAT),
+                            'MCNAPEMAT' => trim((string) $row->MCNAPEMAT),
+                            'MCNNOMBRE' => trim((string) $row->MCNNOMBRE),
+                            'DISTRIDESC' => trim((string) $row->DISTRIDESC),
                         ],
-                        'pagos' => [] // Array simple
+                        'pagos' => [], // Array simple
                     ];
                 }
-                
+
                 // Agregar pago a la lista
-                if ($row->LIQUIDACION) { 
-                    $liquid = trim((string)$row->LIQUIDACION);
+                if ($row->LIQUIDACION) {
+                    $liquid = trim((string) $row->LIQUIDACION);
                     $historial[$codigo]['pagos'][] = [ // Array asociativo
-                        'CONCEPTO' => trim((string)$row->CONCEPTO),
+                        'CONCEPTO' => trim((string) $row->CONCEPTO),
                         'LIQUIDACION' => $liquid,
                         'IMPORTE' => $row->IMPORTE,
                         'EMITIDO' => $row->EMITIDO,
-                        'PAGADO' => trim((string)$row->PAGADO),
-                        'ESTADO' => trim((string)$row->ESTADO),
+                        'PAGADO' => trim((string) $row->PAGADO),
+                        'ESTADO' => trim((string) $row->ESTADO),
                     ];
                 }
             }
-            
+
             return $historial;
-            
+
         } catch (Exception $e) {
-            Log::error('Error buscarHistorialPorDni: ' . $e->getMessage());
+            Log::error('Error buscarHistorialPorDni: '.$e->getMessage());
             throw $e;
         }
     }
@@ -510,8 +517,7 @@ class OracleTusneService
     /**
      * Busca personas por nombre (búsqueda parcial).
      *
-     * @param string $nombre Nombre a buscar
-     * @return Collection
+     * @param  string  $nombre  Nombre a buscar
      */
     public function buscarPorNombre(string $nombre): Collection
     {
@@ -520,19 +526,18 @@ class OracleTusneService
 
     /**
      * Ejecuta una consulta SQL SELECT personalizada en Oracle.
-     * 
+     *
      * ⚠️ ADVERTENCIA: Use solo para consultas SELECT.
      *
-     * @param string $sql Consulta SQL
-     * @param array $params Parámetros de la consulta
-     * @return Collection
+     * @param  string  $sql  Consulta SQL
+     * @param  array  $params  Parámetros de la consulta
      */
     public function consultaSelect(string $sql, array $params = []): Collection
     {
         try {
             return $this->executeQuery($sql, $params);
         } catch (Exception $e) {
-            Log::error('Error en consulta Oracle personalizada: ' . $e->getMessage(), [
+            Log::error('Error en consulta Oracle personalizada: '.$e->getMessage(), [
                 'sql' => $sql,
             ]);
             throw $e;
@@ -542,9 +547,9 @@ class OracleTusneService
     /**
      * Ejecuta un INSERT/UPDATE/DELETE y retorna si fue exitoso.
      *
-     * @param string $sql Consulta SQL
-     * @param array $params Parámetros nombrados [:param => value]
-     * @return bool
+     * @param  string  $sql  Consulta SQL
+     * @param  array  $params  Parámetros nombrados [:param => value]
+     *
      * @throws Exception
      */
     protected function executeInsert(string $sql, array $params = []): bool
@@ -552,7 +557,7 @@ class OracleTusneService
         $conn = $this->getConnection();
         $stmt = oci_parse($conn, $sql);
 
-        if (!$stmt) {
+        if (! $stmt) {
             $error = oci_error($conn);
             throw new Exception($error['message'] ?? 'Error al parsear SQL');
         }
@@ -565,30 +570,33 @@ class OracleTusneService
 
         $result = @oci_execute($stmt, OCI_COMMIT_ON_SUCCESS);
 
-        if (!$result) {
+        if (! $result) {
             $error = oci_error($stmt);
             oci_free_statement($stmt);
             throw new Exception($error['message'] ?? 'Error al ejecutar INSERT');
         }
 
         oci_free_statement($stmt);
+
         return true;
     }
 
     /**
      * Anula (actualiza el estado) una liquidación en la tabla ADMIN.MACARGO.
      *
-     * @param string $numLiquidacion Código de liquidación (CGONUMERO)
+     * @param  string  $numLiquidacion  Código de liquidación (CGONUMERO)
      * @return bool True si se ejecutó correctamente
+     *
      * @throws Exception Si ocurre algún error en la ejecución
      */
     public function anularLiquidacion(string $numLiquidacion): bool
     {
         try {
             $sql = "UPDATE ADMIN.MACARGO SET CGOGESTADO='ERE03' WHERE CGONUMERO = :num";
+
             return $this->executeInsert($sql, [':num' => $numLiquidacion]);
         } catch (Exception $e) {
-            Log::error('Error al anular liquidación en Oracle: ' . $e->getMessage(), ['num_liquidacion' => $numLiquidacion]);
+            Log::error('Error al anular liquidación en Oracle: '.$e->getMessage(), ['num_liquidacion' => $numLiquidacion]);
             throw $e;
         }
     }
@@ -597,7 +605,6 @@ class OracleTusneService
      * Obtiene el siguiente código de contribuyente secuencial.
      * Formato: C0000001, C0000002, etc.
      *
-     * @return string
      * @throws Exception
      */
     public function obtenerSiguienteCodigoContribuyente(): string
@@ -608,20 +615,20 @@ class OracleTusneService
                 FROM SMACARNOM 
                 WHERE MCNCONTRIB LIKE 'C%'
             ";
-            
+
             $resultado = $this->executeQuery($sql, []);
             $ultimoCodigo = $resultado->first()?->ULTIMO_CODIGO;
-            
+
             if (empty($ultimoCodigo)) {
                 return 'C0000001';
             }
-            
+
             $numero = (int) substr($ultimoCodigo, 1);
             $nuevoNumero = $numero + 1;
-            
-            return 'C' . str_pad($nuevoNumero, 7, '0', STR_PAD_LEFT);
+
+            return 'C'.str_pad($nuevoNumero, 7, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
-            Log::error('Error obteniendo siguiente código contribuyente: ' . $e->getMessage());
+            Log::error('Error obteniendo siguiente código contribuyente: '.$e->getMessage());
             throw $e;
         }
     }
@@ -688,11 +695,11 @@ class OracleTusneService
     /**
      * Verifica si existe un contribuyente en Oracle por número de documento.
      * Busca directamente en SMACARNOM sin requerir pagos previos.
-     * 
+     *
      * Solo considera códigos que empiecen con "C" (Generados por sistema nuevo).
      * Ignora códigos antiguos con prefijo "S".
      *
-     * @param string $numDoc Número de documento
+     * @param  string  $numDoc  Número de documento
      * @return string|null Código de contribuyente (CODCON) o null si no existe
      */
     public function verificarContribuyenteExistente(string $numDoc): ?string
@@ -711,32 +718,33 @@ class OracleTusneService
 
             $resultado = $this->executeQuery($sql, [':numdoc' => $numDoc]);
             $codigo = $resultado->first()?->MCNCONTRIB;
-            
+
             if ($codigo) {
                 Log::info('Contribuyente existente (tipo C) encontrado en SMACARNOM', [
                     'codigo' => trim($codigo),
                     'nro_documento' => $numDoc,
                 ]);
+
                 return trim($codigo);
             }
-            
+
             return null;
         } catch (Exception $e) {
-            Log::error('Error verificando contribuyente existente: ' . $e->getMessage(), [
+            Log::error('Error verificando contribuyente existente: '.$e->getMessage(), [
                 'nro_documento' => $numDoc,
             ]);
+
             return null;
         }
     }
 
     /**
      * Crea un contribuyente en Oracle (tabla SMACARNOM).
-     * 
+     *
      * Primero verifica si ya existe en VU_CETPRO_BUS.
      * Si existe, retorna el código existente.
      * Si no existe, crea uno nuevo con prefijo 'C'.
      *
-     * @param \App\Models\Estudiante $estudiante
      * @return string|null Código de contribuyente generado/existente o null si falla
      */
     public function crearContribuyente(\App\Models\Estudiante $estudiante): ?string
@@ -750,25 +758,25 @@ class OracleTusneService
 
             // PASO 2: Si no existe, crear nuevo contribuyente
             $codigoContribuyente = $this->obtenerSiguienteCodigoContribuyente();
-            
+
             $tipoDocumento = $this->mapearTipoDocumento($estudiante->tipo_documento->value ?? 'DNI');
             $codigoDistrito = $this->mapearDistritoACodigo($estudiante->distrito?->value);
             $sexo = $this->mapearGenero($estudiante->genero?->value ?? 'Masculino');
-            
+
             // Nombre completo para MCNAPENOMB: "APELLIDOS, NOMBRES"
             $nombreCompleto = trim(strtoupper(
-                $estudiante->apellido_paterno . ' ' . 
-                $estudiante->apellido_materno . ', ' . 
+                $estudiante->apellido_paterno.' '.
+                $estudiante->apellido_materno.', '.
                 $estudiante->nombres
             ));
-            
+
             $fechaNacimiento = $estudiante->fecha_nacimiento?->format('d/m/Y');
-            
+
             // Preparar apellidos y nombres en mayúsculas
             $apellidoPaterno = trim(strtoupper($estudiante->apellido_paterno ?? ''));
             $apellidoMaterno = trim(strtoupper($estudiante->apellido_materno ?? ''));
             $nombres = trim(strtoupper($estudiante->nombres ?? ''));
-            
+
             // Para TPE01 (persona natural): guardamos TODOS los campos de nombre
             $sql = "
                 INSERT INTO SMACARNOM (
@@ -784,7 +792,7 @@ class OracleTusneService
                     TO_CHAR(SYSDATE, 'HH24:MI:SS'), :sexo
                 )
             ";
-            
+
             $params = [
                 ':codigo' => $codigoContribuyente,
                 ':estado' => 'ERE04',
@@ -804,29 +812,30 @@ class OracleTusneService
                 ':fecnac' => $fechaNacimiento,
                 ':sexo' => $sexo,
             ];
-            
+
             Log::info('Intentando crear contribuyente en Oracle', $params);
 
             try {
                 $this->executeInsert($sql, $params);
             } catch (Exception $e) {
-                Log::error('Excepción OCI al insertar contribuyente: ' . $e->getMessage());
+                Log::error('Excepción OCI al insertar contribuyente: '.$e->getMessage());
                 // Relanzar para que el catch externo lo maneje pero ya con log detallado
                 throw $e;
             }
-            
+
             Log::info('Contribuyente creado en Oracle', [
                 'codigo' => $codigoContribuyente,
                 'nro_documento' => $estudiante->nro_documento,
             ]);
-            
+
             return $codigoContribuyente;
         } catch (Exception $e) {
-            Log::error('Error general al crear contribuyente en Oracle: ' . $e->getMessage(), [
+            Log::error('Error general al crear contribuyente en Oracle: '.$e->getMessage(), [
                 'estudiante_id' => $estudiante->id,
                 'nro_documento' => $estudiante->nro_documento,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return null;
         }
     }
@@ -853,21 +862,22 @@ class OracleTusneService
     /**
      * Obtiene datos de una liquidación desde Oracle (estado y fecha de pago).
      *
-     * @param string $numLiquidacion Número de liquidación
+     * @param  string  $numLiquidacion  Número de liquidación
      * @return object|null Objeto con ESTADO y PAGADO, o null si no existe
      */
     public function obtenerDatosLiquidacion(string $numLiquidacion): ?object
     {
         try {
             $sql = "SELECT ESTADO, PAGADO, IMPORTE FROM {$this->schema}.VU_BUSCA_TUSNE_PER_Pen WHERE LIQUIDACION = :liquidacion";
-            
+
             $resultado = $this->executeQuery($sql, [':liquidacion' => $numLiquidacion]);
-            
+
             return $resultado->first();
         } catch (Exception $e) {
-            Log::warning('Error obteniendo datos de liquidación Oracle: ' . $e->getMessage(), [
+            Log::warning('Error obteniendo datos de liquidación Oracle: '.$e->getMessage(), [
                 'num_liquidacion' => $numLiquidacion,
             ]);
+
             return null;
         }
     }
@@ -877,47 +887,55 @@ class OracleTusneService
      * Actualiza estado y fecha_pago de cada pago que tenga num_liquidacion.
      * IMPORTANTE: Los valores de Oracle SIEMPRE sobrescriben los de PostgreSQL.
      *
-     * @param \App\Models\Cronograma $cronograma
      * @return int Número de pagos actualizados
      */
     public function sincronizarPagosCronograma(\App\Models\Cronograma $cronograma): int
     {
         $actualizados = 0;
-        
+
         $pagosConLiquidacion = $cronograma->pagos()
             ->whereNotNull('num_liquidacion')
             ->get();
-        
+
         foreach ($pagosConLiquidacion as $pago) {
             $datosOracle = $this->obtenerDatosLiquidacion($pago->num_liquidacion);
-            
+
             if ($datosOracle) {
                 $cambios = [];
-                
+
                 // Actualizar estado SIEMPRE desde Oracle (es la fuente de verdad)
                 if ($datosOracle->ESTADO !== null && $datosOracle->ESTADO !== $pago->estado) {
                     $cambios['estado'] = $datosOracle->ESTADO;
                 }
-                
+
                 // Actualizar fecha de pago SIEMPRE desde Oracle
                 // Si Oracle tiene NULL, PostgreSQL también debe tener NULL
-                if (!empty($datosOracle->PAGADO)) {
+                if (! empty($datosOracle->PAGADO)) {
                     try {
-                        $fechaPago = \Carbon\Carbon::createFromFormat('d/m/Y', $datosOracle->PAGADO);
+                        // Intentar primero con 2 dígitos de año (d/m/y)
+                        $fechaPago = \Carbon\Carbon::createFromFormat('d/m/y', $datosOracle->PAGADO);
                         if ($pago->fecha_pago != $fechaPago) {
                             $cambios['fecha_pago'] = $fechaPago;
                         }
                     } catch (\Exception $e) {
                         try {
-                            $fechaPago = \Carbon\Carbon::parse($datosOracle->PAGADO);
+                            // Intentar con 4 dígitos de año (d/m/Y)
+                            $fechaPago = \Carbon\Carbon::createFromFormat('d/m/Y', $datosOracle->PAGADO);
                             if ($pago->fecha_pago != $fechaPago) {
                                 $cambios['fecha_pago'] = $fechaPago;
                             }
                         } catch (\Exception $e2) {
-                            Log::warning('Error parseando fecha de pago Oracle', [
-                                'pago_id' => $pago->id,
-                                'fecha_oracle' => $datosOracle->PAGADO,
-                            ]);
+                            try {
+                                $fechaPago = \Carbon\Carbon::parse($datosOracle->PAGADO);
+                                if ($pago->fecha_pago != $fechaPago) {
+                                    $cambios['fecha_pago'] = $fechaPago;
+                                }
+                            } catch (\Exception $e3) {
+                                Log::warning('Error parseando fecha de pago Oracle', [
+                                    'pago_id' => $pago->id,
+                                    'fecha_oracle' => $datosOracle->PAGADO,
+                                ]);
+                            }
                         }
                     }
                 } else {
@@ -926,12 +944,12 @@ class OracleTusneService
                         $cambios['fecha_pago'] = null;
                     }
                 }
-                
+
                 // Aplicar cambios si hay alguno
-                if (!empty($cambios)) {
+                if (! empty($cambios)) {
                     $pago->update($cambios);
                     $actualizados++;
-                    
+
                     Log::info('Pago sincronizado desde Oracle', [
                         'pago_id' => $pago->id,
                         'num_liquidacion' => $pago->num_liquidacion,
@@ -940,7 +958,7 @@ class OracleTusneService
                 }
             }
         }
-        
+
         return $actualizados;
     }
 }
