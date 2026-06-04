@@ -126,21 +126,10 @@ class Matricula extends Model
             $especialidad = $curso->programa?->especialidad;
         }
 
-        // 2b) FORMACION_CONTINUA -> PAGOS MENSUALES según duración del curso específico
-        if ($this->tipo_matricula === TipoMatricula::FORMACION_CONTINUA) {
-            $curso = $this->curso;
-
-            if (! $curso) {
-                return null;
-            }
-
-            // Usar la duración del curso de formación continua (en meses) como número de cuotas
-            $numCuotas    = max(1, (int) $curso->duracion);
-            $especialidad = $curso->programa?->especialidad;
-        }
-
-        // 3) PROGRAMA -> DURACIÓN DEL PROGRAMA (Pagos mensuales)
-        if ($this->tipo_matricula === TipoMatricula::PROGRAMA) {
+        // 2b) FORMACION_CONTINUA / PROGRAMA -> PAGOS MENSUALES según duración del programa
+        //     Ambos tipos usan la misma lógica: duración del programa, especialidad del programa,
+        //     y descuento de meses transcurridos desde la primera fecha de curso.
+        if (in_array($this->tipo_matricula, [TipoMatricula::FORMACION_CONTINUA, TipoMatricula::PROGRAMA], true)) {
             $programa = $this->horario?->programa;
 
             if (! $programa) {
@@ -409,18 +398,8 @@ class Matricula extends Model
                 $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
             }
         }
-        // CASO 2b: Formación Continua -> Mensualidades según fechas del curso de formación continua
-        elseif ($this->tipo_matricula === TipoMatricula::FORMACION_CONTINUA) {
-            $curso = $this->curso;
-            $inicio = ($curso && $curso->fecha_inicio)
-                ? Carbon::parse($curso->fecha_inicio)
-                : Carbon::today();
-
-            for ($i = 0; $i < $numCuotas; $i++) {
-                $fechas[] = $inicio->copy()->addMonths($i)->endOfMonth();
-            }
-        }
-        // CASO 3: Programa Completo -> Mensualidades según duración del programa
+        // CASO 2b/3: Formación Continua y Programa -> Mensualidades según duración del programa
+        //     Ambos tipos comparten la misma lógica de fechas.
         else {
             $programa = $this->horario?->programa;
             $inicio = Carbon::today(); // Default
@@ -433,10 +412,8 @@ class Matricula extends Model
                 if ($minFechaCurso) {
                     $inicio = Carbon::parse($minFechaCurso);
                     
-                    // Solo aplicar el offset de meses transcurridos si es Programa
-                    if ($this->tipo_matricula === TipoMatricula::PROGRAMA) {
-                        $mesesOffset = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
-                    }
+                    // Aplicar el offset de meses transcurridos para ambos tipos
+                    $mesesOffset = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
                 }
             }
 

@@ -59,6 +59,7 @@
         </tr>
     </table>
 
+    @if($matricula->cronograma && $matricula->cronograma->pagos->count() > 0)
     <table class="pagos-table">
         <thead>
             <tr>
@@ -95,12 +96,20 @@
             @endforeach
         </tbody>
     </table>
+    @else
+    <p style="text-align: center; color: #dc2626; margin-top: 30px; font-size: 14px;">
+        <strong>⚠ No se ha generado cronograma de pagos para esta matrícula.</strong><br>
+        Contacte al administrador del sistema.
+    </p>
+    @endif
 
+    @if($matricula->cronograma)
     <div class="totals">
         <strong>Monto Total:</strong> S/. {{ number_format($matricula->cronograma->monto_total, 2) }} <br>
         <strong>Saldo Pendiente:</strong> 
         <span style="color: #dc2626;">S/. {{ number_format($matricula->cronograma->pagos->filter(fn($p) => str_contains(strtolower($p->estado ?? ''), 'pendiente'))->sum('monto'), 2) }}</span>
     </div>
+    @endif
 
     <div class="footer">
         Generado el {{ now()->format('d/m/Y H:i') }}
