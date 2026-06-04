@@ -27,6 +27,9 @@ class MatriculaService
     /**
      * Valida si hay vacantes disponibles en un horario.
      *
+     * NOTA: El aforo (vacantes) es solo informativo/formalismo.
+     * Este método ya no bloquea matrículas, siempre retorna 'valido' => true.
+     *
      * @param int $horarioId
      * @return array ['valido' => bool, 'mensaje' => string, 'disponibles' => int, 'total' => int]
      */
@@ -43,18 +46,10 @@ class MatriculaService
         
         $matriculados = $this->matriculas->contarActivos($horarioId);
         
-        if ($matriculados >= $horario->vacantes) {
-            return [
-                'valido' => false,
-                'mensaje' => 'No hay vacantes disponibles en este horario.',
-                'disponibles' => 0,
-                'total' => $horario->vacantes
-            ];
-        }
-        
+        // El aforo es solo un formalismo, no bloquea matrículas
         return [
             'valido' => true,
-            'disponibles' => $horario->vacantes - $matriculados,
+            'disponibles' => max(0, $horario->vacantes - $matriculados),
             'total' => $horario->vacantes
         ];
     }
@@ -219,13 +214,7 @@ class MatriculaService
      */
     public function crear(array $data): Matricula
     {
-        // 1. Validar vacantes disponibles
-        $validacionVacantes = $this->validarVacantesDisponibles($data['horario_id']);
-        if (!$validacionVacantes['valido']) {
-            throw ValidationException::withMessages([
-                'horario_id' => $validacionVacantes['mensaje']
-            ]);
-        }
+        // 1. Validar vacantes (informativo, no bloquea — el aforo es solo un formalismo)
         
         // 2. Validar matrícula no duplicada
         $validacionDuplicado = $this->validarDuplicado(
@@ -295,14 +284,8 @@ class MatriculaService
             ]);
         }
         
-        // Si cambia el horario, validar vacantes y duplicados
+        // Si cambia el horario, validar duplicados (vacantes es solo informativo)
         if (isset($data['horario_id']) && $data['horario_id'] !== $matricula->horario_id) {
-            $validacionVacantes = $this->validarVacantesDisponibles($data['horario_id']);
-            if (!$validacionVacantes['valido']) {
-                throw ValidationException::withMessages([
-                    'horario_id' => $validacionVacantes['mensaje']
-                ]);
-            }
             
             $validacionDuplicado = $this->validarDuplicado(
                 $matricula->estudiante_id,
@@ -350,10 +333,7 @@ class MatriculaService
             return ['valido' => false, 'errores' => $errores];
         }
 
-        // 3. Validar vacantes disponibles
-        if (!$this->tieneVacantesDisponibles($horarioId)) {
-            $errores[] = 'No hay vacantes disponibles en este horario.';
-        }
+        // 3. Vacantes (informativo, no bloquea — el aforo es solo un formalismo)
 
         // 4. Validar matrícula duplicada según tipo
         if ($this->tieneMatriculaDuplicada($estudianteId, $horarioId, $tipoMatricula, $cursoId)) {
@@ -381,22 +361,16 @@ class MatriculaService
     /**
      * Verifica si hay vacantes disponibles en un horario.
      *
+     * NOTA: El aforo es solo informativo/formalismo.
+     * Siempre retorna true para no bloquear matrículas.
+     *
      * @param int $horarioId
      * @return bool
      */
     public function tieneVacantesDisponibles(int $horarioId): bool
     {
-        $horario = Horario::find($horarioId);
-        
-        if (!$horario) {
-            return false;
-        }
-
-        $matriculados = Matricula::where('horario_id', $horarioId)
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->count();
-
-        return $matriculados < $horario->vacantes;
+        // El aforo es solo un formalismo, siempre permite matricular
+        return true;
     }
 
     /**
@@ -620,12 +594,7 @@ class MatriculaService
             ]);
         }
 
-        // Validar que haya vacantes en el nuevo horario
-        if (!$this->tieneVacantesDisponibles($nuevoHorarioId)) {
-            throw ValidationException::withMessages([
-                'horario' => 'No hay vacantes disponibles en el horario destino.',
-            ]);
-        }
+        // Vacantes: el aforo es solo un formalismo, no bloquea cambio de sección
 
         // Validar que el nuevo horario sea del mismo programa
         $nuevoHorario = Horario::find($nuevoHorarioId);

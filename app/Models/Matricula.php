@@ -520,23 +520,13 @@ class Matricula extends Model
     /**
      * Valida que existan vacantes disponibles en el horario.
      *
-     * @throws \Illuminate\Validation\ValidationException Si no hay vacantes disponibles
+     * NOTA: Deshabilitado — el aforo (vacantes) es solo informativo/formalismo.
+     * Ya no bloquea la creación de matrículas.
      */
     private static function validarVacantes(Matricula $matricula, ?Horario $horario): void
     {
-        if (!$horario) {
-            return;
-        }
-
-        $matriculados = Matricula::where('horario_id', $matricula->horario_id)
-            ->where('estado', '!=', EstadoMatricula::ANULADO)
-            ->count();
-        
-        if ($matriculados >= $horario->vacantes) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'horario_id' => 'No hay vacantes disponibles en este horario.',
-            ]);
-        }
+        // No-op: el aforo es solo un formalismo, no bloquea matrículas.
+        return;
     }
 
     /**

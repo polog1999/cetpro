@@ -744,14 +744,9 @@ class MatriculaForm
                         return function (string $attribute, $value, \Closure $fail) use ($get) {
                             $service = app(\App\Services\MatriculaService::class);
                             
-                            // 1. Validar vacantes disponibles
-                            $validacion = $service->validarVacantesDisponibles($value);
-                            if (!$validacion['valido']) {
-                                $fail($validacion['mensaje']);
-                                return;
-                            }
+                            // Vacantes: el aforo es solo un formalismo, no bloquea matrículas
                             
-                            // 2. Validar matrícula no duplicada (con tipo, curso y unidad)
+                            // Validar matrícula no duplicada (con tipo, curso y unidad)
                             $estudianteId = $get('estudiante_id');
                             $tipoMatricula = $get('tipo_matricula');
                             $cursoId = $get('id_curso');
