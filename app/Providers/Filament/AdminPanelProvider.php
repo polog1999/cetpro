@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->favicon(asset('favicon.png'))
             ->authGuard('web')
             ->login(CustomLogin::class)
             ->colors([
