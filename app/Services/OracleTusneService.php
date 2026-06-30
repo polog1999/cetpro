@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -86,7 +88,7 @@ class OracleTusneService
 
             return true;
         } catch (Exception $e) {
-            Log::error('Error de conexión Oracle: '.$e->getMessage());
+            Log::error('Error de conexión Oracle: ' . $e->getMessage());
 
             return false;
         }
@@ -175,7 +177,7 @@ class OracleTusneService
 
             if (! empty($nombre)) {
                 $conditions[] = 'NOMBRE LIKE :nombre';
-                $params[':nombre'] = '%'.strtoupper($nombre).'%';
+                $params[':nombre'] = '%' . strtoupper($nombre) . '%';
             }
 
             if (! empty($numDoc)) {
@@ -197,7 +199,7 @@ class OracleTusneService
 
             return $this->executeQuery($sql, $params);
         } catch (Exception $e) {
-            Log::error('Error en buscarPersona Oracle: '.$e->getMessage(), [
+            Log::error('Error en buscarPersona Oracle: ' . $e->getMessage(), [
                 'nombre' => $nombre,
                 'numDoc' => $numDoc,
                 'codigo' => $codigo,
@@ -221,7 +223,7 @@ class OracleTusneService
 
             return $this->executeQuery($sql, [':codigo' => $codigoUpper]);
         } catch (Exception $e) {
-            Log::error('Error en buscarPersonaPendiente Oracle: '.$e->getMessage(), [
+            Log::error('Error en buscarPersonaPendiente Oracle: ' . $e->getMessage(), [
                 'codigo' => $codigo,
             ]);
             throw $e;
@@ -266,7 +268,7 @@ class OracleTusneService
 
             return $resultados->first();
         } catch (Exception $e) {
-            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: '.$e->getMessage(), [
+            Log::error('Error en obtenerCodigoContribuyenteMasReciente Oracle: ' . $e->getMessage(), [
                 'numDoc' => $numDoc,
             ]);
             throw $e;
@@ -308,7 +310,7 @@ class OracleTusneService
 
             return $resultado->first()?->LIQUIDACION;
         } catch (Exception $e) {
-            Log::error('Error generando código de liquidación Oracle: '.$e->getMessage(), [
+            Log::error('Error generando código de liquidación Oracle: ' . $e->getMessage(), [
                 'codigo_especialidad' => $codigoEspecialidad,
                 'codigo_contribuyente' => $codigoContribuyente,
             ]);
@@ -334,7 +336,7 @@ class OracleTusneService
 
             return $resultado->first()?->ESTADO;
         } catch (Exception $e) {
-            Log::warning('Error obteniendo estado de liquidación Oracle: '.$e->getMessage(), [
+            Log::warning('Error obteniendo estado de liquidación Oracle: ' . $e->getMessage(), [
                 'num_liquidacion' => $numLiquidacion,
             ]);
 
@@ -407,7 +409,7 @@ class OracleTusneService
 
             return $persona;
         } catch (Exception $e) {
-            Log::error('Error en obtenerDatosCompletosPersona Oracle: '.$e->getMessage(), [
+            Log::error('Error en obtenerDatosCompletosPersona Oracle: ' . $e->getMessage(), [
                 'nroDoc' => $nroDoc,
             ]);
             throw $e;
@@ -507,9 +509,8 @@ class OracleTusneService
             }
 
             return $historial;
-
         } catch (Exception $e) {
-            Log::error('Error buscarHistorialPorDni: '.$e->getMessage());
+            Log::error('Error buscarHistorialPorDni: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -537,7 +538,7 @@ class OracleTusneService
         try {
             return $this->executeQuery($sql, $params);
         } catch (Exception $e) {
-            Log::error('Error en consulta Oracle personalizada: '.$e->getMessage(), [
+            Log::error('Error en consulta Oracle personalizada: ' . $e->getMessage(), [
                 'sql' => $sql,
             ]);
             throw $e;
@@ -596,7 +597,7 @@ class OracleTusneService
 
             return $this->executeInsert($sql, [':num' => $numLiquidacion]);
         } catch (Exception $e) {
-            Log::error('Error al anular liquidación en Oracle: '.$e->getMessage(), ['num_liquidacion' => $numLiquidacion]);
+            Log::error('Error al anular liquidación en Oracle: ' . $e->getMessage(), ['num_liquidacion' => $numLiquidacion]);
             throw $e;
         }
     }
@@ -626,9 +627,9 @@ class OracleTusneService
             $numero = (int) substr($ultimoCodigo, 1);
             $nuevoNumero = $numero + 1;
 
-            return 'C'.str_pad($nuevoNumero, 7, '0', STR_PAD_LEFT);
+            return 'C' . str_pad($nuevoNumero, 7, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
-            Log::error('Error obteniendo siguiente código contribuyente: '.$e->getMessage());
+            Log::error('Error obteniendo siguiente código contribuyente: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -643,20 +644,49 @@ class OracleTusneService
         }
 
         $mapeo = [
-            'Lima' => '01', 'Ancón' => '02', 'Ate' => '03', 'Barranco' => '04',
-            'Breña' => '05', 'Carabayllo' => '06', 'Comas' => '07', 'Chaclacayo' => '08',
-            'Chorrillos' => '09', 'El Agustino' => '10', 'Jesús María' => '11',
-            'La Molina' => '12', 'La Victoria' => '13', 'Lince' => '14',
-            'Lurigancho' => '15', 'Lurín' => '16', 'Magdalena del Mar' => '17',
-            'Miraflores' => '18', 'Pachacámac' => '19', 'Pucusana' => '20',
-            'Pueblo Libre' => '21', 'Puente Piedra' => '22', 'Punta Negra' => '23',
-            'Punta Hermosa' => '24', 'Rímac' => '25', 'San Bartolo' => '26',
-            'San Isidro' => '27', 'Independencia' => '28', 'San Juan de Miraflores' => '29',
-            'San Luis' => '30', 'San Martín de Porres' => '31', 'San Miguel' => '32',
-            'Santiago de Surco' => '33', 'Surquillo' => '34', 'Villa María del Triunfo' => '35',
-            'San Juan de Lurigancho' => '36', 'Santa María del Mar' => '37', 'Santa Rosa' => '38',
-            'Los Olivos' => '39', 'Cieneguilla' => '40', 'San Borja' => '41',
-            'Villa El Salvador' => '42', 'Santa Anita' => '43',
+            'Lima' => '01',
+            'Ancón' => '02',
+            'Ate' => '03',
+            'Barranco' => '04',
+            'Breña' => '05',
+            'Carabayllo' => '06',
+            'Comas' => '07',
+            'Chaclacayo' => '08',
+            'Chorrillos' => '09',
+            'El Agustino' => '10',
+            'Jesús María' => '11',
+            'La Molina' => '12',
+            'La Victoria' => '13',
+            'Lince' => '14',
+            'Lurigancho' => '15',
+            'Lurín' => '16',
+            'Magdalena del Mar' => '17',
+            'Miraflores' => '18',
+            'Pachacámac' => '19',
+            'Pucusana' => '20',
+            'Pueblo Libre' => '21',
+            'Puente Piedra' => '22',
+            'Punta Negra' => '23',
+            'Punta Hermosa' => '24',
+            'Rímac' => '25',
+            'San Bartolo' => '26',
+            'San Isidro' => '27',
+            'Independencia' => '28',
+            'San Juan de Miraflores' => '29',
+            'San Luis' => '30',
+            'San Martín de Porres' => '31',
+            'San Miguel' => '32',
+            'Santiago de Surco' => '33',
+            'Surquillo' => '34',
+            'Villa María del Triunfo' => '35',
+            'San Juan de Lurigancho' => '36',
+            'Santa María del Mar' => '37',
+            'Santa Rosa' => '38',
+            'Los Olivos' => '39',
+            'Cieneguilla' => '40',
+            'San Borja' => '41',
+            'Villa El Salvador' => '42',
+            'Santa Anita' => '43',
         ];
 
         return $mapeo[$distrito] ?? null;
@@ -730,7 +760,7 @@ class OracleTusneService
 
             return null;
         } catch (Exception $e) {
-            Log::error('Error verificando contribuyente existente: '.$e->getMessage(), [
+            Log::error('Error verificando contribuyente existente: ' . $e->getMessage(), [
                 'nro_documento' => $numDoc,
             ]);
 
@@ -765,9 +795,9 @@ class OracleTusneService
 
             // Nombre completo para MCNAPENOMB: "APELLIDOS, NOMBRES"
             $nombreCompleto = trim(strtoupper(
-                $estudiante->apellido_paterno.' '.
-                $estudiante->apellido_materno.', '.
-                $estudiante->nombres
+                $estudiante->apellido_paterno . ' ' .
+                    $estudiante->apellido_materno . ', ' .
+                    $estudiante->nombres
             ));
 
             $fechaNacimiento = $estudiante->fecha_nacimiento?->format('d/m/Y');
@@ -818,7 +848,7 @@ class OracleTusneService
             try {
                 $this->executeInsert($sql, $params);
             } catch (Exception $e) {
-                Log::error('Excepción OCI al insertar contribuyente: '.$e->getMessage());
+                Log::error('Excepción OCI al insertar contribuyente: ' . $e->getMessage());
                 // Relanzar para que el catch externo lo maneje pero ya con log detallado
                 throw $e;
             }
@@ -830,7 +860,7 @@ class OracleTusneService
 
             return $codigoContribuyente;
         } catch (Exception $e) {
-            Log::error('Error general al crear contribuyente en Oracle: '.$e->getMessage(), [
+            Log::error('Error general al crear contribuyente en Oracle: ' . $e->getMessage(), [
                 'estudiante_id' => $estudiante->id,
                 'nro_documento' => $estudiante->nro_documento,
                 'trace' => $e->getTraceAsString(),
@@ -874,7 +904,7 @@ class OracleTusneService
 
             return $resultado->first();
         } catch (Exception $e) {
-            Log::warning('Error obteniendo datos de liquidación Oracle: '.$e->getMessage(), [
+            Log::warning('Error obteniendo datos de liquidación Oracle: ' . $e->getMessage(), [
                 'num_liquidacion' => $numLiquidacion,
             ]);
 
@@ -960,5 +990,29 @@ class OracleTusneService
         }
 
         return $actualizados;
+    }
+    public function actualizarFechaVencimiento(string $fechaVencimiento, string $numLiquidacion): bool
+    {
+        try {
+            // 1. Parseamos la fecha de manera segura y la dejamos en formato DD/MM/YYYY
+            $fechaVencimientoStr = \Carbon\Carbon::parse($fechaVencimiento)->format('d/m/Y');
+
+            // 2. Usamos parámetros con nombre (:fecha y :num) para evitar SQL Injection
+            $sql = "UPDATE ADMIN.MACARGO
+                SET CGOFECHVEN = TO_DATE(:fecha, 'DD/MM/YYYY') 
+                WHERE CGONUMERO = :num";
+
+            // 3. Pasamos el arreglo asociativo vinculando los nombres exactos
+            return $this->executeInsert($sql, [
+                ':fecha' => $fechaVencimientoStr,
+                ':num'   => trim($numLiquidacion)
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error al actualizar fecha de vencimiento en Oracle: ' . $e->getMessage(), [
+                'num_liquidacion' => $numLiquidacion,
+                'fecha_intento' => $fechaVencimiento
+            ]);
+            throw $e;
+        }
     }
 }

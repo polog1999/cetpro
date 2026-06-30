@@ -281,6 +281,7 @@ class Matricula extends Model
                     if ($numLiquidacion) {
                         $fechaLiquidacion = now();
                     }
+                    $oracleService->actualizarFechaVencimiento($fechasVencimiento[$i - 1], $numLiquidacion);
                 } catch (\Exception $e) {
                     \Log::error("Error generando código de liquidación para cuota {$i}: " . $e->getMessage(), [
                         'matricula_id' => $this->id,
