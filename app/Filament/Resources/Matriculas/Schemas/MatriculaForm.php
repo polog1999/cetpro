@@ -20,7 +20,7 @@ use App\Models\Unidad;
 use App\Models\Apoderado;
 
 use App\Services\OracleTusneService;
-
+use App\Services\PideService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
@@ -36,6 +36,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 
 use Filament\Actions\Action;
+use Filament\Forms\Components\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 
 class MatriculaForm
@@ -71,8 +72,8 @@ class MatriculaForm
                     ->label('Estudiante')
                     ->relationship('estudiante', 'nombres')
                     ->getOptionLabelFromRecordUsing(
-                        fn (Estudiante $record): string =>
-                            trim("{$record->nombres} {$record->apellido_paterno} {$record->apellido_materno}") ?: 'Sin nombre'
+                        fn(Estudiante $record): string =>
+                        trim("{$record->nombres} {$record->apellido_paterno} {$record->apellido_materno}") ?: 'Sin nombre'
                     )
                     ->searchable([
                         'nombres',
@@ -86,18 +87,18 @@ class MatriculaForm
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         // Limpiar estado de validación previo
                         $set('codigo_contribuyente_status', null);
-                        
+
                         if (!$state) {
                             return;
                         }
-                        
+
                         // Obtener el estudiante seleccionado
                         $estudiante = Estudiante::find($state);
-                        
+
                         if (!$estudiante || !$estudiante->nro_documento) {
                             return;
                         }
-                        
+
                         // 1. Primero verificar si tiene código guardado localmente (nuevo sistema)
                         if (!empty($estudiante->codigo_contribuyente)) {
                             // SÍ tiene código local - permitir matrícula
@@ -105,12 +106,12 @@ class MatriculaForm
                             static::generarCodigoInscripcion($set, $get);
                             return;
                         }
-                        
+
                         // 2. Si no tiene código local, consultar Oracle (sistema antiguo)
                         try {
                             $oracle = app(OracleTusneService::class);
                             $codigoReciente = $oracle->obtenerCodigoContribuyenteMasReciente($estudiante->nro_documento);
-                            
+
                             if (!$codigoReciente || empty($codigoReciente->CODIGO)) {
                                 // NO tiene código - mostrar modal y limpiar formulario
                                 Notification::make()
@@ -119,7 +120,7 @@ class MatriculaForm
                                     ->danger()
                                     ->persistent()
                                     ->send();
-                                
+
                                 // Limpiar todos los campos del formulario
                                 $set('estudiante_id', null);
                                 $set('codigo_inscripcion', null);
@@ -130,17 +131,17 @@ class MatriculaForm
                                 $set('id_curso', null);
                                 $set('cursos_matriculados', null);
                                 $set('codigo_contribuyente_status', null);
-                                
+
                                 return;
                             }
-                            
+
                             // SÍ tiene código en Oracle - mostrar mensaje de éxito
                             $set('codigo_contribuyente_status', 'success');
-                            
+
                             // Verificar si el estudiante tiene deudas pendientes
                             $matriculaService = app(\App\Services\MatriculaService::class);
                             $validacionDeudas = $matriculaService->estudianteTieneDeudas($state);
-                            
+
                             if ($validacionDeudas['tiene_deuda']) {
                                 Notification::make()
                                     ->title('⚠️ Estudiante con deudas pendientes')
@@ -148,13 +149,12 @@ class MatriculaForm
                                     ->danger()
                                     ->persistent()
                                     ->send();
-                                
+
                                 // Marcar estado de deuda
                                 $set('estudiante_tiene_deuda', true);
                             } else {
                                 $set('estudiante_tiene_deuda', false);
                             }
-                            
                         } catch (\Exception $e) {
                             // Error en conexión Oracle - permitir continuar si tiene código local
                             Notification::make()
@@ -162,29 +162,29 @@ class MatriculaForm
                                 ->body('No se pudo verificar el código de contribuyente. Por favor, intente nuevamente.')
                                 ->warning()
                                 ->send();
-                            
+
                             $set('codigo_contribuyente_status', 'error');
                         }
-                        
+
                         // Generar código de inscripción si todo está bien
                         static::generarCodigoInscripcion($set, $get);
                     })
                     ->helperText(function (Get $get) {
                         $status = $get('codigo_contribuyente_status');
                         $tieneDeuda = $get('estudiante_tiene_deuda');
-                        
+
                         if ($tieneDeuda) {
                             return new \Illuminate\Support\HtmlString(
                                 '<span style="color: #ef4444;">⚠️ Tiene pagos vencidos. Debe regularizar sus deudas.</span>'
                             );
                         }
-                        
+
                         if ($status === 'success') {
                             return new \Illuminate\Support\HtmlString(
                                 '<span style="color: #10b981;">✓ Apto para matricular</span>'
                             );
                         }
-                        
+
                         return null;
                     })
                     ->createOptionForm([
@@ -195,10 +195,11 @@ class MatriculaForm
                                     ->options(TipoDocumento::class)
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(fn (Select $component) => $component
-                                        ->getContainer()
-                                        ->getComponent('modal_nro_documento')
-                                        ?->state(null)
+                                    ->afterStateUpdated(
+                                        fn(Select $component) => $component
+                                            ->getContainer()
+                                            ->getComponent('modal_nro_documento')
+                                            ?->state(null)
                                     ),
 
                                 TextInput::make('nro_documento')
@@ -222,38 +223,81 @@ class MatriculaForm
                                         }
                                         $isNumeric = $tipo?->isNumeric() ?? true;
                                         $maxLength = $tipo?->getMaxLength() ?? 8;
-                                        
+
                                         $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
-                                        
+
                                         return [
                                             'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
                                         ];
-                                    }),
-
+                                    })->suffixActions(
+                                        [
+                                            self::botonBuscarPersona()
+                                        ]
+                                    ),
+                                Hidden::make('pide_fallo')->default(false)->live(),
                                 TextInput::make('nombres')
+                                    // 2. Reactividad: Transforma el valor real en el cliente (Alpine.js)
+                                    ->extraAttributes([
+                                        'x-on:input' => '$el.querySelector("input").value = $el.querySelector("input").value.toUpperCase()',
+                                    ])
+                                    // 3. Limpieza: Elimina espacios al perder el foco (opcional pero recomendado)
+                                    ->trim()
+
+                                    // 4. Seguridad: Asegura que llegue en mayúsculas al servidor
+                                    ->dehydrateStateUsing(fn($state) => mb_strtoupper(trim($state)))
                                     ->required()
                                     ->regex('/^[\pL\s]+$/u')
                                     ->validationMessages([
                                         'regex' => 'Solo se permiten letras y espacios.',
                                     ])
-                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                    ->extraInputAttributes([
+                                        'oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')",
+                                        'style' => 'text-transform: uppercase'
+                                    ])
+                                    ->readOnly(fn(Get $get) => $get('tipo_documento') == TipoDocumento::DNI && !$get('pide_fallo')),
 
                                 TextInput::make('apellido_paterno')
+                                    // 2. Reactividad: Transforma el valor real en el cliente (Alpine.js)
+                                    ->extraAttributes([
+                                        'x-on:input' => '$el.querySelector("input").value = $el.querySelector("input").value.toUpperCase()',
+                                    ])
+                                    // 3. Limpieza: Elimina espacios al perder el foco (opcional pero recomendado)
+                                    ->trim()
+
+                                    // 4. Seguridad: Asegura que llegue en mayúsculas al servidor
+                                    ->dehydrateStateUsing(fn($state) => mb_strtoupper(trim($state)))
                                     ->required()
                                     ->regex('/^[\pL\s]+$/u')
                                     ->validationMessages([
                                         'regex' => 'Solo se permiten letras y espacios.',
                                     ])
-                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
+                                    ->extraInputAttributes([
+                                        'oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')",
+                                        'style' => 'text-transform: uppercase'
+                                    ])
+                                    ->readOnly(fn(Get $get) => $get('tipo_documento') == TipoDocumento::DNI && !$get('pide_fallo')),
 
                                 TextInput::make('apellido_materno')
+                                    // 2. Reactividad: Transforma el valor real en el cliente (Alpine.js)
+                                    ->extraAttributes([
+                                        'x-on:input' => '$el.querySelector("input").value = $el.querySelector("input").value.toUpperCase()',
+                                    ])
+                                    // 3. Limpieza: Elimina espacios al perder el foco (opcional pero recomendado)
+                                    ->trim()
+
+                                    // 4. Seguridad: Asegura que llegue en mayúsculas al servidor
+                                    ->dehydrateStateUsing(fn($state) => mb_strtoupper(trim($state)))
                                     ->required()
                                     ->regex('/^[\pL\s]+$/u')
                                     ->validationMessages([
                                         'regex' => 'Solo se permiten letras y espacios.',
                                     ])
-                                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')"]),
-                                
+                                    ->extraInputAttributes([
+                                        'oninput' => "this.value = this.value.replace(/[^a-zA-Z\\sñÑáéíóúÁÉÍÓÚüÜ]/g, '')",
+                                        'style' => 'text-transform: uppercase'
+                                    ])
+                                    ->readOnly(fn(Get $get) => $get('tipo_documento') == TipoDocumento::DNI && !$get('pide_fallo')),
+
 
                                 Select::make('distrito')
                                     ->required()
@@ -326,16 +370,16 @@ class MatriculaForm
                                         $tipoEnum = \App\Enums\TipoDiscapacidad::tryFrom($tipo);
                                         return !$tipoEnum || !$tipoEnum->tieneSubtipos();
                                     }),
-                                
+
                                 Select::make('tipo_programa_reparacion')
                                     ->label('Programa de Reparación')
                                     ->options(\App\Enums\TipoProgramaReparacion::class)
                                     ->default('Ninguno'),
-                                
+
                                 Select::make('lengua_materna')
                                     ->label('Lengua Materna')
                                     ->options(\App\Enums\LenguaMaterna::class),
-                                
+
                                 TextInput::make('anio_egreso_ebr')
                                     ->label('Año de Egreso EBR')
                                     ->numeric()
@@ -374,9 +418,9 @@ class MatriculaForm
                                         }
                                         $isNumeric = $tipo?->isNumeric() ?? true;
                                         $maxLength = $tipo?->getMaxLength() ?? 8;
-                                        
+
                                         $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
-                                        
+
                                         return [
                                             'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
                                         ];
@@ -420,7 +464,7 @@ class MatriculaForm
                     ->createOptionUsing(function (array $data): int {
                         return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
                             $service = app(\App\Services\EstudianteService::class);
-                            
+
                             // Separar datos de estudiante y apoderado
                             $apoderadoData = array_filter([
                                 'tipo_documento' => $data['apoderado_tipo_documento'] ?? null,
@@ -430,7 +474,7 @@ class MatriculaForm
                                 'apellido_materno' => $data['apoderado_apellido_materno'] ?? null,
                                 'telefono' => $data['apoderado_telefono'] ?? null,
                             ]);
-                            
+
                             $estudianteData = [
                                 'tipo_documento' => $data['tipo_documento'],
                                 'nro_documento' => $data['nro_documento'],
@@ -453,27 +497,27 @@ class MatriculaForm
                                 'lengua_materna' => $data['lengua_materna'] ?? null,
                                 'anio_egreso_ebr' => $data['anio_egreso_ebr'] ?? null,
                             ];
-                            
+
                             $estudiante = $service->crearConApoderado($estudianteData, $apoderadoData);
-                            
+
                             // ======================================================
                             // CREAR CÓDIGO DE CONTRIBUYENTE EN ORACLE
                             // ======================================================
                             try {
                                 $oracle = app(OracleTusneService::class);
                                 $codigo = $oracle->crearContribuyente($estudiante);
-                                
+
                                 if ($codigo) {
                                     // Guardar el código en el estudiante
                                     $estudiante->codigo_contribuyente = $codigo;
                                     $estudiante->save();
-                                    
+
                                     Notification::make()
                                         ->success()
                                         ->title('Estudiante y contribuyente creados')
                                         ->body("Código de contribuyente: {$codigo}")
                                         ->send();
-                                        
+
                                     \Log::info('Contribuyente creado desde modal de matrícula', [
                                         'estudiante_id' => $estudiante->id,
                                         'codigo' => $codigo,
@@ -490,19 +534,19 @@ class MatriculaForm
                                     'estudiante_id' => $estudiante->id,
                                     'error' => $e->getMessage(),
                                 ]);
-                                
+
                                 Notification::make()
                                     ->warning()
                                     ->title('Estudiante creado sin código de contribuyente')
                                     ->body('Error: ' . $e->getMessage())
                                     ->send();
                             }
-                            
+
                             return (int) $estudiante->id;
                         });
                     })
                     ->createOptionAction(
-                        fn (Action $action) => $action
+                        fn(Action $action) => $action
                             ->label('Nuevo estudiante')
                             ->modalHeading('Registrar estudiante y apoderado')
                             ->icon('heroicon-m-plus')
@@ -555,10 +599,12 @@ class MatriculaForm
                     ->preload()
                     ->live()
                     ->dehydrated(false) // No se guarda en BD
-                    ->visible(fn (Get $get) =>
+                    ->visible(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
-                    ->required(fn (Get $get) =>
+                    ->required(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     ->afterStateUpdated(function ($state, Set $set) {
@@ -570,20 +616,20 @@ class MatriculaForm
                     ->rule(function (Get $get) {
                         return function (string $attribute, $value, \Closure $fail) use ($get) {
                             $tipoMatricula = $get('tipo_matricula');
-                            
+
                             // Solo validar si es matrícula por MODULO
                             if ($tipoMatricula !== TipoMatricula::MODULO) {
                                 return;
                             }
-                            
+
                             if (!$value) {
                                 return;
                             }
-                            
+
                             // Contar módulos del programa
                             $programa = \App\Models\Programa::with('cursos')->find($value);
                             $cantidadModulos = $programa?->cursos?->count() ?? 0;
-                            
+
                             if ($cantidadModulos <= 1) {
                                 $fail('Este programa tiene solo un módulo. Debe matricularse en el programa completo, no por módulo individual.');
                             }
@@ -608,10 +654,12 @@ class MatriculaForm
                     ->preload()
                     ->live()
                     ->dehydrated(false) // No se guarda en BD
-                    ->visible(fn (Get $get) =>
+                    ->visible(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::FORMACION_CONTINUA, TipoMatricula::CURSO])
                     )
-                    ->required(fn (Get $get) =>
+                    ->required(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::FORMACION_CONTINUA, TipoMatricula::CURSO])
                     )
                     ->afterStateUpdated(function ($state, Set $set) {
@@ -623,20 +671,20 @@ class MatriculaForm
                     ->rule(function (Get $get) {
                         return function (string $attribute, $value, \Closure $fail) use ($get) {
                             $tipoMatricula = $get('tipo_matricula');
-                            
+
                             // Solo validar si es matrícula por CURSO
                             if ($tipoMatricula !== TipoMatricula::CURSO) {
                                 return;
                             }
-                            
+
                             if (!$value) {
                                 return;
                             }
-                            
+
                             // Contar cursos de la formación continua
                             $programa = \App\Models\Programa::with('cursos')->find($value);
                             $cantidadCursos = $programa?->cursos?->count() ?? 0;
-                            
+
                             if ($cantidadCursos <= 1) {
                                 $fail('Esta formación continua tiene solo un curso. Debe matricularse en la formación continua completa, no por curso individual.');
                             }
@@ -723,38 +771,38 @@ class MatriculaForm
                     ->live()
                     ->disabled(function (Get $get) {
                         $tipoMatricula = $get('tipo_matricula');
-                        
+
                         if (! $tipoMatricula) {
                             return true;
                         }
-                        
+
                         // Para Programa y Módulo y Unidad, requiere programa_intermediario
                         if (in_array($tipoMatricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])) {
                             return ! $get('programa_intermediario');
                         }
-                        
+
                         // Para Formación Continua y Curso, requiere formacion_continua_intermediaria
                         if ($tipoMatricula === TipoMatricula::FORMACION_CONTINUA || $tipoMatricula === TipoMatricula::CURSO) {
                             return ! $get('formacion_continua_intermediaria');
                         }
-                        
+
                         return true;
                     })
                     ->rule(function (Get $get) {
                         return function (string $attribute, $value, \Closure $fail) use ($get) {
                             $service = app(\App\Services\MatriculaService::class);
-                            
+
                             // Vacantes: el aforo es solo un formalismo, no bloquea matrículas
-                            
+
                             // Validar matrícula no duplicada (con tipo, curso y unidad)
                             $estudianteId = $get('estudiante_id');
                             $tipoMatricula = $get('tipo_matricula');
                             $cursoId = $get('id_curso');
                             $unidadId = $get('id_unidad');
-                            
+
                             if ($estudianteId) {
                                 $validacion = $service->validarDuplicado(
-                                    $estudianteId, 
+                                    $estudianteId,
                                     $value,
                                     null, // matriculaIdIgnorar
                                     $tipoMatricula,
@@ -826,7 +874,7 @@ class MatriculaForm
                             ->mapWithKeys(function ($curso) {
                                 $fechaInicio = $curso->fecha_inicio ? \Carbon\Carbon::parse($curso->fecha_inicio) : null;
                                 $fechaTexto = $fechaInicio ? $fechaInicio->format('d/m/Y') : 'Sin fecha';
-                                
+
                                 return [
                                     $curso->id_curso => $curso->nombre_curso . ' | Inicio: ' . $fechaTexto
                                 ];
@@ -837,22 +885,25 @@ class MatriculaForm
                     ->searchable()
                     ->live()
                     // visible solo para CURSO y MODULO y UNIDAD
-                    ->visible(fn (Get $get) =>
+                    ->visible(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     // deshabilitado si no hay horario
-                    ->disabled(fn (Get $get) =>
+                    ->disabled(
+                        fn(Get $get) =>
                         ! $get('horario_id')
                     )
                     // requerido solo si es CURSO o MODULO o UNIDAD
-                    ->required(fn (Get $get) =>
+                    ->required(
+                        fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD])
                     )
                     ->afterStateUpdated(function (Set $set, Get $get) {
                         $set('id_unidad', null);
                         static::generarCodigoInscripcion($set, $get);
                     }),
-                    
+
                 // ----------------------------------------
                 // UNIDAD (PARA UNIDAD)
                 // ----------------------------------------
@@ -863,7 +914,7 @@ class MatriculaForm
                         if (!$cursoId) {
                             return [];
                         }
-                        
+
                         return Unidad::where('id_curso', $cursoId)
                             ->ordenado()
                             ->pluck('nombre_unidad', 'id_unidad');
@@ -872,15 +923,18 @@ class MatriculaForm
                     ->preload()
                     ->live()
                     // visible solo para UNIDAD
-                    ->visible(fn (Get $get) =>
+                    ->visible(
+                        fn(Get $get) =>
                         $get('tipo_matricula') === TipoMatricula::UNIDAD
                     )
                     // deshabilitado si no hay curso
-                    ->disabled(fn (Get $get) =>
+                    ->disabled(
+                        fn(Get $get) =>
                         ! $get('id_curso')
                     )
                     // requerido solo si es UNIDAD
-                    ->required(fn (Get $get) =>
+                    ->required(
+                        fn(Get $get) =>
                         $get('tipo_matricula') === TipoMatricula::UNIDAD
                     )
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
@@ -901,9 +955,9 @@ class MatriculaForm
 
         $service = app(\App\Services\HorarioService::class);
         $tipoMatricula = $get('tipo_matricula') ?? TipoMatricula::PROGRAMA;
-        
+
         $resultado = $service->obtenerCursosFormateados($horarioId, $tipoMatricula);
-        
+
         $set('cursos_matriculados', $resultado['texto']);
     }
 
@@ -929,5 +983,103 @@ class MatriculaForm
         $codigo = $service->generarCodigoInscripcion($horarioId, $estudianteId, $cursoId, $unidadId);
 
         $set('codigo_inscripcion', $codigo);
+    }
+    protected static function botonBuscarPersona()
+    {
+        return Action::make('buscar_persona')
+            ->color('success')
+            ->icon('heroicon-m-magnifying-glass')
+            ->visible(fn(Get $get) => $get('tipo_documento') == TipoDocumento::DNI)
+            ->extraAttributes([
+                // Forzamos al texto/ícono a ser verde y usamos !important (text-success-600)
+                'class' => '[&_.fi-icon]:!text-success-600 dark:[&_.fi-icon]:!text-success-400',
+            ])
+            ->action(function ($state, Set $set, Get $get) {
+                if (!$state) return;
+
+                // 2. Buscar en tabla PERSONAS (Si ya fue visitante antes)
+                if (strlen($state) === 8) {
+
+                    $persona = Estudiante::where('nro_documento', $state)->first();
+
+                      if ($persona) {
+                    
+                        $set('nombres', null);
+                        $set('apellido_paterno', null);
+                        $set('apellido_materno', null);
+                      
+                        Notification::make()
+                            ->title('Ya se encuentra registrado')
+                            ->success()
+                            ->send();
+                        return;
+                    }
+
+
+                    // 3. Si no existe en BD, Consultar al PIDE
+                    // Supongamos que tienes un Service: PideService::consultar($dni)
+                    $datosPide = PideService::ws_reniec($state);
+
+                    if ($datosPide['codResu'] === '0000') {
+                        $set('pide_fallo', false); // Activamos edición manual
+                        $set('nombres', $datosPide['nombre']);
+                        $set('apellido_paterno', $datosPide['paterno']);
+                        $set('apellido_materno', $datosPide['materno']);
+                        $set('foto_url', '/uploads/foto_dni/' . $state . '.png');
+                        Notification::make()
+                            ->title('Datos del PIDE')
+                            ->body('Se consumió el PIDE')
+                            ->success()
+                            ->send();
+                    } else {
+                        $datosApiPeru = PideService::apiPeruDni($state);
+
+                        if ($datosApiPeru['success']) {
+                            // dd('probando');
+                            $set('pide_fallo', false); // Activamos edición manual
+                            $set('nombres', $datosApiPeru['data']['nombres']);
+                            $set('apellido_paterno', $datosApiPeru['data']['apellido_paterno']);
+                            $set('apellido_materno', $datosApiPeru['data']['apellido_materno']);
+                            Notification::make()
+                                ->title('Datos del ApisPeru')
+                                ->body('Se consumió el ApisPeru')
+                                ->success()
+                                ->send();
+                        } else {
+                            $datosApisNet = PideService::apisNet($state);
+
+                            if ($datosApisNet['success']) {
+                                $set('pide_fallo', false); // Activamos edición manual
+                                $set('nombres', $datosApisNet['nombres']);
+                                $set('apellido_paterno', $datosApisNet['apellidoPaterno']);
+                                $set('apellido_materno', $datosApisNet['apellidoMaterno']);
+                                Notification::make()
+                                    ->title('Datos de ApisNet')
+                                    ->body('Se consumió el ApisNet')
+                                    ->success()
+                                    ->send();
+                            } else {
+                                // FALLÓ EL PIDE
+                                $set('pide_fallo', true); // Activamos edición manual
+                                $set('nombres', null);
+                                $set('apellido_paterno', null);
+                                $set('apellido_materno', null);
+                                $set('foto_url', null);
+                                Notification::make()
+                                    ->title('PIDE no disponible')
+                                    ->body('Complete los datos manualmente.')
+                                    ->warning()
+                                    ->send();
+                            }
+                        }
+                    }
+                } else {
+                    Notification::make()
+                        ->title('Alerta')
+                        ->body('El DNI debe tener 8 dígitos')
+                        ->warning()
+                        ->send();
+                }
+            });
     }
 }

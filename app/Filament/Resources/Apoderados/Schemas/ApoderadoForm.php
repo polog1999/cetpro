@@ -147,19 +147,19 @@ class ApoderadoForm
 
                     $persona = Apoderado::where('nro_documento', $state)->first();
 
-                    if ($persona) {
-                        $set('persona_id', $persona->id);
-                        $set('nombres', $persona->nombres);
-                        $set('apellido_paterno', $persona->apellido_paterno);
-                        $set('apellido_materno', $persona->apellido_materno);
-                        // $set('foto_url', $persona->foto_url); // Traer foto de la BD
+                      if ($persona) {
+                    
+                        $set('nombres', null);
+                        $set('apellido_paterno', null);
+                        $set('apellido_materno', null);
+                      
                         Notification::make()
-                            ->title('Autocompletado')
-                            ->body('Datos obtenidos correctamente')
+                            ->title('Ya se encuentra registrado')
                             ->success()
                             ->send();
                         return;
                     }
+
 
                     // 3. Si no existe en BD, Consultar al PIDE
                     // Supongamos que tienes un Service: PideService::consultar($dni)
