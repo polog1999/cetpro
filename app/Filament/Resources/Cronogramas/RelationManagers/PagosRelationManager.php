@@ -214,7 +214,8 @@ class PagosRelationManager extends RelationManager
                         ]);
                     }),
                 // DeleteAction::make(),
-            ]);
+            ])
+            ->defaultSort('nro_cuota', 'asc');
 
             
     }

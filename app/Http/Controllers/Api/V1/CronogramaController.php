@@ -6,6 +6,8 @@ use App\Services\PagoService;
 use App\Http\Resources\Api\V1\CronogramaResource;
 use App\Http\Resources\Api\V1\PagoResource;
 use App\Models\Cronograma;
+use App\Models\Matricula;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 
 class CronogramaController extends ApiController
@@ -57,4 +59,21 @@ class CronogramaController extends ApiController
             'cuotas_actualizadas' => $actualizados,
         ]);
     }
+   public function verCronograma(Matricula $matricula)
+{
+    $matricula->load(['estudiante', 'horario.programa', 'curso', 'cronograma.pagos' => function ($query) {
+        $query->orderBy('nro_cuota', 'asc');
+    }]);
+
+    $pdf = Pdf::loadView('matriculas.cronograma-pdf', [
+        'matricula' => $matricula,
+    ])
+        ->setPaper('A4', 'portrait');
+
+    $fileName = 'cronograma-pagos-' . ($matricula->codigo_inscripcion ?? $matricula->id) . '.pdf';
+
+    //  RETORNA DIRECTAMENTE EL STREAM
+    // El segundo parámetro son las opciones; 'attachment' => false le dice que NO lo descargue (usa inline)
+    return $pdf->stream($fileName, ['attachment' => false]);
+}
 }

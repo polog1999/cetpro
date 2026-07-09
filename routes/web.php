@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CronogramaController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MatriculaPdfController;
 use App\Http\Controllers\MatriculaCursosPdfController;
@@ -24,6 +25,10 @@ Route::get('/matriculas/{matricula}/cronograma-pdf', [MatriculaPdfController::cl
 
 Route::get('/matriculas/{matricula}/cursos-pdf', [MatriculaCursosPdfController::class, 'show'])
     ->name('matriculas.cursos-pdf');
+
+    //ver cronograma de pagos
+    Route::get('/cronograma/{matricula}/pdf', [CronogramaController::class, 'verCronograma'])
+    ->name('ver.cronograma.pdf');
 
 // Portal de Estudiantes (Alumnos)
 Route::middleware(['web', 'auth', 'alumno'])->prefix('portal')->group(function () {
