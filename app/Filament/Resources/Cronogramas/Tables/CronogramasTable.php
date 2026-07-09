@@ -15,6 +15,7 @@ use Filament\Actions\EditAction;
 
 use App\Filament\Resources\Cronogramas\CronogramaResource;
 use App\Models\Pago;
+use Filament\Actions\Action;
 
 class CronogramasTable
 {
@@ -267,6 +268,12 @@ class CronogramasTable
                 // EditAction removido porque CronogramaResource::canEdit() = false
                 // DeleteAction removido porque CronogramaResource::canDelete() = false
                 // Los cronogramas NO se eliminan por integridad financiera
+                 Action::make('ver_cronograma_pdf')
+                    ->label('Ver PDF')
+                     ->icon('heroicon-m-eye')
+                    ->button()
+                    ->color('success')
+                    ->url(fn($record) =>route('ver.cronograma.pdf', ['matricula' => $record->matricula->id]), shouldOpenInNewTab: true),
             ])
             ->toolbarActions([
                 // Bulk actions removidos porque CronogramaResource::canDeleteAny() = false
