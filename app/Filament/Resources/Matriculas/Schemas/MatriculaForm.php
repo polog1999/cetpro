@@ -37,6 +37,7 @@ use Filament\Schemas\Components\Utilities\Set;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Toggle;
 use Illuminate\Database\Eloquent\Builder;
 
 class MatriculaForm
@@ -550,7 +551,9 @@ class MatriculaForm
                             ->label('Nuevo estudiante')
                             ->modalHeading('Registrar estudiante y apoderado')
                             ->icon('heroicon-m-plus')
-                    ),
+                    )
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(true), // Asegura que se envíe el valor original al guardar,
 
                 // ----------------------------------------
                 // TIPO DE MATRÍCULA (ENUM REAL)
@@ -568,8 +571,31 @@ class MatriculaForm
                         $set('horario_id', null);
                         $set('id_curso', null);
                         $set('cursos_matriculados', null);
-                    }),
-
+                    })
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(true),
+                TextInput::make('num_cuotas_personalizado')
+                    ->label('Meses a estudiar / Nro de Cuotas')
+                    ->placeholder('Dejar en blanco para calcular todo el programa')
+                    ->helperText('Indique cuántos meses pagará el alumno si solo estudiará un periodo parcial (ej: de Marzo a Julio = 5 cuotas).')
+                    ->numeric()
+                    ->integer()
+                    ->minValue(1)
+                    ->maxValue(12)
+                    ->live()
+                    ->visible(
+                        fn(Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
+                    ),
+                Toggle::make('cobrar_mes_actual')
+                    ->label('¿Cobrar mes actual?')
+                    ->helperText('Marque esta opción si el estudiante iniciará sus clases este mes y debe pagar la cuota del mes en curso.')
+                    ->default(true) // Por defecto sugerimos cobrarlo
+                    ->live()
+                    ->visible(
+                        fn(Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
+                    ),
                 // ----------------------------------------
                 // PROGRAMA INTERMEDIARIO (para Programa y Modulo)
                 // No se almacena, solo para filtrar
@@ -634,7 +660,9 @@ class MatriculaForm
                                 $fail('Este programa tiene solo un módulo. Debe matricularse en el programa completo, no por módulo individual.');
                             }
                         };
-                    }),
+                    })
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(false),
 
                 // ----------------------------------------
                 // FORMACION CONTINUA INTERMEDIARIA (para Formacion Continua y Curso)
@@ -822,7 +850,9 @@ class MatriculaForm
                         static::fillCursosDeHorario($state, $set, $get);
                         $set('id_curso', null);
                         static::generarCodigoInscripcion($set, $get);
-                    }),
+                    })
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(true),
 
                 // ----------------------------------------
                 // TEXTAREA INFORMATIVO DE CURSOS/MODULOS
@@ -902,7 +932,10 @@ class MatriculaForm
                     ->afterStateUpdated(function (Set $set, Get $get) {
                         $set('id_unidad', null);
                         static::generarCodigoInscripcion($set, $get);
-                    }),
+                    })
+                    // ... tu lógica ...
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(true),
 
                 // ----------------------------------------
                 // UNIDAD (PARA UNIDAD)
@@ -939,7 +972,9 @@ class MatriculaForm
                     )
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         static::generarCodigoInscripcion($set, $get);
-                    }),
+                    })
+                    ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
+                    ->dehydrated(true),
             ]);
     }
 

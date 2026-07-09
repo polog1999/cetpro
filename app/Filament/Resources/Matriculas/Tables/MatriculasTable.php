@@ -20,6 +20,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FichaMatriculaExport;
 use App\Exports\CursosMatriculaExport;
+use Carbon\Carbon;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 
 class MatriculasTable
 {
@@ -27,6 +31,7 @@ class MatriculasTable
     {
         return $table
             ->columns([
+
                 TextColumn::make('codigo_inscripcion')
                     ->label('Código')
                     ->searchable()
@@ -92,7 +97,7 @@ class MatriculasTable
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['nombre_estudiante'] ?? null,
-                            fn (Builder $query, $search): Builder => $query->whereHas('estudiante', function (Builder $query) use ($search) {
+                            fn(Builder $query, $search): Builder => $query->whereHas('estudiante', function (Builder $query) use ($search) {
                                 $query->where(function (Builder $query) use ($search) {
                                     $query->where('nombres', 'ilike', "%{$search}%")
                                         ->orWhere('apellido_paterno', 'ilike', "%{$search}%")
@@ -113,7 +118,7 @@ class MatriculasTable
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['dni_estudiante'] ?? null,
-                            fn (Builder $query, $dni): Builder => $query->whereHas('estudiante', function (Builder $query) use ($dni) {
+                            fn(Builder $query, $dni): Builder => $query->whereHas('estudiante', function (Builder $query) use ($dni) {
                                 $query->where('nro_documento', 'ilike', "%{$dni}%");
                             })
                         );
@@ -164,6 +169,48 @@ class MatriculasTable
                     ->placeholder('Todos los cursos'),
             ])
             ->recordActions([
+                 Action::make('extender')
+                        ->label('Extender Matrícula')
+                        ->icon('heroicon-o-calendar-days')
+                        ->color('warning')
+                        ->modalHeading('Extender Cronograma de Pagos')
+                        ->modalDescription('Use esta opción para agregar meses de estudio adicionales a esta matrícula sin crear un nuevo registro.')
+                        ->form([
+                            DatePicker::make('fecha_inicio_extension')
+                                ->label('Fecha de Inicio de la Extensión')
+                                ->helperText('Seleccione el mes desde el cual desea generar los nuevos pagos (ej: si faltó Junio, elija 01/06/2024).')
+                                ->default(now()->startOfMonth())
+                                ->required(),
+
+                            TextInput::make('cuotas_adicionales')
+                                ->label('Cantidad de meses a agregar')
+                                ->helperText('Número de cuotas mensuales a generar.')
+                                ->numeric()
+                                ->integer()
+                                ->minValue(1)
+                                ->default(1)
+                                ->required(),
+                        ])
+                        ->action(function (Matricula $record, array $data) {
+                            try {
+                                $cuotas = (int) $data['cuotas_adicionales'];
+                                $fechaInicio = Carbon::parse($data['fecha_inicio_extension']);
+
+                                $record->extenderMatricula($cuotas, $fechaInicio);
+
+                                Notification::make()
+                                    ->title('Matrícula Extendida')
+                                    ->body("Se agregaron exitosamente {$cuotas} cuotas de pago al cronograma.")
+                                    ->success()
+                                    ->send();
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->title('Error al extender')
+                                    ->body('Ocurrió un inconveniente: ' . $e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
 
                 // 👉 Botón para visualizar/descargar PDF de la ficha
                 Action::make('visualizar_ficha_pdf')
@@ -177,13 +224,13 @@ class MatriculasTable
                         $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
 
                         $pdf = Pdf::loadView('matriculas.pdf', [
-                                'matricula' => $record,
-                            ])
+                            'matricula' => $record,
+                        ])
                             ->setPaper('A4', 'portrait');
-                        
+
                         // Convertir PDF a base64
                         $pdfBase64 = base64_encode($pdf->output());
-                        
+
                         return view('components.pdf-preview', [
                             'pdfBase64' => $pdfBase64,
                         ]);
@@ -201,8 +248,8 @@ class MatriculasTable
                                     $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
 
                                     $pdf = Pdf::loadView('matriculas.pdf', [
-                                            'matricula' => $record,
-                                        ])
+                                        'matricula' => $record,
+                                    ])
                                         ->setPaper('A4', 'portrait');
 
                                     $fileName = 'ficha-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.pdf';
@@ -227,13 +274,13 @@ class MatriculasTable
                         $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
 
                         $pdf = Pdf::loadView('matriculas.cursos-pdf', [
-                                'matricula' => $record,
-                            ])
+                            'matricula' => $record,
+                        ])
                             ->setPaper('A4', 'portrait');
-                        
+
                         // Convertir PDF a base64
                         $pdfBase64 = base64_encode($pdf->output());
-                        
+
                         return view('components.pdf-preview', [
                             'pdfBase64' => $pdfBase64,
                         ]);
@@ -251,8 +298,8 @@ class MatriculasTable
                                     $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
 
                                     $pdf = Pdf::loadView('matriculas.cursos-pdf', [
-                                            'matricula' => $record,
-                                        ])
+                                        'matricula' => $record,
+                                    ])
                                         ->setPaper('A4', 'portrait');
 
                                     $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.pdf';
@@ -274,15 +321,15 @@ class MatriculasTable
                     ->action(function (Matricula $record) {
                         // Cargamos relaciones necesarias
                         $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
-                        
+
                         $fileName = 'cursos-matricula-' . ($record->codigo_inscripcion ?? $record->id) . '.xlsx';
-                        
+
                         return Excel::download(
                             new CursosMatriculaExport($record),
                             $fileName
                         );
                     }),
-                    
+
                 Action::make('anular')
                     ->label('Anular')
                     ->icon('heroicon-o-x-circle')
@@ -300,7 +347,7 @@ class MatriculasTable
                             'fecha_anulacion' => now(),
                         ]);
                     })
-                    ->visible(fn (Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
+                    ->visible(fn(Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
 
                 // DeleteAction::make(),
             ])

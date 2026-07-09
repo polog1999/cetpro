@@ -11,7 +11,6 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
-use App\Filament\Resources\Pagos\PagoResource;
 use Filament\Actions\Action;
 
 class CreateMatricula extends CreateRecord
@@ -19,186 +18,123 @@ class CreateMatricula extends CreateRecord
     protected static string $resource = MatriculaResource::class;
 
     /**
-     * Configura las acciones del formulario con doble confirmación.
+     * Modifica el botón nativo de guardar de Filament para que 
+     * exija una confirmación antes de procesar el formulario.
      */
-    protected function getFormActions(): array
+    protected function getSaveFormAction(): Action
     {
-        return [
-            Action::make('create')
-                ->label('Crear Matrícula')
-                ->color('primary')
-                ->requiresConfirmation()
-                ->modalIcon('heroicon-o-exclamation-triangle')
-                ->modalIconColor('warning')
-                ->modalHeading('Confirmar Matrícula')
-                ->modalDescription('¿Está seguro que desea crear esta matrícula? Esta acción generará el cronograma de pagos y las liquidaciones correspondientes.')
-                ->modalSubmitActionLabel('Sí, crear matrícula')
-                ->modalCancelActionLabel('Cancelar')
-                ->mountUsing(fn () => $this->form->validate())
-                ->action(fn () => $this->create()),
-        ];
+        return parent::getSaveFormAction()
+            ->label('Crear Matrícula')
+            ->requiresConfirmation()
+            ->modalIcon('heroicon-o-exclamation-triangle')
+            ->modalIconColor('warning')
+            ->modalHeading('Confirmar Matrícula')
+            ->modalDescription('¿Está seguro que desea crear esta matrícula? Esta acción generará el cronograma de pagos y las liquidaciones correspondientes.')
+            ->modalSubmitActionLabel('Sí, crear matrícula')
+            ->modalCancelActionLabel('Cancelar');
     }
 
     /**
-     * Maneja la creación del registro usando el servicio.
-     * La lógica de validación y creación se delega al MatriculaService.
+     * Maneja la creación del registro de forma segura.
      */
     protected function handleRecordCreation(array $data): Model
     {
         $service = app(MatriculaService::class);
 
+        // 1. Validar deudas del estudiante
+        $validacionDeudas = $service->estudianteTieneDeudas($data['estudiante_id']);
+        
+        if ($validacionDeudas['tiene_deuda']) {
+            // Esto detendrá el spinner y pintará el error en rojo en el formulario
+            throw ValidationException::withMessages([
+                'estudiante_id' => $validacionDeudas['mensaje']
+            ]);
+        }
+        
         try {
-            // Verificar si el estudiante tiene deudas pendientes
-            $validacionDeudas = $service->estudianteTieneDeudas($data['estudiante_id']);
+            // 2. Crear la matrícula usando el modelo nativo
+            return static::getModel()::create($data);
+        } catch (\Exception $e) {
+            Log::error('Error en base de datos al matricular', ['error' => $e->getMessage()]);
             
-            if ($validacionDeudas['tiene_deuda']) {
-                Notification::make()
-                    ->title('No es posible crear la matrícula')
-                    ->body($validacionDeudas['mensaje'])
-                    ->danger()
-                    ->persistent()
-                    ->send();
-                    
-                throw ValidationException::withMessages([
-                    'estudiante_id' => $validacionDeudas['mensaje']
-                ]);
-            }
-            
-            // El servicio ya maneja:
-            // - Validación de vacantes
-            // - Validación de duplicados
-            // - Generación de código
-            // - Creación de cronograma
-            // - Generación de cuotas
-            return Matricula::create($data);
-            
-        } catch (ValidationException $e) {
-            // Filament maneja ValidationException automáticamente
-            throw $e;
+            throw ValidationException::withMessages([
+                'estudiante_id' => 'Error al procesar la matrícula: ' . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Después de crear la matrícula, verificar si el estudiante tiene código de contribuyente.
-     * Si no lo tiene, crearlo en Oracle y luego regenerar las liquidaciones de los pagos.
+     * Procesos post-creación (Oracle) totalmente protegidos de caídas o lentitud.
      */
     protected function afterCreate(): void
     {
-        $estudiante = $this->record->estudiante;
-        $oracle = app(OracleTusneService::class);
-        $codigoContribuyente = null;
-        
-        // 1. VERIFICACIÓN LOCAL PRIMERO - Si ya tiene código guardado, usarlo directamente
-        if (!empty($estudiante->codigo_contribuyente)) {
-            $codigoContribuyente = $estudiante->codigo_contribuyente;
-            Log::info('Usando código de contribuyente existente (local)', [
-                'estudiante_id' => $estudiante->id,
-                'codigo' => $codigoContribuyente,
-            ]);
-        } else {
-            // 2. Si no tiene código local, verificar en Oracle (puede existir pero no guardado)
-            try {
-                $codigoContribuyente = $oracle->verificarContribuyenteExistente($estudiante->nro_documento);
-                
-                if ($codigoContribuyente) {
-                    // Actualizar localmente si existe en Oracle pero no localmente
-                    $estudiante->codigo_contribuyente = $codigoContribuyente;
-                    $estudiante->save();
-                    
-                    Log::info('Código de contribuyente sincronizado desde Oracle', [
-                        'estudiante_id' => $estudiante->id,
-                        'codigo' => $codigoContribuyente,
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::warning('Error verificando contribuyente existente', [
-                    'estudiante_id' => $estudiante->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        try {
+            $estudiante = $this->record->estudiante;
+            if (!$estudiante) return;
+
+            $oracle = app(OracleTusneService::class);
+            $codigoContribuyente = null;
             
-            // 3. Si no existe en Oracle, crear nuevo contribuyente
-            if (!$codigoContribuyente) {
+            // Verificación local
+            if (!empty($estudiante->codigo_contribuyente)) {
+                $codigoContribuyente = $estudiante->codigo_contribuyente;
+            } else {
+                // Consulta externa segura
                 try {
-                    $codigoContribuyente = $oracle->crearContribuyente($estudiante);
+                    $codigoContribuyente = $oracle->verificarContribuyenteExistente($estudiante->nro_documento);
                     
                     if ($codigoContribuyente) {
                         $estudiante->codigo_contribuyente = $codigoContribuyente;
                         $estudiante->save();
-                        
-                        Notification::make()
-                            ->success()
-                            ->title('Contribuyente creado')
-                            ->body("Código: {$codigoContribuyente}")
-                            ->send();
-                            
-                        Log::info('Contribuyente creado al matricular', [
-                            'estudiante_id' => $estudiante->id,
-                            'matricula_id' => $this->record->id,
-                            'codigo' => $codigoContribuyente,
-                        ]);
+                    } else {
+                        $codigoContribuyente = $oracle->crearContribuyente($estudiante);
+                        if ($codigoContribuyente) {
+                            $estudiante->codigo_contribuyente = $codigoContribuyente;
+                            $estudiante->save();
+                        }
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error al crear contribuyente al matricular', [
-                        'estudiante_id' => $estudiante->id,
-                        'matricula_id' => $this->record->id,
-                        'error' => $e->getMessage(),
-                    ]);
+                    Log::error('Fallo de conexión con Oracle en afterCreate', ['error' => $e->getMessage()]);
                     
                     Notification::make()
                         ->warning()
-                        ->title('Matrícula creada sin código contribuyente')
-                        ->body('No se pudo conectar con Oracle')
+                        ->title('Matrícula guardada (Oracle Pendiente)')
+                        ->body('No se pudo conectar con Oracle. Las liquidaciones se generarán más tarde.')
+                        ->persistent()
                         ->send();
-                        
-                    return; // No podemos generar liquidaciones sin contribuyente
+                    return;
                 }
             }
-        }
-        
-        // 4. IMPORTANTE: Regenerar liquidaciones para pagos que no tienen
-        if ($codigoContribuyente) {
-            $this->regenerarLiquidacionesPendientes($oracle, $codigoContribuyente);
+            
+            // Generar liquidaciones
+            if ($codigoContribuyente) {
+                try {
+                    $this->regenerarLiquidacionesPendientes($oracle, $codigoContribuyente);
+                } catch (\Exception $e) {
+                    Log::error('Error generando liquidaciones', ['error' => $e->getMessage()]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::critical('Error general en afterCreate', ['error' => $e->getMessage()]);
         }
     }
     
-    /**
-     * Regenera los números de liquidación para pagos que no los tienen.
-     */
     protected function regenerarLiquidacionesPendientes(OracleTusneService $oracle, string $codigoContribuyente): void
     {
         $cronograma = $this->record->cronograma;
+        if (!$cronograma) return;
         
-        if (!$cronograma) {
-            return;
-        }
-        
-        // Obtener código de especialidad
         $codigoEspecialidad = $this->obtenerCodigoEspecialidad();
+        if (!$codigoEspecialidad) return;
         
-        if (!$codigoEspecialidad) {
-            Log::warning('No se pudo obtener código de especialidad para generar liquidaciones', [
-                'matricula_id' => $this->record->id,
-            ]);
-            return;
-        }
-        
-        // Buscar pagos sin número de liquidación
         $pagosSinLiquidacion = $cronograma->pagos()->whereNull('num_liquidacion')->get();
-        
-        if ($pagosSinLiquidacion->isEmpty()) {
-            return; // Todos los pagos ya tienen liquidación
-        }
+        if ($pagosSinLiquidacion->isEmpty()) return;
         
         $liquidacionesGeneradas = 0;
         
         foreach ($pagosSinLiquidacion as $pago) {
             try {
-                $numLiquidacion = $oracle->generarCodigoLiquidacion(
-                    $codigoEspecialidad,
-                    $codigoContribuyente
-                );
-                
+                $numLiquidacion = $oracle->generarCodigoLiquidacion($codigoEspecialidad, $codigoContribuyente);
                 if ($numLiquidacion) {
                     $pago->update([
                         'num_liquidacion' => $numLiquidacion,
@@ -207,7 +143,7 @@ class CreateMatricula extends CreateRecord
                     $liquidacionesGeneradas++;
                 }
             } catch (\Exception $e) {
-                Log::error("Error regenerando liquidación para pago {$pago->id}: " . $e->getMessage());
+                Log::error("Error liquidación pago {$pago->id}: " . $e->getMessage());
             }
         }
         
@@ -217,59 +153,30 @@ class CreateMatricula extends CreateRecord
                 ->title('Liquidaciones generadas')
                 ->body("Se generaron {$liquidacionesGeneradas} números de liquidación")
                 ->send();
-                
-            Log::info('Liquidaciones regeneradas después de crear contribuyente', [
-                'matricula_id' => $this->record->id,
-                'cantidad' => $liquidacionesGeneradas,
-            ]);
         }
     }
     
-    /**
-     * Obtiene el código de especialidad para la matrícula.
-     */
     protected function obtenerCodigoEspecialidad(): ?string
     {
-        $especialidad = null;
+        $especialidad = $this->record->tipo_matricula === \App\Enums\TipoMatricula::CURSO 
+            ? $this->record->curso?->programa?->especialidad 
+            : $this->record->horario?->programa?->especialidad;
         
-        if ($this->record->tipo_matricula === \App\Enums\TipoMatricula::CURSO) {
-            $especialidad = $this->record->curso?->programa?->especialidad;
-        } else {
-            $especialidad = $this->record->horario?->programa?->especialidad;
-        }
-        
-        if (!$especialidad || !$especialidad->nombre_especialidad) {
-            return null;
-        }
+        if (!$especialidad || !$especialidad->nombre_especialidad) return null;
         
         $nombreNormalizado = strtolower(trim($especialidad->nombre_especialidad));
         
         $mapeo = [
-            'estética personal' => 'B0001',
-            'estetica personal' => 'B0001',
-            'confección textil' => 'B0002',
-            'confeccion textil' => 'B0002',
-            'textil y confección' => 'B0002',
-            'textil y confeccion' => 'B0002',
-            'ofimática' => 'B0003',
-            'ofimatica' => 'B0003',
-            'computación e informática' => 'B0003',
-            'computacion e informatica' => 'B0003',
-            'computación' => 'B0003',
-            'computacion' => 'B0003',
-            'informática' => 'B0003',
-            'informatica' => 'B0003',
+            'estética personal' => 'B0001', 'estetica personal' => 'B0001',
+            'confección textil' => 'B0002', 'confeccion textil' => 'B0002', 'textil y confección' => 'B0002', 'textil y confeccion' => 'B0002',
+            'ofimática' => 'B0003', 'ofimatica' => 'B0003', 'computación e informática' => 'B0003', 'computacion e informatica' => 'B0003', 'computación' => 'B0003', 'computacion' => 'B0003', 'informática' => 'B0003', 'informatica' => 'B0003',
         ];
         
         return $mapeo[$nombreNormalizado] ?? null;
     }
 
-    /**
-     * Redirige a la lista de pagos filtrada por el estudiante de la matrícula.
-     */
     protected function getRedirectUrl(): string
     {
-        // Redirigir al listado de matrículas
         return MatriculaResource::getUrl('index');
     }
 
@@ -278,7 +185,7 @@ class CreateMatricula extends CreateRecord
         return Notification::make()
             ->success()
             ->title('Matrícula creada correctamente')
-            ->body('El cronograma de pagos se ha generado. Puedes descargarlo aquí:')
+            ->body('El cronograma de pagos se ha generado.')
             ->actions([
                 Action::make('descargar')
                     ->label('📥 Descargar Cronograma PDF')
