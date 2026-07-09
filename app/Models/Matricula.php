@@ -17,6 +17,7 @@ use App\Models\Cronograma;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\TipoCertificado;
+use Illuminate\Support\Facades\DB;
 
 class Matricula extends Model
 {
@@ -29,7 +30,9 @@ class Matricula extends Model
      * Set to true when importing legacy students.
      */
     public bool $skipCronogramaGeneration = false;
-
+    // En tu modelo Matricula.php, añade este atributo temporal:
+    public ?bool $cobrar_mes_actual = null;
+    public ?int $num_cuotas_personalizado = null; // 👈 Atributo temporal en memoria
     protected $fillable = [
         'codigo_inscripcion',
         'estudiante_id',
@@ -42,6 +45,9 @@ class Matricula extends Model
         'fecha_anulacion',
         'documento_path',
         'tipo_certificado',
+        'cobrar_mes_actual', // 👈 Añadir aquí temporalmente
+        'num_cuotas_personalizado', // 👈 Añadir aquí
+
     ];
 
     protected $casts = [
@@ -56,9 +62,9 @@ class Matricula extends Model
     }
 
     public function horario(): BelongsTo
-{
-    return $this->belongsTo(Horario::class, 'horario_id', 'id_horario');
-}
+    {
+        return $this->belongsTo(Horario::class, 'horario_id', 'id_horario');
+    }
 
     public function curso(): BelongsTo
     {
@@ -136,18 +142,23 @@ class Matricula extends Model
                 return null;
             }
 
-            $duracion     = $programa->duracion;     // Duración global en meses
-            $numCuotas    = (int) $duracion;         // 1 cuota por mes
-            
-            // Restar meses transcurridos desde el inicio del programa
-            $minFechaCurso = $programa->cursos()->min('fecha_inicio');
-            $mesesTranscurridos = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
-            
-            if ($mesesTranscurridos > 0) {
-                // Dejamos al menos 1 cuota si ya se pasó toda la duración
-                $numCuotas = max(1, $numCuotas - $mesesTranscurridos);
+            // 1. Si el administrativo ingresó una duración personalizada, usamos esa
+            if ($this->num_cuotas_personalizado !== null && $this->num_cuotas_personalizado > 0) {
+                $numCuotas = $this->num_cuotas_personalizado;
             }
-            
+            // 2. Si no, calculamos automáticamente la duración por defecto del programa
+            else {
+                $duracion     = $programa->duracion;     // Duración global en meses
+                $numCuotas    = (int) $duracion;         // 1 cuota por mes
+
+                // Restar meses transcurridos desde el inicio del programa
+                $minFechaCurso = $programa->cursos()->min('fecha_inicio');
+                $mesesTranscurridos = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
+
+                if ($mesesTranscurridos > 0) {
+                    $numCuotas = max(1, $numCuotas - $mesesTranscurridos);
+                }
+            }
             $especialidad = $programa->especialidad;
         }
 
@@ -209,7 +220,7 @@ class Matricula extends Model
         $codigoContribuyente = null;
         $codigoEspecialidad = null;
         $oracleService = null;
-        
+
         try {
             // 1. Obtener código de contribuyente del estudiante
             // IMPORTANTE: Usamos verificarContribuyenteExistente() que busca en VU_CETPRO_BUS
@@ -218,27 +229,28 @@ class Matricula extends Model
             // (vista de liquidaciones pendientes, vacía para nuevos contribuyentes)
             $oracleService = app(\App\Services\OracleTusneService::class);
             $estudiante = $this->estudiante;
-            
+
             if ($estudiante && $estudiante->nro_documento) {
                 // Buscar el código de contribuyente en VU_CETPRO_BUS
                 $codigoContribuyente = $oracleService->verificarContribuyenteExistente($estudiante->nro_documento);
             }
-            
+
             // 2. Obtener especialidad y mapear a código B000X
             $especialidad = null;
-            
-            if ($this->tipo_matricula === TipoMatricula::CURSO || 
+
+            if (
+                $this->tipo_matricula === TipoMatricula::CURSO ||
                 $this->tipo_matricula === TipoMatricula::MODULO ||
-                $this->tipo_matricula === TipoMatricula::UNIDAD) {
+                $this->tipo_matricula === TipoMatricula::UNIDAD
+            ) {
                 $especialidad = $this->curso?->programa?->especialidad;
             } else {
                 $especialidad = $this->horario?->programa?->especialidad;
             }
-            
+
             if ($especialidad && $especialidad->nombre_especialidad) {
                 $codigoEspecialidad = $this->obtenerCodigoEspecialidad($especialidad->nombre_especialidad);
             }
-            
         } catch (\Exception $e) {
             \Log::warning('No se pudo obtener datos para liquidación Oracle: ' . $e->getMessage(), [
                 'matricula_id' => $this->id,
@@ -246,14 +258,14 @@ class Matricula extends Model
             ]);
             // Continuar sin códigos de liquidación
         }
-        
+
         // DEBUG: Log para verificar los datos obtenidos para liquidación
         \Log::info('Datos para generar liquidación', [
             'matricula_id' => $this->id,
             'estudiante_id' => $this->estudiante_id,
             'nro_documento' => $this->estudiante?->nro_documento,
             'codigo_contribuyente' => $codigoContribuyente,
-            'especialidad_nombre' => $this->tipo_matricula === TipoMatricula::CURSO 
+            'especialidad_nombre' => $this->tipo_matricula === TipoMatricula::CURSO
                 ? $this->curso?->programa?->especialidad?->nombre_especialidad
                 : $this->horario?->programa?->especialidad?->nombre_especialidad,
             'codigo_especialidad' => $codigoEspecialidad,
@@ -269,7 +281,7 @@ class Matricula extends Model
         for ($i = 1; $i <= $numCuotas; $i++) {
             $numLiquidacion = null;
             $fechaLiquidacion = null;
-            
+
             // Generar código de liquidación si tenemos todos los datos necesarios
             if ($codigoContribuyente && $codigoEspecialidad && $oracleService) {
                 try {
@@ -277,7 +289,7 @@ class Matricula extends Model
                         $codigoEspecialidad,
                         $codigoContribuyente
                     );
-                    
+
                     if ($numLiquidacion) {
                         $fechaLiquidacion = now();
                     }
@@ -291,7 +303,7 @@ class Matricula extends Model
                     // Continuar sin código de liquidación para esta cuota
                 }
             }
-            
+
             // Obtener estado desde Oracle si tenemos número de liquidación
             $estadoOracle = 'Pendiente'; // Default si no se puede obtener
             if ($numLiquidacion && $oracleService) {
@@ -301,7 +313,7 @@ class Matricula extends Model
                     \Log::warning("Error obteniendo estado de liquidación: " . $e->getMessage());
                 }
             }
-            
+
             // Crear el pago con código de liquidación y estado desde Oracle
             $cronograma->pagos()->create([
                 'nro_cuota'         => $i,
@@ -332,21 +344,21 @@ class Matricula extends Model
         if (!$nombreEspecialidad) {
             return null;
         }
-        
+
         // Normalizar nombre (quitar espacios, convertir a minúsculas)
         $nombreNormalizado = strtolower(trim($nombreEspecialidad));
-        
+
         // Mapeo de nombres a códigos Oracle
         // IMPORTANTE: Agregar todas las especialidades de tu CETPRO con su código B000X correspondiente
         $mapeo = [
             // Estética Personal
             'estética personal' => 'B0001',
             'estetica personal' => 'B0001',
-            
+
             // Confección Textil
             'confección textil' => 'B0002',
             'confeccion textil' => 'B0002',
-            
+
             // Ofimática / Computación
             'ofimática' => 'B0003',
             'ofimatica' => 'B0003',
@@ -357,7 +369,7 @@ class Matricula extends Model
             'informática' => 'B0003',
             'informatica' => 'B0003',
         ];
-        
+
         return $mapeo[$nombreNormalizado] ?? null;
     }
 
@@ -404,7 +416,7 @@ class Matricula extends Model
         else {
             $programa = $this->horario?->programa;
             $inicio = Carbon::today(); // Default
-            
+
             $mesesOffset = 0;
 
             // Obtener fecha de inicio real del programa (min fecha inicio de cursos)
@@ -412,7 +424,7 @@ class Matricula extends Model
                 $minFechaCurso = $programa->cursos()->min('fecha_inicio');
                 if ($minFechaCurso) {
                     $inicio = Carbon::parse($minFechaCurso);
-                    
+
                     // Aplicar el offset de meses transcurridos para ambos tipos
                     $mesesOffset = $this->calcularMesesTranscurridosParaDescuento($minFechaCurso);
                 }
@@ -450,21 +462,27 @@ class Matricula extends Model
         if (!$fechaInicio) {
             return 0;
         }
-        
+
         $inicio = Carbon::parse($fechaInicio);
         $hoy = Carbon::today();
-        
+
         if ($hoy->format('Y-m') >= $inicio->format('Y-m')) {
             $diffMeses = ($hoy->year - $inicio->year) * 12 + ($hoy->month - $inicio->month);
-            
-            // Si se ha pasado el día 5 del mes presente, se considera que ese mes también transcurrió
+
+            // NUEVO: Si el usuario especificó explícitamente si desea cobrar el mes actual
+            if ($this->cobrar_mes_actual !== null) {
+                // Si SÍ quiere cobrar el mes actual, descontamos solo los meses anteriores ($diffMeses)
+                // Si NO quiere cobrar el mes actual, descontamos los anteriores + el actual ($diffMeses + 1)
+                return $this->cobrar_mes_actual ? max(0, $diffMeses) : max(0, $diffMeses + 1);
+            }
+
+            // Fallback original si no se envía el parámetro (para importaciones, etc.)
             $meses = ($hoy->day > 5) ? $diffMeses + 1 : $diffMeses;
             return max(0, $meses);
         }
-        
+
         return 0;
     }
-
     /**
      * Actualiza el estado de la matrícula según el estado del cronograma.
      * Si el cronograma tiene deudas, marca la matrícula como INTERRUMPIDO.
@@ -523,7 +541,7 @@ class Matricula extends Model
 
         // Usar el servicio centralizado para validar duplicados
         $service = app(\App\Services\MatriculaService::class);
-        
+
         $resultado = $service->validarDuplicado(
             $matricula->estudiante_id,
             $matricula->horario_id,
@@ -532,7 +550,7 @@ class Matricula extends Model
             $matricula->id_curso,
             $matricula->id_unidad
         );
-        
+
         if (!$resultado['valido']) {
             // Determinar el campo correcto para el mensaje de error según el tipo
             $campo = match ($matricula->tipo_matricula) {
@@ -540,12 +558,12 @@ class Matricula extends Model
                 TipoMatricula::CURSO, TipoMatricula::MODULO => 'id_curso',
                 default => 'horario_id',
             };
-            
+
             throw \Illuminate\Validation\ValidationException::withMessages([
                 $campo => $resultado['mensaje'],
             ]);
         }
-        
+
         // Validaciones de integridad (campos requeridos)
         self::validarIntegridadSegunTipo($matricula);
     }
@@ -564,7 +582,7 @@ class Matricula extends Model
                 ]);
             }
         }
-        
+
         if ($matricula->tipo_matricula === TipoMatricula::UNIDAD) {
             if (!$matricula->id_curso || !$matricula->id_unidad) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
@@ -600,16 +618,29 @@ class Matricula extends Model
     {
         // ANTES de guardar: validar y generar código de inscripción
         static::creating(function (Matricula $matricula) {
+
+            // 1. NUEVO: Capturar cobrar_mes_actual y removerlo de los atributos de la base de datos
+            if (array_key_exists('cobrar_mes_actual', $matricula->attributes)) {
+                $matricula->cobrar_mes_actual = (bool) $matricula->attributes['cobrar_mes_actual'];
+                unset($matricula->attributes['cobrar_mes_actual']); // 👈 Se remueve para que Postgres no dé error de columna inexistente
+            }
+            // 2. NUEVO: Capturar num_cuotas_personalizado
+            if (array_key_exists('num_cuotas_personalizado', $matricula->attributes)) {
+                $matricula->num_cuotas_personalizado = $matricula->attributes['num_cuotas_personalizado']
+                    ? (int) $matricula->attributes['num_cuotas_personalizado']
+                    : null;
+                unset($matricula->attributes['num_cuotas_personalizado']); // Remover para evitar error en Postgres
+            }
             $horario = Horario::find($matricula->horario_id);
-            
+
             // Paso 4: Validaciones de integridad
             self::validarVacantes($matricula, $horario);
             self::validarDuplicado($matricula);
-            
+
             // Generar código de inscripción
             self::generarCodigoInscripcion($matricula, $horario);
         });
-        
+
         // DESPUÉS de guardar: generar cronograma
         static::created(function (Matricula $matricula) {
             // No generar cronograma si es importación de alumno antiguo
@@ -617,6 +648,203 @@ class Matricula extends Model
                 return;
             }
             $matricula->generarCronograma();
+        });
+    }
+    /**
+     * Extiende una matrícula existente agregando cuotas adicionales
+     * a partir de una fecha específica (puede ser retroactiva).
+     */
+    /**
+     * Extiende una matrícula existente agregando cuotas adicionales
+     * y actualizando el tipo de matrícula a nivel académico si corresponde.
+     */
+
+
+    public function extenderMatricula(int $cuotasAdicionales, \Carbon\Carbon $fechaInicioExtension): ?Cronograma
+    {
+        $cronograma = $this->cronograma;
+
+        if (!$cronograma) {
+            return null;
+        }
+
+        // -------------------------------------------------------------
+        // 1. Transición Automática de Tipo de Matrícula (Ascenso)
+        // -------------------------------------------------------------
+        if ($this->tipo_matricula === TipoMatricula::CURSO) {
+            $this->update([
+                'tipo_matricula' => TipoMatricula::FORMACION_CONTINUA,
+                'id_curso'       => null,
+            ]);
+        } elseif (in_array($this->tipo_matricula, [TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
+            $this->update([
+                'tipo_matricula' => TipoMatricula::PROGRAMA,
+                'id_curso'       => null,
+                'id_unidad'      => null,
+            ]);
+        }
+
+        // Determinar la especialidad según el estado de la matrícula
+        $especialidad = null;
+        if ($this->tipo_matricula === TipoMatricula::FORMACION_CONTINUA || $this->tipo_matricula === TipoMatricula::PROGRAMA) {
+            $especialidad = $this->horario?->programa?->especialidad;
+        } else {
+            $especialidad = $this->curso?->programa?->especialidad;
+        }
+
+        if (!$especialidad) {
+            throw new \Exception("No se pudo determinar la especialidad para calcular el costo.");
+        }
+
+        // -------------------------------------------------------------
+        // 2. NUEVO: Filtrado y Validación de Duplicados por Mes-Año
+        // -------------------------------------------------------------
+        // Obtener los meses/años de las cuotas que ya existen (Formato: '2026-04')
+        $mesesExistentes = $cronograma->pagos()
+            ->whereNotNull('fecha_vencimiento')
+            ->pluck('fecha_vencimiento')
+            ->map(fn($fecha) => \Carbon\Carbon::parse($fecha)->format('Y-m'))
+            ->toArray();
+
+        $fechasNuevasEfectivas = [];
+
+        // Evaluar cada mes propuesto dentro del rango de extensión solicitado
+        for ($i = 0; $i < $cuotasAdicionales; $i++) {
+            $fechaCandidata = $fechaInicioExtension->copy()->addMonths($i)->endOfMonth();
+            $mesAnioCandidato = $fechaCandidata->format('Y-m');
+
+            // Si el mes NO existe en el cronograma actual, lo agregamos como nueva cuota válida
+            if (!in_array($mesAnioCandidato, $mesesExistentes, true)) {
+                $fechasNuevasEfectivas[] = $fechaCandidata;
+            }
+        }
+
+        // Si todas las cuotas solicitadas ya existen, lanzamos una excepción para avisar al usuario
+        if (empty($fechasNuevasEfectivas)) {
+            throw new \Exception("Todas las cuotas dentro del rango seleccionado ya se encuentran registradas para este estudiante.");
+        }
+
+        // Cantidad real de cuotas que se van a insertar
+        $cantidadNuevasEfectivas = count($fechasNuevasEfectivas);
+
+        // -------------------------------------------------------------
+        // 3. Ejecutar actualización y creación de cuotas transaccionalmente
+        // -------------------------------------------------------------
+        DB::transaction(function () use ($cronograma, $especialidad, $fechasNuevasEfectivas, $cantidadNuevasEfectivas) {
+
+            // Calcular los nuevos totales basados únicamente en las cuotas nuevas reales
+            $cuotasAnteriores = (int) $cronograma->num_cuotas;
+            $nuevasCuotasTotales = $cuotasAnteriores + $cantidadNuevasEfectivas;
+            $montoAdicional = $cantidadNuevasEfectivas * $especialidad->costo_mensual;
+            $nuevoMontoTotal = $cronograma->monto_total + $montoAdicional;
+
+            $cronograma->update([
+                'num_cuotas'  => $nuevasCuotasTotales,
+                'monto_total' => $nuevoMontoTotal,
+            ]);
+
+            // Obtener códigos de Oracle
+            $codigoContribuyente = null;
+            $codigoEspecialidad = null;
+            $oracleService = null;
+
+            try {
+                $oracleService = app(\App\Services\OracleTusneService::class);
+                if ($this->estudiante && $this->estudiante->nro_documento) {
+                    $codigoContribuyente = $oracleService->verificarContribuyenteExistente($this->estudiante->nro_documento);
+                }
+                if ($especialidad->nombre_especialidad) {
+                    $codigoEspecialidad = $this->obtenerCodigoEspecialidad($especialidad->nombre_especialidad);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error de conexión a Oracle durante la extensión: ' . $e->getMessage());
+            }
+
+            // Crear los nuevos pagos omitiendo los meses duplicados
+            foreach ($fechasNuevasEfectivas as $index => $fechaVence) {
+                $nroCuotaFisica = $cuotasAnteriores + ($index + 1);
+                $numLiquidacion = null;
+                $fechaLiquidacion = null;
+
+                if ($codigoContribuyente && $codigoEspecialidad && $oracleService) {
+                    try {
+                        $numLiquidacion = $oracleService->generarCodigoLiquidacion($codigoEspecialidad, $codigoContribuyente);
+                        if ($numLiquidacion) {
+                            $fechaLiquidacion = now();
+                            $oracleService->actualizarFechaVencimiento($fechaVence, $numLiquidacion);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Error en Oracle generando cuota {$nroCuotaFisica}: " . $e->getMessage());
+                    }
+                }
+
+                $estadoOracle = 'Pendiente';
+                if ($numLiquidacion && $oracleService) {
+                    try {
+                        $estadoOracle = $oracleService->obtenerEstadoLiquidacion($numLiquidacion) ?? 'Pendiente';
+                    } catch (\Exception $e) {
+                        \Log::warning("No se pudo obtener estado de Oracle para la cuota {$nroCuotaFisica}");
+                    }
+                }
+
+                $cronograma->pagos()->create([
+                    'nro_cuota'         => $nroCuotaFisica,
+                    'monto'             => $especialidad->costo_mensual,
+                    'estado'            => $estadoOracle,
+                    'fecha_vencimiento' => $fechaVence,
+                    'num_liquidacion'   => $numLiquidacion,
+                    'fecha_liquidacion' => $fechaLiquidacion,
+                ]);
+            }
+
+            // 5. Reordenar todas las cuotas cronológicamente (evita colisiones con la restricción UNIQUE)
+            $this->reordenarCuotasCronologicamente();
+        });
+
+        return $cronograma;
+    }
+
+
+    /**
+     * Ordena cronológicamente todos los pagos de la matrícula 
+     * y renumera las cuotas (1, 2, 3...) según su fecha de vencimiento.
+     * Evita colisiones con el índice UNIQUE compuesto [cronograma_id, nro_cuota].
+     */
+    public function reordenarCuotasCronologicamente(): void
+    {
+        $cronograma = $this->cronograma;
+
+        if (!$cronograma) {
+            return;
+        }
+
+        // Usamos una transacción de base de datos para garantizar que el proceso sea atómico.
+        // Si algo falla a mitad de camino, todo vuelve a su estado original.
+        DB::transaction(function () use ($cronograma) {
+
+            // 1. Obtener los pagos actuales de este cronograma (orden inverso para evitar colisiones en el desplazamiento)
+            $pagosParaDesplazar = $cronograma->pagos()
+                ->orderBy('nro_cuota', 'desc')
+                ->get();
+
+            // 2. Sumamos un offset (+1000) a todas las cuotas actuales para liberar los casilleros del 1 al N.
+            foreach ($pagosParaDesplazar as $pago) {
+                $pago->updateQuietly([
+                    'nro_cuota' => $pago->nro_cuota + 1000
+                ]);
+            }
+
+            // 3. Volvemos a consultar los pagos, pero ahora ordenados estrictamente por fecha de vencimiento
+            $pagosOrdenados = $cronograma->pagos()
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->get();
+
+            // 4. Asignamos los números correlativos finales (1, 2, 3...) que ahora están completamente libres
+            foreach ($pagosOrdenados as $index => $pago) {
+                $pago->updateQuietly([
+                    'nro_cuota' => $index + 1
+                ]);
+            }
         });
     }
 }
