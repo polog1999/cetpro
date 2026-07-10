@@ -574,28 +574,7 @@ class MatriculaForm
                     })
                     ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
                     ->dehydrated(true),
-                TextInput::make('num_cuotas_personalizado')
-                    ->label('Meses a estudiar / Nro de Cuotas')
-                    ->placeholder('Dejar en blanco para calcular todo el programa')
-                    ->helperText('Indique cuántos meses pagará el alumno si solo estudiará un periodo parcial (ej: de Marzo a Julio = 5 cuotas).')
-                    ->numeric()
-                    ->integer()
-                    ->minValue(1)
-                    ->maxValue(12)
-                    ->live()
-                    ->visible(
-                        fn(Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
-                    ),
-                Toggle::make('cobrar_mes_actual')
-                    ->label('¿Cobrar mes actual?')
-                    ->helperText('Marque esta opción si el estudiante iniciará sus clases este mes y debe pagar la cuota del mes en curso.')
-                    ->default(true) // Por defecto sugerimos cobrarlo
-                    ->live()
-                    ->visible(
-                        fn(Get $get) =>
-                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
-                    ),
+                
                 // ----------------------------------------
                 // PROGRAMA INTERMEDIARIO (para Programa y Modulo)
                 // No se almacena, solo para filtrar
@@ -975,6 +954,28 @@ class MatriculaForm
                     })
                     ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
                     ->dehydrated(true),
+                    TextInput::make('num_cuotas_personalizado')
+                    ->label('Meses a estudiar / Nro de Cuotas')
+                    ->placeholder('Dejar en blanco para calcular todo el programa')
+                    ->helperText('Indique cuántos meses pagará el alumno si solo estudiará un periodo parcial (ej: de Marzo a Julio = 5 cuotas).')
+                    ->numeric()
+                    ->integer()
+                    ->minValue(1)
+                    ->maxValue(12)
+                    ->live()
+                    ->visible(
+                        fn(Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
+                    ),
+                Toggle::make('cobrar_mes_actual')
+                    ->label('¿Cobrar mes actual?')
+                    ->helperText('Marque esta opción si el estudiante iniciará sus clases este mes y debe pagar la cuota del mes en curso.')
+                    ->default(true) // Por defecto sugerimos cobrarlo
+                    ->live()
+                    ->visible(
+                        fn(Get $get) =>
+                        in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
+                    )
             ]);
     }
 
