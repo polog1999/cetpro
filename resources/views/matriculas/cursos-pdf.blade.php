@@ -62,7 +62,7 @@
 
         .course-selected {
             font-weight: bold;
-            background-color: #ffffcc;
+            background-color: #e8f5e9; /* Tono verde muy suave para los matriculados */
         }
 
         .info-box {
@@ -88,8 +88,16 @@
     $prog    = $horario?->programa;
     $curso   = $matricula->curso;
     $cursos  = $prog?->cursos ?? collect();
+
+     // NUEVO: Ordenamos los cursos/módulos cronológicamente por su fecha de inicio 
+    // y reiniciamos los índices con values() para que el numerador (#) sea correlativo de 1 a N
+    $cursos  = $prog?->cursos ? $prog->cursos->sortBy('fecha_inicio')->values() : collect();
     
-    // Determinar etiqueta según tipo de matrícula
+    // Fallback de seguridad: si no se pasaron los IDs desde la llamada, los calculamos aquí
+    if (!isset($cursosActivosIds)) {
+        $cursosActivosIds = $matricula->obtenerCursosActivos()->pluck('id_curso')->toArray();
+    }
+
     $esTipoModulo = in_array($matricula->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO]);
     $labelCursos = $esTipoModulo ? 'MÓDULOS' : 'CURSOS';
     $labelPrograma = $esTipoModulo ? 'PROGRAMA' : 'FORMACIÓN CONTINUA';
@@ -125,7 +133,7 @@
         <td>{{ $horario?->horario }}</td>
     </tr>
     <tr>
-        <td><strong>Duración:</strong></td>
+        <td><strong>Duración Total:</strong></td>
         <td colspan="3">{{ $prog?->duracion }} meses</td>
     </tr>
 </table>
@@ -144,16 +152,20 @@
     @if($cursos->isEmpty())
         <tr>
             <td colspan="4" class="text-center">
-                Este {{ strtolower($labelPrograma) }} no tiene {{ strtolower($labelCursos) }} registrados.
+                Este {{ mb_strtolower($labelPrograma) }} no tiene {{ mb_strtolower($labelCursos) }} registrados.
             </td>
         </tr>
     @else
         @foreach($cursos as $index => $c)
-            <tr class="{{ $curso && $curso->id_curso === $c->id_curso ? 'course-selected' : '' }}">
+            @php
+                // Verificamos si este curso específico está activo según las cuotas generadas
+                $estaMatriculado = in_array($c->id_curso, $cursosActivosIds);
+            @endphp
+            <tr class="{{ $estaMatriculado ? 'course-selected' : '' }}">
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>
                     {{ $c->nombre_curso }}
-                    @if($curso && $curso->id_curso === $c->id_curso)
+                    @if($estaMatriculado)
                         <strong> ✓ (Matriculado)</strong>
                     @endif
                 </td>
@@ -164,15 +176,25 @@
     @endif
 </table>
 
-@if($curso)
+{{-- NOTAS ACADÉMICAS DEL CRONOGRAMA EN LA PARTE INFERIOR --}}
+@if(in_array($matricula->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::UNIDAD]))
     <div style="margin-top: 20px; padding: 10px; background-color: #fffacd; border: 1px solid #ddd;">
-        <strong>Nota:</strong> Este estudiante está matriculado en el {{ strtolower($esTipoModulo ? 'módulo' : 'curso') }}: 
-        <strong>{{ $curso->nombre_curso }}</strong>
+        <strong>Nota:</strong> Este estudiante está matriculado individualmente en el {{ mb_strtolower($esTipoModulo ? 'módulo' : 'curso') }}: 
+        <strong>{{ $curso?->nombre_curso ?? '-' }}</strong>
     </div>
 @else
-    @if(in_array($matricula->tipo_matricula, [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA]))
+    @php
+        $totalCursosPrograma = $cursos->count();
+        $totalCursosActivos  = count($cursosActivosIds);
+    @endphp
+    
+    @if($totalCursosActivos === $totalCursosPrograma)
         <div style="margin-top: 20px; padding: 10px; background-color: #e8f5e9; border: 1px solid #ddd;">
-            <strong>Nota:</strong> Matrícula completa en todos los {{ strtolower($labelCursos) }} del {{ strtolower($labelPrograma) }}.
+            <strong>Nota:</strong> Matrícula completa en todos los {{ mb_strtolower($labelCursos) }} del {{ mb_strtolower($labelPrograma) }}.
+        </div>
+    @else
+        <div style="margin-top: 20px; padding: 10px; background-color: #e3f2fd; border: 1px solid #ddd;">
+            <strong>Nota:</strong> Matrícula parcial activa. El estudiante está matriculado en <strong>{{ $totalCursosActivos }}</strong> de <strong>{{ $totalCursosPrograma }}</strong> {{ mb_strtolower($labelCursos) }} del {{ mb_strtolower($labelPrograma) }}, según su cronograma de pagos contratado.
         </div>
     @endif
 @endif

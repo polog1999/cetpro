@@ -847,4 +847,103 @@ class Matricula extends Model
             }
         });
     }
+
+    /**
+     * Obtiene el rango de fechas en el que el estudiante estará académicamente activo
+     * basándose estrictamente en la fecha de vencimiento de su primer y último pago.
+     * 
+     * @return array{inicio: Carbon|null, fin: Carbon|null}
+     */
+    public function obtenerRangoEstudios(): array
+    {
+        $cronograma = $this->cronograma;
+
+        if (!$cronograma) {
+            return ['inicio' => null, 'fin' => null];
+        }
+
+        // Obtener la fecha de vencimiento del pago más antiguo y del más reciente
+        $minPago = $cronograma->pagos()->min('fecha_vencimiento');
+        $maxPago = $cronograma->pagos()->max('fecha_vencimiento');
+
+        if (!$minPago || !$maxPago) {
+            return ['inicio' => null, 'fin' => null];
+        }
+
+        // Si el pago vence el 31/03, asumimos que estudió todo Marzo (inicio: 01/03)
+        $rangoInicio = Carbon::parse($minPago)->startOfMonth();
+        $rangoFin    = Carbon::parse($maxPago)->endOfMonth();
+
+        return [
+            'inicio' => $rangoInicio,
+            'fin'    => $rangoFin
+        ];
+    }
+
+    /**
+     * Devuelve la colección de Cursos (o Módulos) en los que el alumno
+     * está académicamente apto según las fechas de sus pagos.
+     */
+   /**
+ * Devuelve la colección de Cursos (o Módulos) en los que el alumno
+ * está académicamente apto, respetando si es matrícula individual o completa.
+ */
+public function obtenerCursosActivos(): \Illuminate\Support\Collection
+{
+    // -----------------------------------------------------------------
+    // CASO 1: Matrículas Individuales (CURSO, MODULO, UNIDAD)
+    // Retornar ÚNICAMENTE el curso que fue seleccionado explícitamente
+    // -----------------------------------------------------------------
+    if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
+        if ($this->id_curso) {
+            $cursoEstructural = $this->curso;
+            return $cursoEstructural ? collect([$cursoEstructural]) : collect();
+        }
+        return collect();
+    }
+
+    // -----------------------------------------------------------------
+    // CASO 2: Matrículas Completas (PROGRAMA, FORMACION_CONTINUA)
+    // Calcular dinámicamente por cruce de fechas de vencimiento de pagos
+    // -----------------------------------------------------------------
+    $rango = $this->obtenerRangoEstudios();
+
+    if (!$rango['inicio'] || !$rango['fin']) {
+        return collect();
+    }
+
+    $programa = $this->horario?->programa;
+
+    if (!$programa) {
+        return collect();
+    }
+
+    // Filtrado dinámico por fechas de inicio y fin reales de cada curso
+    return $programa->cursos()
+        ->where(function ($query) use ($rango) {
+            $query->where('fecha_inicio', '<=', $rango['fin'])
+                  ->where('fecha_termino', '>=', $rango['inicio']);
+        })
+        ->orderBy('fecha_inicio', 'asc')
+        ->get();
+}
+
+    /**
+     * Devuelve la colección de Unidades didácticas activas para el alumno,
+     * mapeadas a partir de los cursos/módulos que le corresponden en su rango.
+     */
+    public function obtenerUnidadesActivas(): \Illuminate\Support\Collection
+    {
+        // Obtener los IDs de los cursos/módulos activos para el alumno
+        $cursosActivosIds = $this->obtenerCursosActivos()->pluck('id_curso');
+
+        if ($cursosActivosIds->isEmpty()) {
+            return collect();
+        }
+
+        // Retorna las unidades que pertenecen a esos cursos activos
+        return \App\Models\Unidad::whereIn('id_curso', $cursosActivosIds)
+            ->ordenado() // Scope de ordenamiento que tienes en tu modelo Unidad
+            ->get();
+    }
 }

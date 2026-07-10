@@ -275,6 +275,7 @@ class CronogramasTable
                     ->color('success')
                     ->url(fn($record) =>route('ver.cronograma.pdf', ['matricula' => $record->matricula->id]), shouldOpenInNewTab: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->toolbarActions([
                 // Bulk actions removidos porque CronogramaResource::canDeleteAny() = false
                 // Los cronogramas NUNCA se eliminan por integridad financiera y auditoría

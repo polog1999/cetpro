@@ -21,9 +21,9 @@ class CreateMatricula extends CreateRecord
      * Modifica el botón nativo de guardar de Filament para que 
      * exija una confirmación antes de procesar el formulario.
      */
-    protected function getSaveFormAction(): Action
+    protected function getCreateFormAction(): Action
     {
-        return parent::getSaveFormAction()
+        return parent::getCreateFormAction()
             ->label('Crear Matrícula')
             ->requiresConfirmation()
             ->modalIcon('heroicon-o-exclamation-triangle')

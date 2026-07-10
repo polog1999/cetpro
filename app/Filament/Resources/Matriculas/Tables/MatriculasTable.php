@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Matriculas\Tables;
 
+use App\Enums\EstadoMatricula;
 use App\Models\Matricula;
 use App\Models\Programa;
 use App\Models\Curso;
@@ -169,48 +170,49 @@ class MatriculasTable
                     ->placeholder('Todos los cursos'),
             ])
             ->recordActions([
-                 Action::make('extender')
-                        ->label('Extender Matrícula')
-                        ->icon('heroicon-o-calendar-days')
-                        ->color('warning')
-                        ->modalHeading('Extender Cronograma de Pagos')
-                        ->modalDescription('Use esta opción para agregar meses de estudio adicionales a esta matrícula sin crear un nuevo registro.')
-                        ->form([
-                            DatePicker::make('fecha_inicio_extension')
-                                ->label('Fecha de Inicio de la Extensión')
-                                ->helperText('Seleccione el mes desde el cual desea generar los nuevos pagos (ej: si faltó Junio, elija 01/06/2024).')
-                                ->default(now()->startOfMonth())
-                                ->required(),
+                Action::make('extender')
+                    ->label('Extender Matrícula')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('warning')
+                    ->visible(fn($record) => $record->estado != EstadoMatricula::ANULADO )
+                    ->modalHeading('Extender Cronograma de Pagos')
+                    ->modalDescription('Use esta opción para agregar meses de estudio adicionales a esta matrícula sin crear un nuevo registro.')
+                    ->form([
+                        DatePicker::make('fecha_inicio_extension')
+                            ->label('Fecha de Inicio de la Extensión')
+                            ->helperText('Seleccione el mes desde el cual desea generar los nuevos pagos (ej: si faltó Junio, elija 01/06/2024).')
+                            ->default(now()->startOfMonth())
+                            ->required(),
 
-                            TextInput::make('cuotas_adicionales')
-                                ->label('Cantidad de meses a agregar')
-                                ->helperText('Número de cuotas mensuales a generar.')
-                                ->numeric()
-                                ->integer()
-                                ->minValue(1)
-                                ->default(1)
-                                ->required(),
-                        ])
-                        ->action(function (Matricula $record, array $data) {
-                            try {
-                                $cuotas = (int) $data['cuotas_adicionales'];
-                                $fechaInicio = Carbon::parse($data['fecha_inicio_extension']);
+                        TextInput::make('cuotas_adicionales')
+                            ->label('Cantidad de meses a agregar')
+                            ->helperText('Número de cuotas mensuales a generar.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required(),
+                    ])
+                    ->action(function (Matricula $record, array $data) {
+                        try {
+                            $cuotas = (int) $data['cuotas_adicionales'];
+                            $fechaInicio = Carbon::parse($data['fecha_inicio_extension']);
 
-                                $record->extenderMatricula($cuotas, $fechaInicio);
+                            $record->extenderMatricula($cuotas, $fechaInicio);
 
-                                Notification::make()
-                                    ->title('Matrícula Extendida')
-                                    ->body("Se agregaron exitosamente {$cuotas} cuotas de pago al cronograma.")
-                                    ->success()
-                                    ->send();
-                            } catch (\Exception $e) {
-                                Notification::make()
-                                    ->title('Error al extender')
-                                    ->body('Ocurrió un inconveniente: ' . $e->getMessage())
-                                    ->danger()
-                                    ->send();
-                            }
-                        }),
+                            Notification::make()
+                                ->title('Matrícula Extendida')
+                                ->body("Se agregaron exitosamente {$cuotas} cuotas de pago al cronograma.")
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Error al extender')
+                                ->body('Ocurrió un inconveniente: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
 
                 // 👉 Botón para visualizar/descargar PDF de la ficha
                 Action::make('visualizar_ficha_pdf')
@@ -263,6 +265,9 @@ class MatriculasTable
                     ->modalWidth('7xl'),
 
                 // 👉 Botón para visualizar/descargar PDF de cursos/módulos
+                // Busca dentro de MatriculasTable.php las acciones: 'visualizar_cursos_pdf' y 'descargar_cursos'
+
+                // 👉 Botón para visualizar/descargar PDF de cursos/módulos
                 Action::make('visualizar_cursos_pdf')
                     ->label('')
                     ->tooltip('Cursos/Módulos PDF')
@@ -270,11 +275,15 @@ class MatriculasTable
                     ->color('success')
                     ->modalHeading('Vista previa - Cursos/Módulos del Programa')
                     ->modalContent(function (Matricula $record) {
-                        // Cargamos relaciones necesarias
-                        $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+                        // Cargamos relaciones incluyendo cronograma y pagos
+                        $record->load(['estudiante', 'horario.programa.cursos', 'curso', 'cronograma.pagos']);
+
+                        // Calculamos los cursos activos en base a las cuotas
+                        $cursosActivosIds = $record->obtenerCursosActivos()->pluck('id_curso')->toArray();
 
                         $pdf = Pdf::loadView('matriculas.cursos-pdf', [
-                            'matricula' => $record,
+                            'matricula'        => $record,
+                            'cursosActivosIds' => $cursosActivosIds,
                         ])
                             ->setPaper('A4', 'portrait');
 
@@ -294,11 +303,14 @@ class MatriculasTable
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('primary')
                                 ->action(function () use ($record) {
-                                    // Cargamos relaciones necesarias
-                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso']);
+                                    // Cargamos relaciones incluyendo cronograma y pagos
+                                    $record->load(['estudiante', 'horario.programa.cursos', 'curso', 'cronograma.pagos']);
+
+                                    $cursosActivosIds = $record->obtenerCursosActivos()->pluck('id_curso')->toArray();
 
                                     $pdf = Pdf::loadView('matriculas.cursos-pdf', [
-                                        'matricula' => $record,
+                                        'matricula'        => $record,
+                                        'cursosActivosIds' => $cursosActivosIds,
                                     ])
                                         ->setPaper('A4', 'portrait');
 
@@ -351,6 +363,7 @@ class MatriculasTable
 
                 // DeleteAction::make(),
             ])
+            ->defaultSort('created_at','desc')
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
