@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Cronogramas\RelationManagers;
 
+use App\Enums\EstadoMatricula;
 use App\Models\Cronograma;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -192,6 +193,10 @@ class PagosRelationManager extends RelationManager
                     ->label('Subir Evidencia')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->color('success')
+                     ->visible(fn (Pago $record): bool => 
+                        strtolower($record->estado) === 'pendiente' && 
+                        (auth()->user()->esAdmin() || auth()->user()->esDirectora()) && $record->cronograma->matricula->estado != EstadoMatricula::ANULADO
+                    )
                     ->form([
                         Select::make('metodo_pago')
                             ->options([
@@ -221,7 +226,7 @@ class PagosRelationManager extends RelationManager
                     ->color('danger')
                     ->visible(fn (Pago $record): bool => 
                         strtolower($record->estado) === 'pendiente' && 
-                        (auth()->user()->esAdmin() || auth()->user()->esDirectora())
+                        (auth()->user()->esAdmin() || auth()->user()->esDirectora()) && $record->cronograma->matricula->estado != EstadoMatricula::ANULADO
                     )
                     ->requiresConfirmation()
                     ->modalHeading('¿Seguro que desea anular este pago?')
