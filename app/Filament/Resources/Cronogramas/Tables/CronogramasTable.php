@@ -16,6 +16,7 @@ use Filament\Actions\EditAction;
 use App\Filament\Resources\Cronogramas\CronogramaResource;
 use App\Models\Pago;
 use Filament\Actions\Action;
+use Filament\Tables\Enums\RecordActionsPosition;
 
 class CronogramasTable
 {
@@ -25,7 +26,7 @@ class CronogramasTable
         return $table
             // Eager loading para evitar N+1
             ->modifyQueryUsing(
-                fn (Builder $query) => $query->with([
+                fn(Builder $query) => $query->with([
                     'matricula.estudiante',
                     'matricula.horario.programa',
                     'matricula.curso',
@@ -33,7 +34,11 @@ class CronogramasTable
             )
 
             ->columns([
-
+                TextColumn::make('matricula.codigo_inscripcion')
+                    ->label('Código')
+                    ->copyable()
+                    ->searchable()
+                    ->sortable(),
                 // =========================
                 // ALUMNO MATRICULADO
                 // =========================
@@ -79,7 +84,7 @@ class CronogramasTable
                         query: function (Builder $query, string $search): Builder {
                             return $query->whereHas(
                                 'matricula.estudiante',
-                                fn (Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
+                                fn(Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
                             );
                         }
                     ),
@@ -91,11 +96,11 @@ class CronogramasTable
                     ->label('Código Programa')
                     ->getStateUsing(function (Cronograma $record) {
                         $horario = $record->matricula?->horario;
-                        
+
                         if (!$horario || !$horario->id_programa) {
                             return '-';
                         }
-                        
+
                         // Formatear el ID del programa a 3 dígitos (igual que en el código de matrícula)
                         return str_pad($horario->id_programa, 3, '0', STR_PAD_LEFT);
                     })
@@ -141,7 +146,7 @@ class CronogramasTable
                         return $extra ? "{$principal} | {$extra}" : $principal;
                     })
                     ->wrap(),   // Solo para que haga salto de línea si es largo
-                    // OJO: sin ->searchable() para evitar SQL raro sobre relaciones
+                // OJO: sin ->searchable() para evitar SQL raro sobre relaciones
 
                 // =========================
                 // MONTO TOTAL
@@ -165,12 +170,12 @@ class CronogramasTable
 
                         return $esDeudor ? 'Deudor' : 'Al día';
                     })
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'Deudor' => 'danger',
                         'Al día' => 'success',
                         default => 'gray',
                     })
-                    ->icon(fn (string $state): string => match ($state) {
+                    ->icon(fn(string $state): string => match ($state) {
                         'Deudor' => 'heroicon-m-exclamation-circle',
                         'Al día' => 'heroicon-m-check-badge',
                         default => 'heroicon-m-question-mark-circle',
@@ -260,21 +265,22 @@ class CronogramasTable
             ])
             ->recordActions([
                 ViewAction::make('verPagos')
-                    ->label('Ver Pagos')
-                    ->icon('heroicon-m-eye')
-                    ->button()
-                    ->color('info') 
-                    ->url(fn (Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])),
+                    ->label(false)
+                    ->tooltip('Ver Pagos')
+                    ->icon('heroicon-m-banknotes')
+                    ->color('info')
+                    ->url(fn(Cronograma $record): string => CronogramaResource::getUrl('view', ['record' => $record])),
                 // EditAction removido porque CronogramaResource::canEdit() = false
                 // DeleteAction removido porque CronogramaResource::canDelete() = false
                 // Los cronogramas NO se eliminan por integridad financiera
-                 Action::make('ver_cronograma_pdf')
-                    ->label('Ver PDF')
-                     ->icon('heroicon-m-eye')
-                    ->button()
+                Action::make('ver_cronograma_pdf')
+                    ->label(false)
+                    ->tooltip('Ver PDF')
+                    ->icon('heroicon-m-document-text')
                     ->color('success')
-                    ->url(fn($record) =>route('ver.cronograma.pdf', ['matricula' => $record->matricula->id]), shouldOpenInNewTab: true),
-            ])
+                    ->url(fn($record) => route('ver.cronograma.pdf', ['matricula' => $record->matricula->id]), shouldOpenInNewTab: true),
+            ], position: RecordActionsPosition::BeforeColumns)
+            ->defaultSort('created_at', 'desc')
             ->toolbarActions([
                 // Bulk actions removidos porque CronogramaResource::canDeleteAny() = false
                 // Los cronogramas NUNCA se eliminan por integridad financiera y auditoría
