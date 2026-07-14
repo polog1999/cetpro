@@ -21,10 +21,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FichaMatriculaExport;
 use App\Exports\CursosMatriculaExport;
+use App\Models\Horario;
 use Carbon\Carbon;
+use Filament\Actions\SelectAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Support\Colors\Color;
+use Filament\Tables\Enums\RecordActionsPosition;
 
 class MatriculasTable
 {
@@ -35,6 +40,7 @@ class MatriculasTable
 
                 TextColumn::make('codigo_inscripcion')
                     ->label('Código')
+                    ->copyable()
                     ->searchable()
                     ->sortable(),
 
@@ -170,11 +176,118 @@ class MatriculasTable
                     ->placeholder('Todos los cursos'),
             ])
             ->recordActions([
-                Action::make('extender')
-                    ->label('Extender Matrícula')
-                    ->icon('heroicon-o-calendar-days')
+                Action::make('cambiar_horario')
+                    ->tooltip('Cambiar Horario')
+                    ->label(false)
+                    ->icon('heroicon-o-arrow-path')
                     ->color('warning')
-                    ->visible(fn($record) => $record->estado != EstadoMatricula::ANULADO )
+                    ->visible(fn($record) => $record->estado != EstadoMatricula::ANULADO)
+                    ->modalHeading('Cambiar horario')
+                    ->modalDescription('Use esta opción para cambiar el horario de clase del estudiante.')
+                    ->form([
+                        // ----------------------------------------
+                        // HORARIO (FILTRADO POR TIPO DE MATRÍCULA Y PROGRAMA)
+                        // ----------------------------------------
+                        Select::make('horario_id')
+                            ->label('Horario')
+                            ->relationship(
+                                name: 'horario',
+                                titleAttribute: 'id_horario',
+                                modifyQueryUsing: function (Builder $query, $get, $record) {
+                                    /** @var TipoMatricula|null $tipoMatricula */
+                                    $tipoMatricula = $record->tipo_matricula;
+
+                                    if (! $tipoMatricula) {
+                                        $query->whereRaw('1 = 0');
+                                        return;
+                                    }
+
+                                    // Cargar relaciones necesarias (programa y docente)
+                                    $query->with(['programa', 'docente']);
+
+                                    // Filtrar por programa intermediario seleccionado
+                                    if (in_array($tipoMatricula, [TipoMatricula::PROGRAMA, TipoMatricula::MODULO, TipoMatricula::UNIDAD])) {
+                                        $programaId = $record->horario->id_programa;
+                                        if ($programaId) {
+                                            $query->where('id_programa', $programaId);
+                                        } else {
+                                            $query->whereRaw('1 = 0');
+                                        }
+                                    }
+                                    // Filtrar por formacion continua intermediaria seleccionada
+                                    elseif ($tipoMatricula === TipoMatricula::FORMACION_CONTINUA || $tipoMatricula === TipoMatricula::CURSO) {
+                                        $formacionId = $record->horario->id_programa;
+                                        if ($formacionId) {
+                                            $query->where('id_programa', $formacionId);
+                                        } else {
+                                            $query->whereRaw('1 = 0');
+                                        }
+                                    }
+
+                                    // Solo mostrar horarios activos
+                                    $query->where('activo', true);
+                                },
+                            )
+                            ->default(fn($record) => $record->horario_id)
+                            ->getOptionLabelFromRecordUsing(function (Horario $horario): string {
+                                $programa  = $horario->programa?->nombre_programa ?? 'Sin programa';
+                                $docente   = $horario->docente?->nombre_completo ?? 'Sin docente';
+
+                                $turno     = $horario->turno?->value ?? $horario->turno;
+                                $modalidad = $horario->modalidad?->value ?? $horario->modalidad;
+
+                                $dias = is_array($horario->dias)
+                                    ? implode(', ', $horario->dias)
+                                    : $horario->dias;
+
+                                // Formatear hora_inicio y hora_fin usando Carbon para asegurar el formato correcto
+                                $horarioTexto = '';
+                                if (!empty($horario->hora_inicio) && !empty($horario->hora_fin)) {
+                                    try {
+                                        $inicio = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                                        $fin = \Carbon\Carbon::parse($horario->hora_fin)->format('H:i');
+                                        $horarioTexto = "{$inicio} - {$fin}";
+                                    } catch (\Exception $e) {
+                                        // Si hay error al parsear, intentar mostrar directamente
+                                        $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5) . ' - ' . substr($horario->hora_fin ?? '', 0, 5);
+                                    }
+                                } elseif (!empty($horario->hora_inicio)) {
+                                    try {
+                                        $horarioTexto = \Carbon\Carbon::parse($horario->hora_inicio)->format('H:i');
+                                    } catch (\Exception $e) {
+                                        $horarioTexto = substr($horario->hora_inicio ?? '', 0, 5);
+                                    }
+                                }
+
+                                return "{$programa} | {$docente} | {$turno} | {$dias} | {$horarioTexto} | {$modalidad}";
+                            })
+                    ])
+
+                    ->action(function (Matricula $record, array $data) {
+                        try {
+                            $horario_id = $data['horario_id'];
+
+                            $record->cambiarHorario($horario_id);
+
+                            Notification::make()
+                                ->title('Cambio de Horario')
+                                ->body("Se cambió el horario con éxito")
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Error al cambiar de horario')
+                                ->body('Ocurrió un inconveniente: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Action::make('extender')
+                    ->label(false)
+                    ->tooltip('Extender Matricula')
+                    ->icon('heroicon-o-document-plus')
+                    ->color(Color::Purple)
+                    ->visible(fn($record) => $record->estado != EstadoMatricula::ANULADO)
                     ->modalHeading('Extender Cronograma de Pagos')
                     ->modalDescription('Use esta opción para agregar meses de estudio adicionales a esta matrícula sin crear un nuevo registro.')
                     ->form([
@@ -362,8 +475,8 @@ class MatriculasTable
                     ->visible(fn(Matricula $record) => $record->estado !== \App\Enums\EstadoMatricula::ANULADO),
 
                 // DeleteAction::make(),
-            ])
-            ->defaultSort('created_at','desc')
+            ], position: RecordActionsPosition::BeforeColumns)
+            ->defaultSort('created_at', 'desc')
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

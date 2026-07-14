@@ -36,7 +36,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     protected function password(): Attribute
     {
         return Attribute::make(
-            set: fn ($value) => filled($value)
+            set: fn($value) => filled($value)
                 ? (Hash::needsRehash($value) ? Hash::make($value) : $value)
                 : $value
         );
@@ -91,6 +91,10 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         return $this->role?->nombre === 'Profesor' || $this->docente_id !== null;
     }
 
+    public function esDirectora(): bool
+    {
+        return $this->role?->nombre === 'Directora' || (is_null($this->directora_id)  && is_null($this->directora_id));
+    }
     /**
      * Verificar si el usuario es administrador
      */
@@ -113,7 +117,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
         if ($this->esAlumno()) {
             return false;
         }
-        
+
         // Si tiene rol asignado (y no es alumno), puede acceder
         if ($this->role) {
             return true;
@@ -127,20 +131,20 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     {
         if ($this->empleado) {
             return trim(
-                $this->empleado->nombre . ' ' . 
-                $this->empleado->apellido_paterno . ' ' . 
-                ($this->empleado->apellido_materno ?? '')
+                $this->empleado->nombre . ' ' .
+                    $this->empleado->apellido_paterno . ' ' .
+                    ($this->empleado->apellido_materno ?? '')
             );
         }
-        
+
         if ($this->docente) {
             return trim(
-                $this->docente->nombres . ' ' . 
-                $this->docente->apellido_paterno . ' ' . 
-                ($this->docente->apellido_materno ?? '')
+                $this->docente->nombres . ' ' .
+                    $this->docente->apellido_paterno . ' ' .
+                    ($this->docente->apellido_materno ?? '')
             );
         }
-        
+
         return $this->usuario ?? 'Usuario';
     }
 }

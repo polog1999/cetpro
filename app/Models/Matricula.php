@@ -804,7 +804,11 @@ class Matricula extends Model
         return $cronograma;
     }
 
-
+    public function cambiarHorario(int $horario_id) {
+        $this->update([
+            'horario_id' => $horario_id
+        ]);
+    }
     /**
      * Ordena cronológicamente todos los pagos de la matrícula 
      * y renumera las cuotas (1, 2, 3...) según su fecha de vencimiento.
@@ -884,49 +888,49 @@ class Matricula extends Model
      * Devuelve la colección de Cursos (o Módulos) en los que el alumno
      * está académicamente apto según las fechas de sus pagos.
      */
-   /**
- * Devuelve la colección de Cursos (o Módulos) en los que el alumno
- * está académicamente apto, respetando si es matrícula individual o completa.
- */
-public function obtenerCursosActivos(): \Illuminate\Support\Collection
-{
-    // -----------------------------------------------------------------
-    // CASO 1: Matrículas Individuales (CURSO, MODULO, UNIDAD)
-    // Retornar ÚNICAMENTE el curso que fue seleccionado explícitamente
-    // -----------------------------------------------------------------
-    if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
-        if ($this->id_curso) {
-            $cursoEstructural = $this->curso;
-            return $cursoEstructural ? collect([$cursoEstructural]) : collect();
+    /**
+     * Devuelve la colección de Cursos (o Módulos) en los que el alumno
+     * está académicamente apto, respetando si es matrícula individual o completa.
+     */
+    public function obtenerCursosActivos(): \Illuminate\Support\Collection
+    {
+        // -----------------------------------------------------------------
+        // CASO 1: Matrículas Individuales (CURSO, MODULO, UNIDAD)
+        // Retornar ÚNICAMENTE el curso que fue seleccionado explícitamente
+        // -----------------------------------------------------------------
+        if (in_array($this->tipo_matricula, [TipoMatricula::CURSO, TipoMatricula::MODULO, TipoMatricula::UNIDAD], true)) {
+            if ($this->id_curso) {
+                $cursoEstructural = $this->curso;
+                return $cursoEstructural ? collect([$cursoEstructural]) : collect();
+            }
+            return collect();
         }
-        return collect();
+
+        // -----------------------------------------------------------------
+        // CASO 2: Matrículas Completas (PROGRAMA, FORMACION_CONTINUA)
+        // Calcular dinámicamente por cruce de fechas de vencimiento de pagos
+        // -----------------------------------------------------------------
+        $rango = $this->obtenerRangoEstudios();
+
+        if (!$rango['inicio'] || !$rango['fin']) {
+            return collect();
+        }
+
+        $programa = $this->horario?->programa;
+
+        if (!$programa) {
+            return collect();
+        }
+
+        // Filtrado dinámico por fechas de inicio y fin reales de cada curso
+        return $programa->cursos()
+            ->where(function ($query) use ($rango) {
+                $query->where('fecha_inicio', '<=', $rango['fin'])
+                    ->where('fecha_termino', '>=', $rango['inicio']);
+            })
+            ->orderBy('fecha_inicio', 'asc')
+            ->get();
     }
-
-    // -----------------------------------------------------------------
-    // CASO 2: Matrículas Completas (PROGRAMA, FORMACION_CONTINUA)
-    // Calcular dinámicamente por cruce de fechas de vencimiento de pagos
-    // -----------------------------------------------------------------
-    $rango = $this->obtenerRangoEstudios();
-
-    if (!$rango['inicio'] || !$rango['fin']) {
-        return collect();
-    }
-
-    $programa = $this->horario?->programa;
-
-    if (!$programa) {
-        return collect();
-    }
-
-    // Filtrado dinámico por fechas de inicio y fin reales de cada curso
-    return $programa->cursos()
-        ->where(function ($query) use ($rango) {
-            $query->where('fecha_inicio', '<=', $rango['fin'])
-                  ->where('fecha_termino', '>=', $rango['inicio']);
-        })
-        ->orderBy('fecha_inicio', 'asc')
-        ->get();
-}
 
     /**
      * Devuelve la colección de Unidades didácticas activas para el alumno,

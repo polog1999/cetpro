@@ -47,7 +47,7 @@ class MatriculaResource extends Resource
         return [
             'index' => ListMatriculas::route('/'),
             'create' => CreateMatricula::route('/create'),
-            'edit' => EditMatricula::route('/{record}/edit'),
+            // 'edit' => EditMatricula::route('/{record}/edit'),
             'matricula-masiva' => MatriculaMasiva::route('/matricula-masiva'),
         ];
     }
