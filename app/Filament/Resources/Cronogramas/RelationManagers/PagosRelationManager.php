@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Cronogramas\RelationManagers;
 
+use App\Enums\EstadoMatricula;
+use App\Models\Cronograma;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -191,6 +193,10 @@ class PagosRelationManager extends RelationManager
                     ->label('Subir Evidencia')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->color('success')
+                     ->visible(fn (Pago $record): bool => 
+                        strtolower($record->estado) === 'pendiente' && 
+                        (auth()->user()->esAdmin() || auth()->user()->esDirectora()) && $record->cronograma->matricula->estado != EstadoMatricula::ANULADO
+                    )
                     ->form([
                         Select::make('metodo_pago')
                             ->options([
@@ -212,6 +218,35 @@ class PagosRelationManager extends RelationManager
                             'metodo_pago'=>$data['metodo_pago'],
                             'fecha_pago'=>$fechaActual,
                         ]);
+                    }),
+                    Action::make('anular_pago')
+                    ->label('')
+                    ->tooltip('Anular pago')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Pago $record): bool => 
+                        strtolower($record->estado) === 'pendiente' && 
+                        (auth()->user()->esAdmin() || auth()->user()->esDirectora()) && $record->cronograma->matricula->estado != EstadoMatricula::ANULADO
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('¿Seguro que desea anular este pago?')
+                    ->modalSubheading('Esta acción primero anulará el pago en Oracle y luego en PostgreSQL. No se puede revertir.')
+                    ->modalButton('Confirmar anulación')
+                    ->action(function (Pago $record) {
+                        $service = app(\App\Services\PagoService::class);
+                        try {
+                            $service->anularPago($record);
+                            \Filament\Notifications\Notification::make()
+                                ->title('Pago anulado correctamente')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error al anular pago')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
                 // DeleteAction::make(),
             ])
