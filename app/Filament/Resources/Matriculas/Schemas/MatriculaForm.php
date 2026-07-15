@@ -52,7 +52,7 @@ class MatriculaForm
                 // ----------------------------------------
                 TextInput::make('codigo_inscripcion')
                     ->label('Código de inscripción')
-                    ->prefix('📋')
+                    ->prefixIcon('heroicon-o-identification')
                     ->placeholder('Se generará al seleccionar estudiante y horario')
                     ->disabled()
                     ->dehydrated(true)

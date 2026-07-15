@@ -36,7 +36,7 @@ class CursoRepository implements CursoRepositoryInterface
 
     public function findByPrograma(int $programaId): Collection
     {
-        return Curso::where('id_programa', $programaId)->get();
+        return Curso::where('id_programa', $programaId)->orderBy('fecha_inicio','asc')->get();
     }
 
     public function hasDependencies(int $id): bool

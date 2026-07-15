@@ -6,8 +6,25 @@
                 Seleccionar Programa, Curso y Horario
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {{-- Selector de Programa --}}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {{-- Selector de Tipo de Programa --}}
+                <div>
+                    <label for="tipo_programa" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tipo de Programa
+                    </label>
+                    <select 
+                        wire:model.live="tipo_programa" 
+                        id="tipo_programa"
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    >
+                        <option value="">-- Seleccionar tipo --</option>
+                        @foreach($this->tiposPrograma as $label)
+                            <option value="{{ $label }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Selector de Programa / Formación Continua --}}
                 <div>
                     <label for="programa_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Programa / Formación Continua
@@ -16,6 +33,7 @@
                         wire:model.live="programa_id" 
                         id="programa_id"
                         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                        @if(!$tipo_programa) disabled @endif
                     >
                         <option value="">-- Buscar programa --</option>
                         @foreach($this->programas as $id => $nombre)
@@ -24,7 +42,7 @@
                     </select>
                 </div>
 
-                {{-- Selector de Curso/Módulo --}}
+                {{-- Selector de Curso / Módulo --}}
                 <div>
                     <label for="curso_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Curso / Módulo
@@ -93,7 +111,7 @@
                         <thead class="bg-gray-50 dark:bg-gray-900/50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">#</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombres y Apellidos</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Apellidos y Nombres</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">DNI</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Nota</th>
                             </tr>
@@ -102,7 +120,7 @@
                             @foreach($this->estudiantes as $index => $estudiante)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $index + 1 }}
+                                          {{ $loop->iteration }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900 dark:text-white">
@@ -113,11 +131,13 @@
                                         {{ $estudiante['dni'] }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        @if($estudiante['ya_tiene_nota'])
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                {{ intval($estudiante['nota_actual']) }}
+                                        {{-- MODIFICADO: Si no tiene permisos de guardado (Directora), se muestra solo lectura en badge --}}
+                                        @if(!$this->puedeGuardarNotas())
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ $estudiante['ya_tiene_nota'] ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400' }}">
+                                                {{ $estudiante['ya_tiene_nota'] ? intval($estudiante['nota_actual']) : '--' }}
                                             </span>
                                         @else
+                                            {{-- Para Admin y Docentes autorizados, se muestra el campo de texto editable --}}
                                             <input 
                                                 type="text" 
                                                 wire:model.blur="notas.{{ $estudiante['matricula_id'] }}"
@@ -135,64 +155,65 @@
                     </table>
                 </div>
 
-                {{-- Botones --}}
-                {{-- Botones con confirmación inline --}}
-                <div 
-                    x-data="{ showConfirm: false }"
-                    class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex flex-col items-end gap-3"
-                >
-                    <div class="flex justify-end gap-3" x-show="!showConfirm">
-                        <button 
-                            wire:click="cancelar"
-                            type="button"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            @click="showConfirm = true"
-                            type="button"
-                            style="background-color: #16a34a; color: white;"
-                            class="px-6 py-2 font-medium rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800 transition-colors"
-                        >
-                            Guardar Notas
-                        </button>
-                    </div>
-
-                    {{-- Mensaje de confirmación inline --}}
+                {{-- Sección de Botones: Totalmente oculta si el rol es de solo lectura (Directora) --}}
+                @if($this->puedeGuardarNotas())
                     <div 
-                        x-show="showConfirm" 
-                        x-cloak
-                        x-transition:enter="transition ease-out duration-200"
-                        x-transition:enter-start="opacity-0 transform translate-y-2"
-                        x-transition:enter-end="opacity-100 transform translate-y-0"
-                        class="w-full max-w-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-right"
+                        x-data="{ showConfirm: false }"
+                        class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex flex-col items-end gap-3"
                     >
-                        <p class="text-sm text-amber-800 dark:text-amber-200 mb-3 font-medium">
-                            ⚠️ Una vez guardadas, las notas se registrarán permanentemente. <br>
-                            Podrá editarlas después si es necesario, pero quedará registro.
-                        </p>
-                        <div class="flex justify-end gap-2">
+                        <div class="flex justify-end gap-3" x-show="!showConfirm">
                             <button 
-                                @click="showConfirm = false"
+                                wire:click="cancelar"
                                 type="button"
-                                class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50"
+                                class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                             >
                                 Cancelar
                             </button>
                             <button 
-                                wire:click="guardarNotas"
-                                wire:loading.attr="disabled"
+                                @click="showConfirm = true"
                                 type="button"
                                 style="background-color: #16a34a; color: white;"
-                                class="px-4 py-1.5 text-sm font-medium rounded hover:bg-green-700 shadow-sm"
+                                class="px-6 py-2 font-medium rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800 transition-colors"
                             >
-                                <span wire:loading.remove wire:target="guardarNotas">Sí, Confirmar Guardado</span>
-                                <span wire:loading wire:target="guardarNotas">Guardando...</span>
+                                Guardar Notas
                             </button>
                         </div>
+
+                        {{-- Mensaje de confirmación inline --}}
+                        <div 
+                            x-show="showConfirm" 
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 transform translate-y-2"
+                            x-transition:enter-end="opacity-100 transform translate-y-0"
+                            class="w-full max-w-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-right"
+                        >
+                            <p class="text-sm text-amber-800 dark:text-amber-200 mb-3 font-medium">
+                                ⚠️ Una vez guardadas, las notas se registrarán permanentemente. <br>
+                                Podrá editarlas después si es necesario, pero quedará registro.
+                            </p>
+                            <div class="flex justify-end gap-2">
+                                <button 
+                                    @click="showConfirm = false"
+                                    type="button"
+                                    class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    wire:click="guardarNotas"
+                                    wire:loading.attr="disabled"
+                                    type="button"
+                                    style="background-color: #16a34a; color: white;"
+                                    class="px-4 py-1.5 text-sm font-medium rounded hover:bg-green-700 shadow-sm"
+                                >
+                                    <span wire:loading.remove wire:target="guardarNotas">Sí, Confirmar Guardado</span>
+                                    <span wire:loading wire:target="guardarNotas">Guardando...</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                @endif
             </div>
         @elseif($horario_id && $curso_id && $this->estudiantes->isEmpty())
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 border border-gray-200 dark:border-gray-700 text-center">
