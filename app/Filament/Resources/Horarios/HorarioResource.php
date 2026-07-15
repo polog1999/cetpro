@@ -26,7 +26,7 @@ class HorarioResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Horarios';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestión Académica';
 

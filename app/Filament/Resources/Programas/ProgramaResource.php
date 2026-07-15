@@ -29,7 +29,7 @@ class ProgramaResource extends Resource
     protected static ?string $pluralModelLabel = 'Programas / Formación Continua';
     protected static ?string $modelLabel = 'Programa / Formación Continua';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-briefcase';
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestión Académica';
 

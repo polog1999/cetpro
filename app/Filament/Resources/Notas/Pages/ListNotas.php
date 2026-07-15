@@ -242,7 +242,9 @@ class ListNotas extends Page implements HasForms
                 'nota_actual' => $notaExistente?->nota_numerica,
                 'ya_tiene_nota' => $notaExistente !== null,
             ];
-        });
+        })
+            ->sortBy('nombre_completo') // 👈 1. Asegurar ordenamiento alfabético en PHP
+            ->values();
     }
 
     /**
