@@ -8,6 +8,7 @@ use App\Models\Horario;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Programa;
+use App\Models\Unidad; // 👈 Importado
 use App\Enums\TipoPrograma;
 use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -27,6 +28,7 @@ class ListNotas extends Page implements HasForms
     public ?string $tipo_programa = null;
     public ?int $programa_id = null;
     public ?int $curso_id = null;
+    public ?int $unidad_id = null; // 👈 Añadido
     public ?int $horario_id = null;
 
     // Array de notas
@@ -34,6 +36,22 @@ class ListNotas extends Page implements HasForms
 
     // Modal de confirmación
     public bool $showConfirmModal = false;
+
+    /**
+     * Ayudante seguro para verificar si se seleccionó Programa de Estudio
+     */
+    public function esProgramaEstudio(): bool
+    {
+        if (!$this->tipo_programa) {
+            return false;
+        }
+
+        $val = is_object($this->tipo_programa) && method_exists($this->tipo_programa, 'value')
+            ? $this->tipo_programa->value
+            : (string) $this->tipo_programa;
+
+        return $val === 'PROGRAMA_ESTUDIO' || (defined('\App\Enums\TipoPrograma::PROGRAMA_ESTUDIO') && $val === TipoPrograma::PROGRAMA_ESTUDIO->value);
+    }
 
     /**
      * Verifica si el usuario tiene rol de Administrador o Directora.
@@ -51,16 +69,13 @@ class ListNotas extends Page implements HasForms
      */
     public function puedeGuardarNotas(): bool
     {
-
         $user = auth()->user();
 
         if (!$user) {
-
             return false;
         }
 
         if ($user->esDirectora()) {
-
             return false; // Directora solo puede visualizar
         }
 
@@ -103,12 +118,8 @@ class ListNotas extends Page implements HasForms
 
         $query = Programa::query();
 
-
-        // Mapeo seguro para soportar Enum o String de base de datos
-
         if (class_exists(TipoPrograma::class)) {
             $enumValue = $this->tipo_programa;
-
             $query->where('tipo_programa', $enumValue);
         } else {
             $query->where('tipo_programa', $this->tipo_programa);
@@ -123,11 +134,6 @@ class ListNotas extends Page implements HasForms
 
         // El docente solo ve los programas donde tiene horarios asignados activamente
         if ($user?->docente_id) {
-            //  Notification::make()
-            //     ->danger()
-            //     ->title('Es docente')
-            //     // ->body($enumValue)
-            //     ->send();
             return $query->whereHas('horarios', function ($q) use ($user) {
                 $q->where('id_docente', $user->docente_id)
                     ->where('activo', true);
@@ -151,6 +157,26 @@ class ListNotas extends Page implements HasForms
         return Curso::where('id_programa', $this->programa_id)
             ->orderBy('fecha_inicio', 'asc')
             ->pluck('nombre_curso', 'id_curso');
+    }
+
+    /**
+     * NUEVO: Obtener unidades didácticas si es Programa de Estudio
+     */
+    public function getUnidadesProperty(): Collection
+    {
+        if (!$this->curso_id || !$this->esProgramaEstudio()) {
+            return collect();
+        }
+
+        $query = Unidad::where('id_curso', $this->curso_id);
+
+        if (method_exists(Unidad::class, 'scopeOrdenado')) {
+            $query->ordenado();
+        } else {
+            $query->orderBy('id_unidad', 'asc');
+        }
+
+        return $query->pluck('nombre_unidad', 'id_unidad');
     }
 
     /**
@@ -206,34 +232,74 @@ class ListNotas extends Page implements HasForms
     /**
      * Obtener estudiantes matriculados
      */
+    /**
+     * Obtener estudiantes cruzando curso Y unidad de forma estricta
+     */
     public function getEstudiantesProperty(): Collection
     {
         if (!$this->horario_id || !$this->curso_id) {
             return collect();
         }
 
+        // Si es Programa de Estudio, exigimos que se seleccione una unidad antes de cargar alumnos
+        if ($this->esProgramaEstudio() && !$this->unidad_id) {
+            return collect();
+        }
+
         $matriculas = Matricula::with(['estudiante'])
             ->where('horario_id', $this->horario_id)
-            ->where(function ($query) {
-                $query->where('id_curso', $this->curso_id)
-                    ->orWhereNull('id_curso');
-            })
             ->whereIn('estado', [
                 \App\Enums\EstadoMatricula::ENPROCESO->value,
                 \App\Enums\EstadoMatricula::CULMINADO->value,
             ])
-            ->whereHas('estudiante', function ($q) {
-                $q->orderBy('apellido_paterno', 'asc');
+            ->where(function ($query) {
+                if ($this->esProgramaEstudio()) {
+                    // LÓGICA PARA PROGRAMA DE ESTUDIO
+                    
+                    // 1. Alumno matriculado específicamente en la Unidad seleccionada
+                    $query->where(function ($q) {
+                        $q->where('id_curso', $this->curso_id)
+                          ->where('id_unidad', $this->unidad_id);
+                    })
+                    // 2. O alumno matriculado en TODO el Módulo (unidad es null)
+                    ->orWhere(function ($q) {
+                        $q->where('id_curso', $this->curso_id)
+                          ->whereNull('id_unidad');
+                    })
+                    // 3. O alumno matriculado en TODO el Programa (curso y unidad null)
+                    ->orWhere(function ($q) {
+                        $q->whereNull('id_curso')
+                          ->whereNull('id_unidad');
+                    });
+                    
+                } else {
+                    // LÓGICA PARA FORMACIÓN CONTINUA
+                    $query->where('id_curso', $this->curso_id)
+                          ->orWhereNull('id_curso');
+                }
             })
-
             ->get();
-        // 2. Ordenamos la colección en memoria por apellido paterno
-        $matriculasOrdenadas = $matriculas->sortBy('estudiante.apellido_paterno');
-        // 3. Mapeamos el resultado final
+
+        // NUEVO: Agrupamos por ID de estudiante para asegurar que no se dupliquen
+        // en la lista si tuvieran múltiples matrículas activas por algún error administrativo
+        $matriculasUnicas = $matriculas->unique('estudiante_id');
+
+        // Ordenamos la colección en memoria por apellido paterno
+        $matriculasOrdenadas = $matriculasUnicas->sortBy('estudiante.apellido_paterno');
+
+        // Mapeamos el resultado final
         return $matriculasOrdenadas->map(function ($matricula) {
-            $notaExistente = Nota::where('matricula_id', $matricula->id)
-                ->where('curso_id', $this->curso_id)
-                ->first();
+            $queryNota = Nota::where('matricula_id', $matricula->id)
+                ->where('curso_id', $this->curso_id);
+
+            // Condicional: Si es programa filtra por unidad_id, si es formación continua por nulo
+            if ($this->esProgramaEstudio()) {
+                $queryNota->where('unidad_id', $this->unidad_id);
+            } else {
+                $queryNota->whereNull('unidad_id');
+            }
+
+            $notaExistente = $queryNota->first();
 
             return [
                 'matricula_id' => $matricula->id,
@@ -254,6 +320,7 @@ class ListNotas extends Page implements HasForms
     {
         $this->programa_id = null;
         $this->curso_id = null;
+        $this->unidad_id = null; // 👈 Añadido reset
         $this->horario_id = null;
         $this->notas = [];
     }
@@ -261,14 +328,21 @@ class ListNotas extends Page implements HasForms
     public function updatedProgramaId(): void
     {
         $this->curso_id = null;
+        $this->unidad_id = null; // 👈 Añadido reset
         $this->horario_id = null;
         $this->notas = [];
     }
 
     public function updatedCursoId(): void
     {
+        $this->unidad_id = null; // 👈 Añadido reset
         $this->horario_id = null;
         $this->notas = [];
+    }
+
+    public function updatedUnidadId(): void
+    {
+        $this->updatedHorarioId(); // Al cambiar unidad, cargar notas de esa unidad
     }
 
     /**
@@ -340,7 +414,16 @@ class ListNotas extends Page implements HasForms
         $actualizadas = 0;
         $errores = 0;
 
+        // 👉 NUEVO: Obtenemos estrictamente los IDs de matrícula que pertenecen al horario actual
+        $matriculasValidas = $this->estudiantes->pluck('matricula_id')->toArray();
+
         foreach ($this->notas as $matriculaId => $nota) {
+
+            // 👉 NUEVO: Si por algún motivo quedó un ID de un horario viejo en memoria, lo saltamos
+            if (!in_array($matriculaId, $matriculasValidas)) {
+                continue;
+            }
+
             if ($nota === '' || $nota === null) {
                 continue;
             }
@@ -351,9 +434,17 @@ class ListNotas extends Page implements HasForms
                 continue;
             }
 
-            $existente = Nota::where('matricula_id', $matriculaId)
-                ->where('curso_id', $this->curso_id)
-                ->first();
+            // Filtrado condicional para buscar la nota existente
+            $queryExistente = Nota::where('matricula_id', $matriculaId)
+                ->where('curso_id', $this->curso_id);
+
+            if ($this->esProgramaEstudio()) {
+                $queryExistente->where('unidad_id', $this->unidad_id);
+            } else {
+                $queryExistente->whereNull('unidad_id');
+            }
+
+            $existente = $queryExistente->first();
 
             if ($existente) {
                 // Tanto administradores como docentes autorizados pueden editar y sobrescribir las notas
@@ -374,6 +465,7 @@ class ListNotas extends Page implements HasForms
                 Nota::create([
                     'matricula_id' => $matriculaId,
                     'curso_id' => $this->curso_id,
+                    'unidad_id' => $this->esProgramaEstudio() ? $this->unidad_id : null, // 👈 Condicional según tipo
                     'nota_numerica' => $notaNumerica,
                     'docente_id' => $docenteId,
                 ]);
@@ -408,7 +500,7 @@ class ListNotas extends Page implements HasForms
         }
 
         $this->showConfirmModal = false;
-        $this->updatedHorarioId();
+        // $this->updatedHorarioId();
     }
 
     /**
@@ -419,6 +511,7 @@ class ListNotas extends Page implements HasForms
         $this->tipo_programa = null;
         $this->programa_id = null;
         $this->curso_id = null;
+        $this->unidad_id = null; // 👈 Añadido
         $this->horario_id = null;
         $this->notas = [];
     }

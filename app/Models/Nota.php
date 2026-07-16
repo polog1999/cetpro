@@ -22,6 +22,7 @@ class Nota extends Model
     protected $fillable = [
         'matricula_id',
         'curso_id',
+         'unidad_id', // 👈 Añadido
         'docente_id',
         'nota_numerica',
         'nota_letra',
