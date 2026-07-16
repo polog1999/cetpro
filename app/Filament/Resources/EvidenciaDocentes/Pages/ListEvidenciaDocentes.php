@@ -13,7 +13,9 @@ class ListEvidenciaDocentes extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+            ->label('Subir Evidencia')
+            ->visible(fn () => !auth()->user()->esDirectora()), // 👈 Oculta el botón si es Directora
         ];
     }
 }

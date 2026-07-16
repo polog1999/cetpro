@@ -68,4 +68,15 @@ class EvidenciaDocenteResource extends Resource
         // Bloqueo preventivo por defecto
         return $query->whereRaw('1 = 0');
     }
+    public static function canCreate(): bool
+{
+    $user = auth()->user();
+    
+    // Si el usuario es Directora, NO puede crear registros (retorna false)
+    if ($user && $user->esDirectora()) {
+        return false;
+    }
+
+    return true; // Administradores y Docentes sí pueden crear
+}
 }
