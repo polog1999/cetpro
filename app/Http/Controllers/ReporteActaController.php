@@ -8,10 +8,9 @@ use App\Models\Nota;
 use App\Models\Curso;
 use App\Models\Unidad;
 use App\Enums\EstadoMatricula;
-use App\Enums\TipoMatricula;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\TemplateProcessor;
-use Illuminate\Support\Str;
 
 class ReporteActaController extends Controller
 {
@@ -20,7 +19,6 @@ class ReporteActaController extends Controller
         $horario = Horario::with(['programa', 'docente', 'programa.cursos'])->findOrFail($horario_id);
         $curso = Curso::findOrFail($curso_id);
 
-        // Lógica dinámica: Si es Formación Continua usa los cursos, si es Programa usa las unidades
         $tipoProg = $horario->programa->tipo_programa;
         $esFormacionContinua = ($tipoProg == 'FORMACION_CONTINUA' || (is_object($tipoProg) && $tipoProg->value == 'FORMACION_CONTINUA'));
 
@@ -43,6 +41,12 @@ class ReporteActaController extends Controller
             ->values();
 
         $templatePath = public_path('plantillas/acta.docx');
+        
+        if (!File::exists($templatePath)) {
+            Log::error("La plantilla no existe en: {$templatePath}");
+            return back()->with('error', 'No se encontró la plantilla base acta.docx.');
+        }
+
         $templateProcessor = new TemplateProcessor($templatePath);
 
         // Cabeceras
@@ -52,7 +56,7 @@ class ReporteActaController extends Controller
         $templateProcessor->setValue('anio', $anio);
         $templateProcessor->setValue('docente', $horario->docente ? mb_strtoupper($horario->docente->nombre_completo) : 'NO ASIGNADO');
 
-        // Títulos de columnas (u1_nombre hasta u8_nombre)
+        // Títulos de columnas
         for ($j = 1; $j <= 8; $j++) {
             $col = $columnas->get($j - 1);
             $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
@@ -79,9 +83,6 @@ class ReporteActaController extends Controller
                     $queryNota = Nota::where('matricula_id', $mat->id)
                         ->where('curso_id', $curso_id);
 
-                    // Lógica corregida: 
-                    // Si es Formación Continua, el ID es del CURSO.
-                    // Si es Programa, el ID es de la UNIDAD.
                     if ($esFormacionContinua) {
                         $queryNota->where('curso_id', $item->id_curso);
                     } else {
@@ -118,18 +119,25 @@ class ReporteActaController extends Controller
         if (PHP_OS_FAMILY === 'Windows') {
             $soffice = '"C:\Program Files\LibreOffice\program\soffice.exe"';
         } else {
-            // En Ubuntu / Linux, 'soffice' o 'libreoffice' están en el PATH del sistema
-            $soffice = 'libreoffice';
+            // En Linux es importante asignar un HOME temporal para que www-data no falle al crear perfil
+            $soffice = 'export HOME=/tmp && libreoffice';
         }
 
-        // Comando multiplataforma
-        $command = "{$soffice} --headless --convert-to pdf --outdir " . escapeshellarg($tempPath) . " " . escapeshellarg($docxPath);
+        // Ejecutar comando capturando la salida de error (2>&1)
+        $command = "{$soffice} --headless --convert-to pdf --outdir " . escapeshellarg($tempPath) . " " . escapeshellarg($docxPath) . " 2>&1";
         exec($command, $output, $returnVar);
 
-        if (!file_exists($pdfPath)) {
-            return back()->with('error', 'Error al convertir el documento a PDF.');
+        if ($returnVar !== 0 || !file_exists($pdfPath)) {
+            Log::error("Error LibreOffice (Code {$returnVar}): " . implode("\n", $output));
+            return back()->with('error', 'Error al generar el PDF. Revisa los logs.');
         }
 
-        return response()->download($pdfPath)->deleteFileAfterSend(true);
+        // Limpiar el DOCX temporal
+        @unlink($docxPath);
+
+        // Retornar la descarga directa sin deleteFileAfterSend inmediato para evitar cortes
+        return response()->download($pdfPath, "{$fileName}.pdf", [
+            'Content-Type' => 'application/pdf',
+        ]);
     }
 }
