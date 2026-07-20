@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MatriculaPdfController;
 use App\Http\Controllers\MatriculaCursosPdfController;
 use App\Http\Controllers\EvidenciaPagoController;
+use App\Http\Controllers\ReporteActaController;
+use App\Http\Controllers\ReporteNominaController;
 use App\Http\Controllers\StudentPortalController;
 
 // Rutas seguras para evidencias de pago (con control de acceso)
@@ -42,7 +44,12 @@ Route::middleware(['web', 'auth', 'alumno'])->prefix('portal')->group(function (
     Route::post('/cambiar-password', [StudentPortalController::class, 'cambiarPassword'])->name('portal.cambiar-password.update');
     Route::post('/logout', [StudentPortalController::class, 'logout'])->name('portal.logout');
 });
-
+Route::get('/reportes/nomina/{horario_id}/{anio}/{curso_id}', [ReporteNominaController::class, 'stream'])
+    ->name('reportes.nomina.stream');
+    
+    Route::get('/reportes/acta/{horario_id}/{anio}/{curso_id}', [ReporteActaController::class, 'stream'])
+    ->name('reportes.acta.stream')
+    ->middleware(['web', 'auth']);
 // Ruta raíz
 Route::get('/', function () {
     return redirect('/admin');

@@ -130,7 +130,8 @@ class HorariosTable
                     )
                     ->searchable(),
             ])
-            ->actions([
+            ->recordActions([
+                
                 ViewAction::make('verAlumnos')
                     ->label('Ver Alumnos')
                     ->icon('heroicon-m-users')
