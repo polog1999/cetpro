@@ -58,22 +58,22 @@ class EvidenciaDocenteForm
                     ->downloadable()
                     ->openable(),
 
-                // Sección exclusiva de revisión para la Directora y el Admin
-                Textarea::make('observaciones')
-                    ->label('Observaciones de Revisión')
-                    ->placeholder('Escriba aquí los motivos si el documento es observado...')
-                    ->visible($esAdministrativo),
+                // // Sección exclusiva de revisión para la Directora y el Admin
+                // Textarea::make('observaciones')
+                //     ->label('Observaciones de Revisión')
+                //     ->placeholder('Escriba aquí los motivos si el documento es observado...')
+                //     ->visible($esAdministrativo),
 
-                Select::make('estado')
-                    ->label('Estado de Revisión')
-                    ->options([
-                        'Pendiente' => 'Pendiente',
-                        'Aprobado' => 'Aprobado',
-                        'Observado' => 'Observado',
-                    ])
-                    ->default('Pendiente')
-                    ->disabled(!$esAdministrativo)
-                    ->visible($esAdministrativo),
+                // Select::make('estado')
+                //     ->label('Estado de Revisión')
+                //     ->options([
+                //         'Pendiente' => 'Pendiente',
+                //         'Aprobado' => 'Aprobado',
+                //         'Observado' => 'Observado',
+                //     ])
+                //     ->default('Pendiente')
+                //     ->disabled(!$esAdministrativo)
+                //     ->visible($esAdministrativo),
             ]);
     }
 }

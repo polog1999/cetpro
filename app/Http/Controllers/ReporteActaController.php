@@ -23,7 +23,6 @@ class ReporteActaController extends Controller
             $curso = Curso::findOrFail($curso_id);
         }
 
-
         $tipoProg = $horario->programa->tipo_programa;
         $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
 
@@ -37,17 +36,28 @@ class ReporteActaController extends Controller
             $nombreModulo = mb_strtoupper($curso->nombre_curso);
         }
 
-        $matriculas = Matricula::with('estudiante')
+        // 1. OBTENEMOS LAS MATRÍCULAS CRUDAS (Agrupamos por estudiante para unificar duplicados)
+        $matriculasCrudas = Matricula::with('estudiante')
             ->where('horario_id', $horario_id)
-            ->where(function ($q) use ($curso_id) {
-                $q->where('id_curso', $curso_id)->orWhereNull('id_curso');
+            ->where(function ($q) use ($curso_id, $esFormacionContinua) {
+                if ($esFormacionContinua) {
+                    $q->whereNotNull('id_curso')
+                        ->orWhereNull('id_curso');
+                } else {
+                    $q->where('id_curso', $curso_id)
+                        ->orWhereNull('id_curso');
+                }
             })
             ->where('codigo_inscripcion', 'like', $anio . '%')
             ->whereIn('estado', [EstadoMatricula::ENPROCESO->value, EstadoMatricula::CULMINADO->value])
-            ->get()
-            ->unique('estudiante_id')
-            ->sortBy('estudiante.apellido_paterno')
-            ->values();
+            ->get();
+
+        // Agrupamos por estudiante para manejar los que tienen múltiples matrículas (curso por curso)
+        $estudiantesAgrupados = $matriculasCrudas->groupBy('estudiante_id');
+        
+        $matriculas = $estudiantesAgrupados->map(function ($grupo) {
+            return $grupo->first(); // Tomamos una matrícula de referencia para los datos personales
+        })->sortBy('estudiante.apellido_paterno')->values();
 
         $templatePath = public_path('plantillas/acta.docx');
 
@@ -72,13 +82,21 @@ class ReporteActaController extends Controller
             $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
             // Escapar caracteres especiales para XML (&, <, >, etc.)
             $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
-            // dd($columnas->get(3)->nombre_curso);
+            
             $templateProcessor->setValue("titulo_u{$j}", $nombreColLimpio);
         }
         $templateProcessor->setValue('hoy', now()->format('d - m - Y'));
+
         // Filas alumnos
         for ($i = 1; $i <= 40; $i++) {
             $mat = $matriculas->get($i - 1);
+            
+            // Recogemos los IDs de TODAS las matrículas que tenga este estudiante específico
+            $idsMatriculasDelAlumno = [];
+            if ($mat) {
+                $idsMatriculasDelAlumno = $estudiantesAgrupados[$mat->estudiante_id]->pluck('id')->toArray();
+            }
+
             $templateProcessor->setValue("n_{$i}", $mat ? $i : '');
             $templateProcessor->setValue("cod_{$i}", $mat ? $mat->estudiante->nro_documento : '');
             $templateProcessor->setValue("nom_{$i}", $mat ? mb_strtoupper("{$mat->estudiante->apellido_paterno} {$mat->estudiante->apellido_materno}, {$mat->estudiante->nombres}") : '');
@@ -92,10 +110,10 @@ class ReporteActaController extends Controller
                 $item = $columnas->get($j - 1);
                 $notaVal = '';
 
-                if ($mat && $item) {
-                    $queryNota = Nota::where('matricula_id', $mat->id);
+                // Buscamos usando whereIn con todas las matrículas del alumno
+                if (!empty($idsMatriculasDelAlumno) && $item) {
+                    $queryNota = Nota::whereIn('matricula_id', $idsMatriculasDelAlumno);
 
-                    
                     if ($esFormacionContinua) {
                         $queryNota->where('curso_id', $item->id_curso);
                     } else {

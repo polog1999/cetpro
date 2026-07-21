@@ -55,16 +55,16 @@ class EvidenciaDocentesTable
                     ->sortable(),
 
                 // 4. Estado de Revisión con colores condicionales (Badges)
-                TextColumn::make('estado')
-                    ->label('Estado')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Aprobado' => 'success',   // Verde
-                        'Observado' => 'danger',   // Rojo
-                        'Pendiente' => 'warning',  // Amarillo/Naranja
-                        default => 'gray',
-                    })
-                    ->sortable(),
+                // TextColumn::make('estado')
+                //     ->label('Estado')
+                //     ->badge()
+                //     ->color(fn (string $state): string => match ($state) {
+                //         'Aprobado' => 'success',   // Verde
+                //         'Observado' => 'danger',   // Rojo
+                //         'Pendiente' => 'warning',  // Amarillo/Naranja
+                //         default => 'gray',
+                //     })
+                //     ->sortable(),
 
                 // 5. Fecha de subida del archivo
                 TextColumn::make('created_at')
@@ -75,14 +75,14 @@ class EvidenciaDocentesTable
             ])
             ->filters([
                 // Filtro por Estado de Revisión
-                SelectFilter::make('estado')
-                    ->label('Filtrar por Estado')
-                    ->options([
-                        'Pendiente' => 'Pendiente',
-                        'Aprobado' => 'Aprobado',
-                        'Observado' => 'Observado',
-                    ])
-                    ->placeholder('Todos los estados'),
+                // SelectFilter::make('estado')
+                //     ->label('Filtrar por Estado')
+                //     ->options([
+                //         'Pendiente' => 'Pendiente',
+                //         'Aprobado' => 'Aprobado',
+                //         'Observado' => 'Observado',
+                //     ])
+                //     ->placeholder('Todos los estados'),
 
                 // Filtro por Tipo de Documento
                 SelectFilter::make('tipo_documento')
@@ -116,45 +116,45 @@ class EvidenciaDocentesTable
 
                 // 👉 2. Acción rápida de revisión (Exclusiva para Directora y Admin)
                 //      Les permite Aprobar u Observar directamente desde la fila
-                Action::make('revisar')
-                    ->label('')
-                    ->tooltip('Revisar y Calificar Documento')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('info')
-                    ->visible($esAdministrativo)
-                    ->form([
-                        Select::make('estado')
-                            ->label('Decisión de Revisión')
-                            ->options([
-                                'Aprobado' => 'Aprobado (Conforme)',
-                                'Observado' => 'Observado (Requiere corregir)',
-                            ])
-                            ->required(),
-                        Textarea::make('observaciones')
-                            ->label('Observaciones / Retroalimentación')
-                            ->placeholder('Escriba detalladamente si el archivo tiene observaciones...')
-                            ->rows(3),
-                    ])
-                    ->action(function (EvidenciaDocente $record, array $data) {
-                        $record->update([
-                            'estado' => $data['estado'],
-                            'observaciones' => $data['observaciones'] ?? null,
-                        ]);
+                // Action::make('revisar')
+                //     ->label('')
+                //     ->tooltip('Revisar y Calificar Documento')
+                //     ->icon('heroicon-o-check-badge')
+                //     ->color('info')
+                //     ->visible($esAdministrativo)
+                //     ->form([
+                //         Select::make('estado')
+                //             ->label('Decisión de Revisión')
+                //             ->options([
+                //                 'Aprobado' => 'Aprobado (Conforme)',
+                //                 'Observado' => 'Observado (Requiere corregir)',
+                //             ])
+                //             ->required(),
+                //         Textarea::make('observaciones')
+                //             ->label('Observaciones / Retroalimentación')
+                //             ->placeholder('Escriba detalladamente si el archivo tiene observaciones...')
+                //             ->rows(3),
+                //     ])
+                //     ->action(function (EvidenciaDocente $record, array $data) {
+                //         $record->update([
+                //             'estado' => $data['estado'],
+                //             'observaciones' => $data['observaciones'] ?? null,
+                //         ]);
 
-                        Notification::make()
-                            ->title('Evaluación registrada')
-                            ->body("El documento de " . $record->docente?->nombre_completo . " ha sido marcado como " . $data['estado'] . ".")
-                            ->success()
-                            ->send();
-                    }),
+                //         Notification::make()
+                //             ->title('Evaluación registrada')
+                //             ->body("El documento de " . $record->docente?->nombre_completo . " ha sido marcado como " . $data['estado'] . ".")
+                //             ->success()
+                //             ->send();
+                //     }),
 
-                // El docente puede editar su registro si está observado o pendiente
-                EditAction::make()
-                    ->label('')
-                    ->tooltip('Editar registro')
-                    ->visible(fn (EvidenciaDocente $record) => 
-                        !$esAdministrativo && $record->estado !== 'Aprobado'
-                    ),
+                // // El docente puede editar su registro si está observado o pendiente
+                // EditAction::make()
+                //     ->label('')
+                //     ->tooltip('Editar registro')
+                //     ->visible(fn (EvidenciaDocente $record) => 
+                //         !$esAdministrativo && $record->estado !== 'Aprobado'
+                //     ),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

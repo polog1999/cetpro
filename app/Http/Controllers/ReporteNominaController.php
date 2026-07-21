@@ -6,6 +6,7 @@ use App\Models\Horario;
 use App\Models\Matricula;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoGenero;
+use App\Enums\TipoPrograma;
 use Barryvdh\DomPDF\Facade\Pdf;
 use \Illuminate\Support\Str;
 
@@ -18,14 +19,23 @@ class ReporteNominaController extends Controller
         // 1. Buscamos el nombre del curso/módulo
         $modulo = \App\Models\Curso::find($curso_id);
         $nombreModulo = $modulo ? $modulo->nombre_curso : '';
-
+        $tipoProg = $horario->programa->tipo_programa;
+        $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
         $matriculas = Matricula::with('estudiante')
             ->where('horario_id', $horario_id)
-            ->where(function ($q) use ($curso_id) {
-                if ($curso_id != 0) {
-                    $q->where('id_curso', $curso_id)->orWhereNull('id_curso');
+            ->where(function ($q) use ($curso_id, $esFormacionContinua) {
+                if ($esFormacionContinua) {
+                    // SI ES FORMACIÓN CONTINUA:
+                    // Incluimos al que se matriculó al paquete completo (null) 
+                    // Y al que se matriculó específicamente a este curso ($curso_id)
+                    $q->whereNotNull('id_curso')
+                        ->orWhereNull('id_curso');
                 } else {
-                    $q->whereNull('id_curso');
+                    // SI ES PROGRAMA DE ESTUDIOS:
+                    // Incluimos al que está en este módulo específico ($curso_id)
+                    // Y al del programa completo (null)
+                    $q->where('id_curso', $curso_id)
+                        ->orWhereNull('id_curso');
                 }
             })
             ->where('codigo_inscripcion', 'like', $anio . '%')
@@ -48,7 +58,7 @@ class ReporteNominaController extends Controller
 
             return [
                 'codigo' => $mat->estudiante->nro_documento,
-                'apellidos_nombres' =>Str::upper("{$est->apellido_paterno} {$est->apellido_materno}, "). trim(Str::title(Str::lower($est->nombres))),
+                'apellidos_nombres' => Str::upper("{$est->apellido_paterno} {$est->apellido_materno}, ") . trim(Str::title(Str::lower($est->nombres))),
                 'sexo' => $letraSexo,
                 'edad' => $est->fecha_nacimiento ? \Carbon\Carbon::parse($est->fecha_nacimiento)->age : '-',
                 'condicion' => 'P'
@@ -58,7 +68,7 @@ class ReporteNominaController extends Controller
         $pdf = Pdf::loadView('reportes.nomina-pdf', [
             'horario' => $horario,
             'anio' => $anio,
-             'curso_id' => $curso_id, // 👈 ASEGÚRATE DE AÑADIR ESTA LÍNEA
+            'curso_id' => $curso_id, // 👈 ASEGÚRATE DE AÑADIR ESTA LÍNEA
             'alumnos' => $alumnosProcesados,
             'nombreModulo' => $nombreModulo, // 👈 Pasamos el nombre del módulo aquí
             'resumen' => [

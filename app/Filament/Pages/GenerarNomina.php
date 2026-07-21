@@ -9,6 +9,7 @@ use App\Enums\TipoPrograma;
 use BackedEnum;
 use Filament\Pages\Page;
 use UnitEnum;
+use Illuminate\Support\Collection;
 
 class GenerarNomina extends Page
 {
@@ -49,16 +50,47 @@ class GenerarNomina extends Page
     {
         return TipoPrograma::cases();
     }
-
+/**
+     * Verifica si el usuario tiene rol de Administrador o Directora.
+     */
+    public function puedeEditarTodo(): bool
+    {
+        $user = auth()->user();
+        return $user && ($user->esAdmin() || $user->esDirectora());
+    }
     public function getProgramasProperty()
     {
-        if (!$this->tipo_programa) return [];
+         if (!$this->tipo_programa) {
+            return collect();
+        }
 
-        $enumValue = class_exists(TipoPrograma::class) ? $this->tipo_programa : $this->tipo_programa;
+        $query = Programa::query();
 
-        return Programa::where('tipo_programa', $enumValue)
-            ->orderBy('nombre_programa')
-            ->pluck('nombre_programa', 'id_programa');
+        if (class_exists(TipoPrograma::class)) {
+            $enumValue = $this->tipo_programa;
+            $query->where('tipo_programa', $enumValue);
+        } else {
+            $query->where('tipo_programa', $this->tipo_programa);
+        }
+
+        $user = auth()->user();
+
+        // Admin y Directora ven todos los programas de ese tipo
+        if ($this->puedeEditarTodo()) {
+            return $query->orderBy('nombre_programa')->pluck('nombre_programa', 'id_programa');
+        }
+
+        // El docente solo ve los programas donde tiene horarios asignados activamente
+        if ($user?->docente_id) {
+            return $query->whereHas('horarios', function ($q) use ($user) {
+                $q->where('id_docente', $user->docente_id)
+                    ->where('activo', true);
+            })
+                ->orderBy('nombre_programa')
+                ->pluck('nombre_programa', 'id_programa');
+        }
+
+        return collect();
     }
 
     public function getCursosProperty()
@@ -69,20 +101,45 @@ class GenerarNomina extends Page
             ->pluck('nombre_curso', 'id_curso');
     }
 
-    public function getHorariosProperty()
+     /**
+     * Obtener horarios filtrados de forma estricta por rol
+     */
+    public function getHorariosProperty(): Collection
     {
-        if (!$this->programa_id || !$this->anio) return [];
+        if (!$this->programa_id) {
+            return collect();
+        }
 
-        $horarios = Horario::where('id_programa', $this->programa_id)
-            ->whereHas('matriculas', function ($query) {
-                $query->where('codigo_inscripcion', 'like', $this->anio . '%');
-            })
-            ->get();
+        $user = auth()->user();
+        if (!$user) {
+            return collect();
+        }
+
+        $query = Horario::where('id_programa', $this->programa_id)
+            ->where('activo', true);
+
+        // Filtro estricto por Rol
+        if ($user->esAdmin() || $user->esDirectora()) {
+            // Admin y Directora ven todos los horarios activos del programa
+            $horarios = $query->get();
+        } elseif ($user->docente_id) {
+            // El docente solo ve sus propios horarios asignados
+            $horarios = $query->where('id_docente', $user->docente_id)->get();
+        } else {
+            return collect(); // Bloqueado si no cumple condiciones
+        }
 
         return $horarios->mapWithKeys(function ($horario) {
             $turno = $horario->turno?->value ?? 'Sin turno';
-            $docente = $horario->docente ? $horario->docente->nombre_completo : 'Sin docente';
-            return [$horario->id_horario => "{$turno} - [Prof. {$docente}]"];
+            $dias = is_array($horario->dias) ? implode(', ', $horario->dias) : ($horario->dias ?? '');
+            $horaInicio = $horario->hora_inicio?->format('H:i') ?? '';
+            $horaFin = $horario->hora_fin?->format('H:i') ?? '';
+
+            $profesorInfo = ($this->puedeEditarTodo() && $horario->docente)
+                ? " [Prof. " . $horario->docente->nombre_completo . "]"
+                : "";
+
+            return [$horario->id_horario => "{$turno} - {$dias} ({$horaInicio} - {$horaFin}){$profesorInfo}"];
         });
     }
 
