@@ -8,6 +8,7 @@ use App\Models\Nota;
 use App\Models\Curso;
 use App\Models\Unidad;
 use App\Enums\EstadoMatricula;
+use App\Enums\TipoPrograma;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -17,15 +18,23 @@ class ReporteActaController extends Controller
     public function stream($horario_id, $anio, $curso_id)
     {
         $horario = Horario::with(['programa', 'docente', 'programa.cursos'])->findOrFail($horario_id);
-        $curso = Curso::findOrFail($curso_id);
+
+        if ($curso_id != 0) {
+            $curso = Curso::findOrFail($curso_id);
+        }
+
 
         $tipoProg = $horario->programa->tipo_programa;
-        $esFormacionContinua = ($tipoProg == 'FORMACION_CONTINUA' || (is_object($tipoProg) && $tipoProg->value == 'FORMACION_CONTINUA'));
+        $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
 
         if ($esFormacionContinua) {
             $columnas = $horario->programa->cursos()->orderBy('fecha_inicio')->get();
+            $nombrePrograma = 'FORMACIÓN CONTINUA';
+            $nombreModulo = $horario->programa->nombre_programa;
         } else {
-            $columnas = Unidad::where('id_curso', $curso_id)->orderBy('id_unidad')->get();
+            $columnas = Unidad::where('id_curso', $curso_id)->orderBy('orden')->get();
+            $nombrePrograma = $horario->programa->nombre_programa;
+            $nombreModulo = mb_strtoupper($curso->nombre_curso);
         }
 
         $matriculas = Matricula::with('estudiante')
@@ -41,7 +50,7 @@ class ReporteActaController extends Controller
             ->values();
 
         $templatePath = public_path('plantillas/acta.docx');
-        
+
         if (!File::exists($templatePath)) {
             Log::error("La plantilla no existe en: {$templatePath}");
             return back()->with('error', 'No se encontró la plantilla base acta.docx.');
@@ -51,18 +60,22 @@ class ReporteActaController extends Controller
 
         // Cabeceras
         $templateProcessor->setValue('cetpro', 'LA MOLINA');
-        $templateProcessor->setValue('programa', mb_strtoupper($horario->programa->nombre_programa));
-        $templateProcessor->setValue('modulo', mb_strtoupper($curso->nombre_curso));
+        $templateProcessor->setValue('programa', mb_strtoupper($nombrePrograma));
+        $templateProcessor->setValue('modulo', mb_strtoupper($nombreModulo));
         $templateProcessor->setValue('anio', $anio);
         $templateProcessor->setValue('docente', $horario->docente ? mb_strtoupper($horario->docente->nombre_completo) : 'NO ASIGNADO');
 
         // Títulos de columnas
-        for ($j = 1; $j <= 8; $j++) {
+        for ($j = 1; $j <= 10; $j++) {
             $col = $columnas->get($j - 1);
-            $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
-            $templateProcessor->setValue("titulo_u{$j}", mb_strtoupper($nombreCol));
-        }
 
+            $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
+            // Escapar caracteres especiales para XML (&, <, >, etc.)
+            $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
+            // dd($columnas->get(3)->nombre_curso);
+            $templateProcessor->setValue("titulo_u{$j}", $nombreColLimpio);
+        }
+        $templateProcessor->setValue('hoy', now()->format('d - m - Y'));
         // Filas alumnos
         for ($i = 1; $i <= 40; $i++) {
             $mat = $matriculas->get($i - 1);
@@ -75,14 +88,14 @@ class ReporteActaController extends Controller
             $aprobadas = 0;
             $desaprobadas = 0;
 
-            for ($j = 1; $j <= 8; $j++) {
+            for ($j = 1; $j <= 10; $j++) {
                 $item = $columnas->get($j - 1);
                 $notaVal = '';
 
                 if ($mat && $item) {
-                    $queryNota = Nota::where('matricula_id', $mat->id)
-                        ->where('curso_id', $curso_id);
+                    $queryNota = Nota::where('matricula_id', $mat->id);
 
+                    
                     if ($esFormacionContinua) {
                         $queryNota->where('curso_id', $item->id_curso);
                     } else {
@@ -92,7 +105,7 @@ class ReporteActaController extends Controller
                     $nota = $queryNota->value('nota_numerica');
 
                     if ($nota !== null) {
-                        $notaVal = str_pad($nota, 2, '0', STR_PAD_LEFT);
+                        $notaVal = str_pad((int) $nota, 2, '0', STR_PAD_LEFT);
                         $suma += $nota;
                         $conNota++;
                         ($nota >= 13) ? $aprobadas++ : $desaprobadas++;
@@ -104,40 +117,54 @@ class ReporteActaController extends Controller
             $templateProcessor->setValue("aprob_{$i}", $mat ? str_pad($aprobadas, 2, '0', STR_PAD_LEFT) : '');
             $templateProcessor->setValue("desap_{$i}", $mat ? str_pad($desaprobadas, 2, '0', STR_PAD_LEFT) : '');
         }
+        //==========================================PARA PDF========================================
+        // $tempPath = storage_path('app/temp');
+        // File::ensureDirectoryExists($tempPath);
 
+        // $fileName = 'Acta_Generada_' . time();
+        // $docxPath = $tempPath . DIRECTORY_SEPARATOR . $fileName . '.docx';
+        // $pdfPath = $tempPath . DIRECTORY_SEPARATOR . $fileName . '.pdf';
+
+        // // Guardar el DOCX
+        // $templateProcessor->saveAs($docxPath);
+
+        // // Detectar ejecutable según el SO
+        // if (PHP_OS_FAMILY === 'Windows') {
+        //     $soffice = '"C:\Program Files\LibreOffice\program\soffice.exe"';
+        // } else {
+        //     // En Linux es importante asignar un HOME temporal para que www-data no falle al crear perfil
+        //     $soffice = 'export HOME=/tmp && libreoffice';
+        // }
+
+        // // Ejecutar comando capturando la salida de error (2>&1)
+        // $command = "{$soffice} --headless --convert-to pdf --outdir " . escapeshellarg($tempPath) . " " . escapeshellarg($docxPath) . " 2>&1";
+        // exec($command, $output, $returnVar);
+
+        // if ($returnVar !== 0 || !file_exists($pdfPath)) {
+        //     Log::error("Error LibreOffice (Code {$returnVar}): " . implode("\n", $output));
+        //     return back()->with('error', 'Error al generar el PDF. Revisa los logs.');
+        // }
+
+        // // Limpiar el DOCX temporal
+        // @unlink($docxPath);
+
+        // // Retornar la descarga directa sin deleteFileAfterSend inmediato para evitar cortes
+        // return response()->download($pdfPath, "{$fileName}.pdf", [
+        //     'Content-Type' => 'application/pdf',
+        // ]);
+        //=======================================PARA PDF==================================================
         $tempPath = storage_path('app/temp');
         File::ensureDirectoryExists($tempPath);
 
-        $fileName = 'Acta_Generada_' . time();
-        $docxPath = $tempPath . DIRECTORY_SEPARATOR . $fileName . '.docx';
-        $pdfPath = $tempPath . DIRECTORY_SEPARATOR . $fileName . '.pdf';
+        $fileName = 'Acta_Generada_' . time() . '.docx';
+        $docxPath = $tempPath . DIRECTORY_SEPARATOR . $fileName;
 
-        // Guardar el DOCX
+        // Guardar directamente el archivo Word procesado
         $templateProcessor->saveAs($docxPath);
 
-        // Detectar ejecutable según el SO
-        if (PHP_OS_FAMILY === 'Windows') {
-            $soffice = '"C:\Program Files\LibreOffice\program\soffice.exe"';
-        } else {
-            // En Linux es importante asignar un HOME temporal para que www-data no falle al crear perfil
-            $soffice = 'export HOME=/tmp && libreoffice';
-        }
-
-        // Ejecutar comando capturando la salida de error (2>&1)
-        $command = "{$soffice} --headless --convert-to pdf --outdir " . escapeshellarg($tempPath) . " " . escapeshellarg($docxPath) . " 2>&1";
-        exec($command, $output, $returnVar);
-
-        if ($returnVar !== 0 || !file_exists($pdfPath)) {
-            Log::error("Error LibreOffice (Code {$returnVar}): " . implode("\n", $output));
-            return back()->with('error', 'Error al generar el PDF. Revisa los logs.');
-        }
-
-        // Limpiar el DOCX temporal
-        @unlink($docxPath);
-
-        // Retornar la descarga directa sin deleteFileAfterSend inmediato para evitar cortes
-        return response()->download($pdfPath, "{$fileName}.pdf", [
-            'Content-Type' => 'application/pdf',
-        ]);
+        // Retornar la descarga del archivo .docx
+        return response()->download($docxPath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ])->deleteFileAfterSend(true);
     }
 }
