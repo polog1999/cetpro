@@ -12,6 +12,7 @@ use App\Enums\TipoPrograma;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\TemplateProcessor;
+use \Illuminate\Support\Str;
 
 class ReporteActaController extends Controller
 {
@@ -99,7 +100,7 @@ class ReporteActaController extends Controller
 
             $templateProcessor->setValue("n_{$i}", $mat ? $i : '');
             $templateProcessor->setValue("cod_{$i}", $mat ? $mat->estudiante->nro_documento : '');
-            $templateProcessor->setValue("nom_{$i}", $mat ? mb_strtoupper("{$mat->estudiante->apellido_paterno} {$mat->estudiante->apellido_materno}, {$mat->estudiante->nombres}") : '');
+            $templateProcessor->setValue("nom_{$i}", $mat ? Str::upper("{$mat->estudiante->apellido_paterno} {$mat->estudiante->apellido_materno}, ") . trim(Str::title(Str::lower($mat->estudiante->nombres))) : '');
 
             $suma = 0;
             $conNota = 0;

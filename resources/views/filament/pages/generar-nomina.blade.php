@@ -114,7 +114,7 @@
                     style="background-color: #2563eb !important; color: white !important;"
                     class="{{ !$datosCompletos ? 'opacity-50 pointer-events-none' : '' }} inline-flex items-center justify-center px-4 py-2 font-bold rounded-lg shadow transition duration-200 hover:bg-blue-700"
                 >
-                    Ver Acta de Evaluación (PDF)
+                    Ver Acta de Evaluación (Word)
                 </a>
             </div>
         </div>
