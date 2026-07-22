@@ -15,7 +15,7 @@ class GenerarNomina extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-duplicate';
     protected static string|UnitEnum|null $navigationGroup = 'Reportes y Documentos';
-    protected static ?string $title = 'Generar Nómina y Acta de Matrícula';
+    protected static ?string $title = 'Generar Nómina y Acta';
     protected string $view = 'filament.pages.generar-nomina';
 
     public ?string $anio = null;
