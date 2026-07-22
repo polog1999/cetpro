@@ -55,7 +55,7 @@ class ReporteActaController extends Controller
 
         // Agrupamos por estudiante para manejar los que tienen múltiples matrículas (curso por curso)
         $estudiantesAgrupados = $matriculasCrudas->groupBy('estudiante_id');
-        
+
         $matriculas = $estudiantesAgrupados->map(function ($grupo) {
             return $grupo->first(); // Tomamos una matrícula de referencia para los datos personales
         })->sortBy('estudiante.apellido_paterno')->values();
@@ -84,7 +84,7 @@ class ReporteActaController extends Controller
             $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
             // Escapar caracteres especiales para XML (&, <, >, etc.)
             $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
-            
+
             $templateProcessor->setValue("titulo_u{$j}", $nombreColLimpio);
         }
         $templateProcessor->setValue('hoy', now()->format('d - m - Y'));
@@ -92,7 +92,7 @@ class ReporteActaController extends Controller
         // Filas alumnos
         for ($i = 1; $i <= 40; $i++) {
             $mat = $matriculas->get($i - 1);
-            
+
             // Recogemos los IDs de TODAS las matrículas que tenga este estudiante específico
             $idsMatriculasDelAlumno = [];
             if ($mat) {
@@ -107,6 +107,7 @@ class ReporteActaController extends Controller
             $conNota = 0;
             $aprobadas = 0;
             $desaprobadas = 0;
+            $topeAprobado = false;
 
             for ($j = 1; $j <= 10; $j++) {
                 $item = $columnas->get($j - 1);
@@ -128,14 +129,42 @@ class ReporteActaController extends Controller
                         $notaVal = str_pad((int) $nota, 2, '0', STR_PAD_LEFT);
                         $suma += $nota;
                         $conNota++;
-                        ($nota >= 13) ? $aprobadas++ : $desaprobadas++;
+                        $topeAprobado = ($nota >= 13);
+                        $topeAprobado ? $aprobadas++ : $desaprobadas++;
                     }
                 }
                 $templateProcessor->setValue("u{$j}_{$i}", $notaVal);
             }
-            $templateProcessor->setValue("logro_{$i}", $conNota > 0 ? str_pad(round($suma / $conNota), 2, '0', STR_PAD_LEFT) : '');
+            // Calcular el promedio numérico como un entero para las condiciones
+            $promedioNum = $conNota > 0 ? (int) round($suma / $conNota) : null;
+            $promedioFormateado = $promedioNum !== null ? str_pad($promedioNum, 2, '0', STR_PAD_LEFT) : '';
+            $templateProcessor->setValue("logro_{$i}", $promedioFormateado);
             $templateProcessor->setValue("aprob_{$i}", $mat ? str_pad($aprobadas, 2, '0', STR_PAD_LEFT) : '');
             $templateProcessor->setValue("desap_{$i}", $mat ? str_pad($desaprobadas, 2, '0', STR_PAD_LEFT) : '');
+            // Determinar la observación correctamente
+            $observacion = '';
+            if ($mat) {
+                if ($promedioNum !== null) {
+                    if ($promedioNum === 0) {
+                        $observacion = 'Retirado';
+                    } elseif ($promedioNum < 13) {
+                        $observacion = 'Desaprobado';
+                    }
+                }
+            }
+
+            $templateProcessor->setValue("obs_{$i}", $observacion);
+        }
+        for ($i = 1; $i <= 10; $i++) {
+            $mat = $matriculas->get($i - 1);
+
+            // Recogemos los IDs de TODAS las matrículas que tenga este estudiante específico
+            $idsMatriculasDelAlumno = [];
+            if ($mat) {
+                $idsMatriculasDelAlumno = $estudiantesAgrupados[$mat->estudiante_id]->pluck('id')->toArray();
+            }
+            for ($j = 1; $j <= 40; $j++) {
+            }
         }
         //==========================================PARA PDF========================================
         // $tempPath = storage_path('app/temp');
