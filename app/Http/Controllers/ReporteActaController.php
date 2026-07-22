@@ -74,7 +74,7 @@ class ReporteActaController extends Controller
         $templateProcessor->setValue('programa', mb_strtoupper($nombrePrograma));
         $templateProcessor->setValue('modulo', mb_strtoupper($nombreModulo));
         $templateProcessor->setValue('anio', $anio);
-        $templateProcessor->setValue('turno',  mb_strtoupper($horario->turno));
+        $templateProcessor->setValue('turno',  mb_strtoupper($horario->turno->value));
         $templateProcessor->setValue('docente', $horario->docente ? mb_strtoupper($horario->docente->nombre_completo) : 'NO ASIGNADO');
 
         // Títulos de columnas
