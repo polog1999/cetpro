@@ -60,7 +60,7 @@ class ReporteActaController extends Controller
             return $grupo->first(); // Tomamos una matrícula de referencia para los datos personales
         })->sortBy('estudiante.apellido_paterno')->values();
 
-        $templatePath = public_path('plantillas/acta.docx');
+        $templatePath = public_path('plantillas/ACTA.docx');
 
         if (!File::exists($templatePath)) {
             Log::error("La plantilla no existe en: {$templatePath}");
@@ -74,6 +74,7 @@ class ReporteActaController extends Controller
         $templateProcessor->setValue('programa', mb_strtoupper($nombrePrograma));
         $templateProcessor->setValue('modulo', mb_strtoupper($nombreModulo));
         $templateProcessor->setValue('anio', $anio);
+        $templateProcessor->setValue('turno',  mb_strtoupper($horario->turno));
         $templateProcessor->setValue('docente', $horario->docente ? mb_strtoupper($horario->docente->nombre_completo) : 'NO ASIGNADO');
 
         // Títulos de columnas
