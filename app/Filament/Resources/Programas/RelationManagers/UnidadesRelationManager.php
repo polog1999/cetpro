@@ -14,6 +14,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use App\Enums\TipoPrograma;
+use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\FontWeight;
 
 /**
@@ -39,11 +40,11 @@ class UnidadesRelationManager extends RelationManager
     {
         // Verificar si el programa padre es de tipo PROGRAMA_ESTUDIO
         $programa = $ownerRecord->programa;
-        
+
         if (!$programa) {
             return false;
         }
-        
+
         return $programa->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO;
     }
 
@@ -105,7 +106,7 @@ class UnidadesRelationManager extends RelationManager
         return $table
             ->heading('📚 Unidades del Módulo')
             ->description(
-                $totalUnidades > 0 
+                $totalUnidades > 0
                     ? "✓ {$totalUnidades} unidad(es) · ⏱ {$totalHoras} horas totales"
                     : 'No hay unidades registradas aún'
             )
@@ -123,18 +124,19 @@ class UnidadesRelationManager extends RelationManager
                     ->searchable()
                     ->weight(FontWeight::SemiBold)
                     ->wrap()
-                    ->description(fn ($record) => $record->descripcion 
-                        ? \Illuminate\Support\Str::limit($record->descripcion, 80) 
-                        : null
+                    ->description(
+                        fn($record) => $record->descripcion
+                            ? \Illuminate\Support\Str::limit($record->descripcion, 80)
+                            : null
                     )
                     ->icon('heroicon-o-bookmark')
                     ->iconColor('primary'),
 
                 Tables\Columns\TextColumn::make('duracion')
                     ->label('Duración')
-                    ->formatStateUsing(fn ($state) => $state ? "{$state} hrs" : '—')
+                    ->formatStateUsing(fn($state) => $state ? "{$state} hrs" : '—')
                     ->badge()
-                    ->color(fn ($state) => match(true) {
+                    ->color(fn($state) => match (true) {
                         $state === null => 'gray',
                         $state <= 20 => 'info',
                         $state <= 40 => 'success',
@@ -142,9 +144,10 @@ class UnidadesRelationManager extends RelationManager
                     })
                     ->icon('heroicon-o-clock')
                     ->alignCenter()
-                    ->tooltip(fn ($record) => $record->duracion 
-                        ? "Aproximadamente " . ceil($record->duracion / 3) . " sesiones de 3 horas"
-                        : 'Duración no especificada'
+                    ->tooltip(
+                        fn($record) => $record->duracion
+                            ? "Aproximadamente " . ceil($record->duracion / 3) . " sesiones de 3 horas"
+                            : 'Duración no especificada'
                     ),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -206,7 +209,7 @@ class UnidadesRelationManager extends RelationManager
             ])
             ->reorderable('orden')
             ->reorderRecordsTriggerAction(
-                fn ($action) => $action
+                fn($action) => $action
                     ->button()
                     ->label('Reordenar')
                     ->icon('heroicon-o-arrows-up-down')

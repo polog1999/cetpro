@@ -15,6 +15,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use App\Enums\TipoPrograma;
 use App\Models\Unidad;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 
 
@@ -37,11 +38,11 @@ class CursosRelationManager extends RelationManager
     {
         $programa = $this->getOwnerRecord();
         $isPrograma = $programa?->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO;
-        
+
         if ($plural) {
             return $isPrograma ? 'Módulos' : 'Cursos';
         }
-        
+
         return $isPrograma ? 'Módulo' : 'Curso';
     }
 
@@ -56,7 +57,7 @@ class CursosRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         $label = $this->getItemLabel();
-        
+
         return $schema->components([
             Forms\Components\TextInput::make('nombre_curso')
                 ->label("Nombre del {$label}")
@@ -76,6 +77,16 @@ class CursosRelationManager extends RelationManager
             Forms\Components\DatePicker::make('fecha_termino')
                 ->label('Fecha de término')
                 ->required(),
+            TextInput::make('creditos')
+                ->label('Créditos')
+                ->numeric()
+                ->integer()
+                ->nullable(),
+            TextInput::make('horas')
+              ->label('Horas')
+                ->numeric()
+                ->integer()
+                ->nullable(),
         ]);
     }
 
@@ -118,18 +129,18 @@ class CursosRelationManager extends RelationManager
                         $programa = $this->getOwnerRecord();
                         $cursosActuales = $programa->cursos()->count();
                         $numeroMaximoCursos = $programa->num_cursos;
-                        
+
                         return $cursosActuales >= $numeroMaximoCursos;
                     })
                     ->tooltip(function () use ($labelPlural) {
                         $programa = $this->getOwnerRecord();
                         $cursosActuales = $programa->cursos()->count();
                         $numeroMaximoCursos = $programa->num_cursos;
-                        
+
                         if ($cursosActuales >= $numeroMaximoCursos) {
                             return "Límite alcanzado: {$cursosActuales}/{$numeroMaximoCursos} {$labelPlural}";
                         }
-                        
+
                         return "{$labelPlural}: {$cursosActuales}/{$numeroMaximoCursos}";
                     })
                     ->after(function () {
@@ -144,7 +155,7 @@ class CursosRelationManager extends RelationManager
                     ->icon('heroicon-o-list-bullet')
                     ->color('info')
                     ->visible($esProgramaEstudio)
-                    ->modalHeading(fn ($record) => "Unidades de: {$record->nombre_curso}")
+                    ->modalHeading(fn($record) => "Unidades de: {$record->nombre_curso}")
                     ->modalWidth('4xl')
                     ->form(function ($record) {
                         return [
@@ -175,6 +186,15 @@ class CursosRelationManager extends RelationManager
                                         ->rows(2)
                                         ->columnSpanFull()
                                         ->nullable(),
+                                    TextInput::make('creditos')
+                                        ->label('Créditos')
+                                        ->numeric()
+                                        ->integer()
+                                        ->nullable(),
+                                    TextInput::make('horas')
+                                        ->numeric()
+                                        ->integer()
+                                        ->nullable(),
                                 ])
                                 ->columns(4)
                                 ->defaultItems(0)
@@ -183,14 +203,16 @@ class CursosRelationManager extends RelationManager
                                 ->orderColumn('orden')
                                 ->collapsible()
                                 ->collapsed()
-                                ->itemLabel(fn (array $state): ?string => $state['nombre_unidad'] ?? 'Nueva Unidad')
+                                ->itemLabel(fn(array $state): ?string => $state['nombre_unidad'] ?? 'Nueva Unidad')
                                 ->default(function () use ($record) {
-                                    return $record->unidades->map(fn ($unidad) => [
+                                    return $record->unidades->map(fn($unidad) => [
                                         'id' => $unidad->id_unidad,
                                         'nombre_unidad' => $unidad->nombre_unidad,
                                         'duracion' => $unidad->duracion,
                                         'orden' => $unidad->orden,
                                         'descripcion' => $unidad->descripcion,
+                                        'creditos' => $unidad->creditos,
+                                        'horas' => $unidad->horas,
                                     ])->toArray();
                                 }),
                         ];
@@ -198,7 +220,7 @@ class CursosRelationManager extends RelationManager
                     ->action(function ($record, array $data) {
                         // Eliminar unidades existentes y recrear
                         $record->unidades()->delete();
-                        
+
                         $orden = 1;
                         foreach ($data['unidades_data'] ?? [] as $unidadData) {
                             $record->unidades()->create([
@@ -206,10 +228,12 @@ class CursosRelationManager extends RelationManager
                                 'duracion' => $unidadData['duracion'] ?? null,
                                 'orden' => $unidadData['orden'] ?? $orden,
                                 'descripcion' => $unidadData['descripcion'] ?? null,
+                                'creditos' => $unidadData['creditos'] ?? null,
+                                'horas' => $unidadData['horas'] ?? null,
                             ]);
                             $orden++;
                         }
-                        
+
                         Notification::make()
                             ->title('Unidades actualizadas')
                             ->success()

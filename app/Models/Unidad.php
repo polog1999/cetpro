@@ -25,6 +25,8 @@ class Unidad extends Model
         'duracion',
         'orden',
         'descripcion',
+        'creditos',
+        'horas'
     ];
 
     protected $casts = [

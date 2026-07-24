@@ -18,6 +18,8 @@ class Curso extends Model
         'fecha_inicio',
         'fecha_termino',
         'id_programa',
+        'creditos',
+        'horas'
     ];
 
     public function programa()
