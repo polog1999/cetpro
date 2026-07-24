@@ -37,6 +37,7 @@ class ReporteActaController extends Controller
             $nombrePrograma = $horario->programa->nombre_programa;
             $nombreModulo = mb_strtoupper($curso->nombre_curso);
         }
+        $totalColumnas = $columnas->count();
 
         // 1. OBTENEMOS LAS MATRÍCULAS CRUDAS (Agrupamos por estudiante para unificar duplicados)
         $matriculasCrudas = Matricula::with('estudiante')
@@ -92,6 +93,17 @@ class ReporteActaController extends Controller
         }
         $templateProcessor->setValue('hoy', now()->format('d - m - Y'));
 
+
+        // ==========================================
+        // NUEVO: ARREGLOS PARA CONTAR ESTADÍSTICAS POR COLUMNA
+        // ==========================================
+        $totalesAprobados = array_fill(1, 10, 0);
+        $totalesDesaprobados = array_fill(1, 10, 0);
+        $totalesRetirados = array_fill(1, 10, 0);
+        // Pre-recolectamos la matriz de notas de todos los alumnos por cada columna (1 al 10)
+        // $matrizNotasPorColumna = array_fill(1, 10, []);
+
+
         // Filas alumnos
         for ($i = 1; $i <= 40; $i++) {
             $mat = $matriculas->get($i - 1);
@@ -110,7 +122,7 @@ class ReporteActaController extends Controller
             $conNota = 0;
             $aprobadas = 0;
             $desaprobadas = 0;
-            $topeAprobado = false;
+            // $topeAprobado = false;
 
             for ($j = 1; $j <= 10; $j++) {
                 $item = $columnas->get($j - 1);
@@ -129,11 +141,23 @@ class ReporteActaController extends Controller
                     $nota = $queryNota->value('nota_numerica');
 
                     if ($nota !== null) {
-                        $notaVal = str_pad((int) $nota, 2, '0', STR_PAD_LEFT);
+                        $notaInt = (int) $nota;
+                        $notaVal = str_pad($notaInt, 2, '0', STR_PAD_LEFT);
                         $suma += $nota;
                         $conNota++;
-                        $topeAprobado = ($nota >= 13);
-                        $topeAprobado ? $aprobadas++ : $desaprobadas++;
+
+                        // Lógica de conteo por unidad
+                        if ($mat) {
+                            if ($notaInt === 0) {
+                                $totalesRetirados[$j]++;
+                            } elseif ($notaInt >= 13) {
+                                $totalesAprobados[$j]++;
+                                $aprobadas++;
+                            } else {
+                                $totalesDesaprobados[$j]++;
+                                $desaprobadas++;
+                            }
+                        }
                     }
                 }
                 $templateProcessor->setValue("u{$j}_{$i}", $notaVal);
@@ -158,15 +182,20 @@ class ReporteActaController extends Controller
 
             $templateProcessor->setValue("obs_{$i}", $observacion);
         }
-        for ($i = 1; $i <= 10; $i++) {
-            $mat = $matriculas->get($i - 1);
-
-            // Recogemos los IDs de TODAS las matrículas que tenga este estudiante específico
-            $idsMatriculasDelAlumno = [];
-            if ($mat) {
-                $idsMatriculasDelAlumno = $estudiantesAgrupados[$mat->estudiante_id]->pluck('id')->toArray();
-            }
-            for ($j = 1; $j <= 40; $j++) {
+        // ==========================================
+        // MODIFICADO: LLENAR ESTADÍSTICAS SÓLO HASTA LAS UNIDADES REALES
+        // ==========================================
+        for ($j = 1; $j <= 10; $j++) {
+            // Si la columna existe (está dentro del total de unidades del módulo), ponemos el número con ceros. 
+            // Si está fuera de rango (ej: columnas 7 a 10 cuando el módulo solo tiene 6 unidades), mandamos vacío.
+            if ($j <= $totalColumnas) {
+                $templateProcessor->setValue("aprob_col_{$j}", str_pad($totalesAprobados[$j], 2, '0', STR_PAD_LEFT));
+                $templateProcessor->setValue("desap_col_{$j}", str_pad($totalesDesaprobados[$j], 2, '0', STR_PAD_LEFT));
+                $templateProcessor->setValue("ret_col_{$j}", str_pad($totalesRetirados[$j], 2, '0', STR_PAD_LEFT));
+            } else {
+                $templateProcessor->setValue("aprob_col_{$j}", '');
+                $templateProcessor->setValue("desap_col_{$j}", '');
+                $templateProcessor->setValue("ret_col_{$j}", '');
             }
         }
         //==========================================PARA PDF========================================
