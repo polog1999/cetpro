@@ -162,7 +162,7 @@ body:has(.fi-sidebar) .fi-sidebar img.fi-logo {
 
 /* Panel de login con glassmorphism */
 .fi-simple-main {
-    background: rgba(255, 255, 255, 0.95) !important;
+    /* background: rgba(255, 255, 255, 0.95) !important; */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -186,7 +186,7 @@ body:has(.fi-sidebar) .fi-sidebar img.fi-logo {
 /* Campos de formulario mejorados */
 .fi-simple-main .fi-input {
     background: rgba(255, 255, 255, 0.8) !important;
-    border: 2px solid rgba(0, 0, 0, 0.1) !important;
+    /* border: 2px solid rgba(0, 0, 0, 0.1) !important; */
     transition: all 0.3s ease;
 }
 
