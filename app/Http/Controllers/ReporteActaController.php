@@ -33,12 +33,15 @@ class ReporteActaController extends Controller
             $nombreModulo = $horario->programa->nombre_programa;
         } else {
             $columnas = Unidad::where('id_curso', $curso_id)->orderBy('orden')->get();
+
             $nombrePrograma = $horario->programa->nombre_programa;
             $nombreModulo = mb_strtoupper($curso->nombre_curso);
         }
 
         // 1. OBTENEMOS LAS MATRÍCULAS CRUDAS (Agrupamos por estudiante para unificar duplicados)
         $matriculasCrudas = Matricula::with('estudiante')
+            //MATRICULA DE PRUEBA CON ESTUDIANTE TEST
+            ->where('id', '!=', 42)
             ->where('horario_id', $horario_id)
             ->where(function ($q) use ($curso_id, $esFormacionContinua) {
                 if ($esFormacionContinua) {

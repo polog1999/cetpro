@@ -22,6 +22,8 @@ class ReporteNominaController extends Controller
         $tipoProg = $horario->programa->tipo_programa;
         $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
         $matriculas = Matricula::with('estudiante')
+            //MATRICULA DE PRUEBA CON ESTUDIANTE TEST
+            ->where('id', '!=', 42)
             ->where('horario_id', $horario_id)
             ->where(function ($q) use ($curso_id, $esFormacionContinua) {
                 if ($esFormacionContinua) {

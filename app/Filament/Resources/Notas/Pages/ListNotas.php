@@ -247,6 +247,8 @@ class ListNotas extends Page implements HasForms
         }
 
         $matriculas = Matricula::with(['estudiante'])
+            //MATRICULA DE PRUEBA CON ESTUDIANTE TEST
+            ->where('id', '!=', 42)
             ->where('horario_id', $this->horario_id)
             ->whereIn('estado', [
                 \App\Enums\EstadoMatricula::ENPROCESO->value,
@@ -255,27 +257,26 @@ class ListNotas extends Page implements HasForms
             ->where(function ($query) {
                 if ($this->esProgramaEstudio()) {
                     // LÓGICA PARA PROGRAMA DE ESTUDIO
-                    
+
                     // 1. Alumno matriculado específicamente en la Unidad seleccionada
                     $query->where(function ($q) {
                         $q->where('id_curso', $this->curso_id)
-                          ->where('id_unidad', $this->unidad_id);
+                            ->where('id_unidad', $this->unidad_id);
                     })
-                    // 2. O alumno matriculado en TODO el Módulo (unidad es null)
-                    ->orWhere(function ($q) {
-                        $q->where('id_curso', $this->curso_id)
-                          ->whereNull('id_unidad');
-                    })
-                    // 3. O alumno matriculado en TODO el Programa (curso y unidad null)
-                    ->orWhere(function ($q) {
-                        $q->whereNull('id_curso')
-                          ->whereNull('id_unidad');
-                    });
-                    
+                        // 2. O alumno matriculado en TODO el Módulo (unidad es null)
+                        ->orWhere(function ($q) {
+                            $q->where('id_curso', $this->curso_id)
+                                ->whereNull('id_unidad');
+                        })
+                        // 3. O alumno matriculado en TODO el Programa (curso y unidad null)
+                        ->orWhere(function ($q) {
+                            $q->whereNull('id_curso')
+                                ->whereNull('id_unidad');
+                        });
                 } else {
                     // LÓGICA PARA FORMACIÓN CONTINUA
                     $query->where('id_curso', $this->curso_id)
-                          ->orWhereNull('id_curso');
+                        ->orWhereNull('id_curso');
                 }
             })
             ->get();
