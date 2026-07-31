@@ -64,8 +64,7 @@ class CursosRelationManager extends RelationManager
         return $schema->components([
             Forms\Components\TextInput::make('nombre_curso')
                 ->label("Nombre del {$label}")
-                ->required()
-                ->unique(ignoreRecord: true),
+                ->required(),
 
             Forms\Components\TextInput::make('duracion')
                 ->label('Duración')
