@@ -15,7 +15,10 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use App\Enums\TipoPrograma;
 use App\Models\Unidad;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 
 
@@ -83,10 +86,16 @@ class CursosRelationManager extends RelationManager
                 ->integer()
                 ->nullable(),
             TextInput::make('horas')
-              ->label('Horas')
+                ->label('Horas')
                 ->numeric()
                 ->integer()
                 ->nullable(),
+            Toggle::make('es_efsrt')
+                ->label('Es EFSRT'),
+            Textarea::make('capacidad')
+                ->label('Capacidad')
+                ->rows(2)
+                ->columnSpanFull()
         ]);
     }
 
@@ -195,6 +204,12 @@ class CursosRelationManager extends RelationManager
                                         ->numeric()
                                         ->integer()
                                         ->nullable(),
+                                    Toggle::make('es_efsrt')
+                                        ->label('Es EFSRT'),
+                                    Textarea::make('capacidad')
+                                        ->label('Capacidad')
+                                        ->rows(2)
+                                        ->columnSpanFull()
                                 ])
                                 ->columns(4)
                                 ->defaultItems(0)
@@ -213,6 +228,8 @@ class CursosRelationManager extends RelationManager
                                         'descripcion' => $unidad->descripcion,
                                         'creditos' => $unidad->creditos,
                                         'horas' => $unidad->horas,
+                                        'es_efsrt' => $unidad->es_efsrt,
+                                        'capacidad' => $unidad->capacidad
                                     ])->toArray();
                                 }),
                         ];
@@ -230,6 +247,8 @@ class CursosRelationManager extends RelationManager
                                 'descripcion' => $unidadData['descripcion'] ?? null,
                                 'creditos' => $unidadData['creditos'] ?? null,
                                 'horas' => $unidadData['horas'] ?? null,
+                                'es_efsrt' => $unidadData['es_efsrt'] ?? false,
+                                'capacidad' => $unidadData['capacidad'] ?? false,
                             ]);
                             $orden++;
                         }

@@ -51,6 +51,11 @@ class Nota extends Model
         return $this->belongsTo(Curso::class, 'curso_id', 'id_curso');
     }
 
+    public function unidad(): BelongsTo
+    {
+        return $this->belongsTo(Unidad::class, 'unidad_id', 'id_unidad');
+    }
+
     /**
      * Docente que registró la nota.
      */

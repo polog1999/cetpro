@@ -85,12 +85,35 @@ class ReporteActaController extends Controller
         for ($j = 1; $j <= 10; $j++) {
             $col = $columnas->get($j - 1);
 
-            $nombreCol = $col ? ($esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad) : '';
-            // Escapar caracteres especiales para XML (&, <, >, etc.)
-            $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
+            // Si no hay columna o es un elemento EFSRT, dejamos los valores vacíos
+            if (!$col || $col->es_efsrt) {
+                $templateProcessor->setValue("titulo_u{$j}", '');
+                $templateProcessor->setValue("c/h_u{$j}", '');
+                $templateProcessor->setValue("capacidad_u{$j}", '');
+                continue; // Pasamos a la siguiente iteración
+            }
 
+            // Si es un curso/unidad normal, obtenemos su nombre
+            $nombreCol = $esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad;
+
+            // Limpieza de texto para XML
+            $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
+            $nombreCapacidadLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
+            // Asignamos los valores al Template Processor
             $templateProcessor->setValue("titulo_u{$j}", $nombreColLimpio);
+            $templateProcessor->setValue("c/h_u{$j}", $col->creditos . ' / ' . $col->horas);
+            $templateProcessor->setValue("capacidad_u{$j}", $col->capacidad);
         }
+        // Obtenemos el primer elemento que cumpla con la condición
+        $efsrt = $columnas->first(fn($item) => $item->es_efsrt == true);
+
+        // Evaluamos correctamente y asignamos según el tipo de colección
+        $valorEfsrt = '';
+        if ($efsrt) {
+            $valorEfsrt = $esFormacionContinua ? $efsrt->nombre_curso : $efsrt->nombre_unidad;
+        }
+        $templateProcessor->setValue("efsrt", $valorEfsrt);
+        $templateProcessor->setValue("c/h_efsrt", ($efsrt ? $efsrt->creditos . ' / ' . $efsrt->horas : '') ?? '');
         $templateProcessor->setValue('hoy', now()->format('d - m - Y'));
 
 
@@ -122,6 +145,8 @@ class ReporteActaController extends Controller
             $conNota = 0;
             $aprobadas = 0;
             $desaprobadas = 0;
+            $notaEfsrtVal = ''; // Variable para almacenar la nota de la EFSRT de este alumno
+
             // $topeAprobado = false;
 
             for ($j = 1; $j <= 10; $j++) {
@@ -130,7 +155,7 @@ class ReporteActaController extends Controller
 
                 // Buscamos usando whereIn con todas las matrículas del alumno
                 if (!empty($idsMatriculasDelAlumno) && $item) {
-                    $queryNota = Nota::whereIn('matricula_id', $idsMatriculasDelAlumno);
+                    $queryNota = Nota::with(['curso', 'unidad'])->whereIn('matricula_id', $idsMatriculasDelAlumno);
 
                     if ($esFormacionContinua) {
                         $queryNota->where('curso_id', $item->id_curso);
@@ -138,12 +163,33 @@ class ReporteActaController extends Controller
                         $queryNota->where('unidad_id', $item->id_unidad);
                     }
 
-                    $nota = $queryNota->value('nota_numerica');
+                    // 1. Ejecutamos la consulta para obtener el registro
+                    $notaModel = $queryNota->first();
 
-                    if ($nota !== null) {
+                    // 2. Evaluamos la lógica solicitada para el EFSRT
+                    $nota = '';
+                    if ($notaModel) {
+                        $esEfsrt = false;
+
+                        // Si la unidad es null, buscamos es_efsrt en curso
+                        if (is_null($notaModel->unidad_id) && $notaModel->curso) {
+                            $esEfsrt = (bool) $notaModel->curso->es_efsrt;
+                        }
+                        // Sino, si la unidad tiene un valor no null, buscamos en unidad
+                        elseif (!is_null($notaModel->unidad_id) && $notaModel->unidad) {
+                            $esEfsrt = (bool) $notaModel->unidad->es_efsrt;
+                        }
+
+                        // Si no es EFSRT, asignamos la nota numérica
+                        if (!$esEfsrt) {
+                            $nota = $notaModel->nota_numerica ?? '';
+                        }
+                    }
+
+                    if ($nota !== null && is_numeric($nota)) {
                         $notaInt = (int) $nota;
                         $notaVal = str_pad($notaInt, 2, '0', STR_PAD_LEFT);
-                        $suma += $nota;
+                        $suma += $notaInt;
                         $conNota++;
 
                         // Lógica de conteo por unidad
@@ -162,6 +208,25 @@ class ReporteActaController extends Controller
                 }
                 $templateProcessor->setValue("u{$j}_{$i}", $notaVal);
             }
+            // ==========================================
+            // ASIGNAR NOTA EFSRT AL MARCADOR DEL WORD (${nota_efsrt1}, etc.)
+            // ==========================================
+            if ($efsrt && !empty($idsMatriculasDelAlumno)) {
+                $queryEfsrt = Nota::whereIn('matricula_id', $idsMatriculasDelAlumno);
+                if ($esFormacionContinua) {
+                    $queryEfsrt->where('curso_id', $efsrt->id_curso);
+                } else {
+                    $queryEfsrt->where('unidad_id', $efsrt->id_unidad);
+                }
+                $notaEfsrtModel = $queryEfsrt->first();
+                if ($notaEfsrtModel && $notaEfsrtModel->nota_numerica !== null) {
+                    $notaEfsrtVal = str_pad((int) $notaEfsrtModel->nota_numerica, 2, '0', STR_PAD_LEFT);
+                }
+            }
+
+            // Inyectamos en las dos variantes de marcadores por si acaso tu Word usa con o sin guion bajo
+            $templateProcessor->setValue("nota_efsrt{$i}", $notaEfsrtVal);
+            $templateProcessor->setValue("nota_efsrt_{$i}", $notaEfsrtVal);
             // Calcular el promedio numérico como un entero para las condiciones
             $promedioNum = $conNota > 0 ? (int) round($suma / $conNota) : null;
             $promedioFormateado = $promedioNum !== null ? str_pad($promedioNum, 2, '0', STR_PAD_LEFT) : '';

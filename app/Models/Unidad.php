@@ -26,12 +26,15 @@ class Unidad extends Model
         'orden',
         'descripcion',
         'creditos',
-        'horas'
+        'horas',
+        'es_efsrt',
+        'capacidad'
     ];
 
     protected $casts = [
         'duracion' => 'integer',
         'orden' => 'integer',
+        'es_efsrt' => 'boolean'
     ];
 
     /**
