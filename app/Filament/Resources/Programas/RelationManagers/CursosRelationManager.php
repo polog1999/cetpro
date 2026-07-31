@@ -248,7 +248,7 @@ class CursosRelationManager extends RelationManager
                                 'creditos' => $unidadData['creditos'] ?? null,
                                 'horas' => $unidadData['horas'] ?? null,
                                 'es_efsrt' => $unidadData['es_efsrt'] ?? false,
-                                'capacidad' => $unidadData['capacidad'] ?? false,
+                                'capacidad' => $unidadData['capacidad'] ?? null,
                             ]);
                             $orden++;
                         }
