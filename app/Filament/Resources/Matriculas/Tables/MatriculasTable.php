@@ -81,6 +81,7 @@ class MatriculasTable
                 TextColumn::make('horario.programa.nombre_programa')
                     ->label('Programa')
                     ->sortable()
+                    ->searchable()
                     ->toggleable(),
 
                 TextColumn::make('curso.nombre_curso')
