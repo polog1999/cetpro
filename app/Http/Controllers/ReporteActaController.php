@@ -26,16 +26,18 @@ class ReporteActaController extends Controller
 
         $tipoProg = $horario->programa->tipo_programa;
         $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
-
+        $chtotal = '';
         if ($esFormacionContinua) {
             $columnas = $horario->programa->cursos()->orderBy('fecha_inicio')->get();
             $nombrePrograma = 'FORMACIÓN CONTINUA';
             $nombreModulo = $horario->programa->nombre_programa;
+            $chtotal = $horario->programa->creditos . ' / ' . $horario->programa->horas;
         } else {
             $columnas = Unidad::where('id_curso', $curso_id)->orderBy('orden')->get();
 
             $nombrePrograma = $horario->programa->nombre_programa;
             $nombreModulo = mb_strtoupper($curso->nombre_curso);
+            $chtotal = $curso->creditos . ' / ' . $curso->horas;
         }
         $totalColumnas = $columnas->count();
 
@@ -80,7 +82,7 @@ class ReporteActaController extends Controller
         $templateProcessor->setValue('anio', $anio);
         $templateProcessor->setValue('turno',  mb_strtoupper($horario->turno->value));
         $templateProcessor->setValue('docente', $horario->docente ? mb_strtoupper($horario->docente->nombre_completo) : 'NO ASIGNADO');
-
+        $templateProcessor->setValue('chtotal', $chtotal ?? '');
         // Títulos de columnas
         for ($j = 1; $j <= 10; $j++) {
             $col = $columnas->get($j - 1);
