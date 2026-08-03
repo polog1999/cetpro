@@ -50,11 +50,11 @@ class PagosTable
                         query: function (Builder $query, string $search): Builder {
                             return $query->whereHas(
                                 'cronograma.matricula.estudiante',
-                                fn (Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
+                                fn(Builder $q) => $q->where('nro_documento', 'ilike', "%{$search}%")
                             );
                         },
                     ),
-                    
+
                 TextColumn::make('cronograma.matricula.estudiante.nombre_completo')
                     ->label('Estudiante')
                     ->sortable()
@@ -79,14 +79,14 @@ class PagosTable
                     ->label('Monto')
                     ->numeric()
                     ->sortable(),
-                    
+
                 TextColumn::make('num_liquidacion')
                     ->searchable(),
                 TextColumn::make('estado')
                     ->label('Estado de Pago')
                     ->searchable()
                     ->badge()
-                    ->color(fn (string $state): string => match (true) {
+                    ->color(fn(string $state): string => match (true) {
                         str_contains(strtolower($state), 'cancelado') => 'success',
                         str_contains(strtolower($state), 'pendiente') => 'warning',
                         str_contains(strtolower($state), 'vencido') => 'danger',
@@ -101,24 +101,24 @@ class PagosTable
                         if (!$matricula) {
                             return 'Sin matrícula';
                         }
-                        
+
                         $tipo = $matricula->tipo_matricula?->value ?? $matricula->tipo_matricula ?? '';
-                        
+
                         // Para UNIDAD: mostrar nombre de la unidad
                         if ($tipo === 'Unidad' && $matricula->unidad) {
                             return $matricula->unidad->nombre_unidad;
                         }
-                        
+
                         // Para CURSO o MODULO: mostrar nombre del curso
                         if (in_array($tipo, ['Curso', 'Módulo']) && $matricula->curso) {
                             return $matricula->curso->nombre_curso;
                         }
-                        
+
                         // Para PROGRAMA o FORMACION_CONTINUA: mostrar nombre del programa
                         if (in_array($tipo, ['Programa', 'Formación continua']) && $matricula->horario?->programa) {
                             return $matricula->horario->programa->nombre_programa;
                         }
-                        
+
                         return 'Sin detalle';
                     })
                     ->wrap()
@@ -129,14 +129,14 @@ class PagosTable
                                 $q->whereHas('cronograma.matricula.horario.programa', function ($subQ) use ($search) {
                                     $subQ->where('nombre_programa', 'ilike', "%{$search}%");
                                 })
-                                // Buscar en nombre de curso
-                                ->orWhereHas('cronograma.matricula.curso', function ($subQ) use ($search) {
-                                    $subQ->where('nombre_curso', 'ilike', "%{$search}%");
-                                })
-                                // Buscar en nombre de unidad
-                                ->orWhereHas('cronograma.matricula.unidad', function ($subQ) use ($search) {
-                                    $subQ->where('nombre_unidad', 'ilike', "%{$search}%");
-                                });
+                                    // Buscar en nombre de curso
+                                    ->orWhereHas('cronograma.matricula.curso', function ($subQ) use ($search) {
+                                        $subQ->where('nombre_curso', 'ilike', "%{$search}%");
+                                    })
+                                    // Buscar en nombre de unidad
+                                    ->orWhereHas('cronograma.matricula.unidad', function ($subQ) use ($search) {
+                                        $subQ->where('nombre_unidad', 'ilike', "%{$search}%");
+                                    });
                             });
                         },
                     ),
@@ -145,8 +145,8 @@ class PagosTable
                     ->label('Fecha de vencimiento')
                     ->date()
                     ->sortable(),
-                    
-                    
+
+
                 TextColumn::make('fecha_liquidacion')
                     ->label('Fecha emisión')
                     ->date()
@@ -158,10 +158,10 @@ class PagosTable
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                     ->dateTime()
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-    
+
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -169,165 +169,170 @@ class PagosTable
             ])
             ->filters([
                 // ------------------ PROGRAMA ------------------
-            Filter::make('estructura')
-                ->label('Programa / Horario / Curso')
-                ->form([
-                    // ---------------- PROGRAMA ----------------
-                    Select::make('programa_id')
-                        ->label('Programa')
-                        ->options(fn () =>
-                            Programa::query()
-                                ->whereNotNull('nombre_programa')
-                                ->orderBy('nombre_programa')
-                                ->pluck('nombre_programa', 'id_programa')
-                                ->toArray()
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            if ($state) {
-                                // Si elijo un programa, limpio horario y curso
-                                $set('horario_id', null);
-                                $set('curso_id', null);
-                            }
-                        }),
+                Filter::make('estructura')
+                    ->label('Programa / Horario / Curso')
+                    ->form([
+                        // ---------------- PROGRAMA ----------------
+                        Select::make('programa_id')
+                            ->label('Programa')
+                            ->options(
+                                fn() =>
+                                Programa::query()
+                                    ->whereNotNull('nombre_programa')
+                                    ->orderBy('nombre_programa')
+                                    ->pluck('nombre_programa', 'id_programa')
+                                    ->toArray()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    // Si elijo un programa, limpio horario y curso
+                                    $set('horario_id', null);
+                                    $set('curso_id', null);
+                                }
+                            }),
 
-                    // ---------------- HORARIO -----------------
-                    Select::make('horario_id')
-                        ->label('Horario')
-                        ->options(fn () =>
-                            Horario::query()
-                                ->with('programa')
-                                ->get()
-                                ->mapWithKeys(function (Horario $horario) {
-                                    $programa = $horario->programa->nombre_programa ?? 'Sin programa';
+                        // ---------------- HORARIO -----------------
+                        Select::make('horario_id')
+                            ->label('Horario')
+                            ->options(
+                                fn() =>
+                                Horario::query()
+                                    ->with('programa')
+                                    ->get()
+                                    ->mapWithKeys(function (Horario $horario) {
+                                        $programa = $horario->programa->nombre_programa ?? 'Sin programa';
 
-                                    $texto = $programa
-                                        .' | Hor. '.$horario->id_horario
-                                        .' | Aula '.$horario->aula;
+                                        $texto = $programa
+                                            . ' | Hor. ' . $horario->id_horario
+                                            . ' | Aula ' . $horario->aula;
 
-                                    return [
-                                        $horario->id_horario => $texto,
-                                    ];
-                                })
-                                ->toArray()
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            if ($state) {
-                                // Si elijo horario, limpio programa y curso
-                                $set('programa_id', null);
-                                $set('curso_id', null);
-                            }
-                        }),
+                                        return [
+                                            $horario->id_horario => $texto,
+                                        ];
+                                    })
+                                    ->toArray()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    // Si elijo horario, limpio programa y curso
+                                    $set('programa_id', null);
+                                    $set('curso_id', null);
+                                }
+                            }),
 
-                    // ---------------- CURSO -------------------
-                    Select::make('curso_id')
-                        ->label('Curso')
-                        ->options(fn () =>
-                            Curso::query()
-                                ->whereNotNull('nombre_curso')
-                                ->orderBy('nombre_curso')
-                                ->pluck('nombre_curso', 'id_curso')
-                                ->toArray()
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            if ($state) {
-                                // Si elijo curso, limpio programa y horario
-                                $set('programa_id', null);
-                                $set('horario_id', null);
-                            }
-                        }),
-                ])
-                ->query(function (Builder $query, array $data): Builder {
+                        // ---------------- CURSO -------------------
+                        Select::make('curso_id')
+                            ->label('Curso')
+                            ->options(
+                                fn() =>
+                                Curso::query()
+                                    ->whereNotNull('nombre_curso')
+                                    ->orderBy('nombre_curso')
+                                    ->pluck('nombre_curso', 'id_curso')
+                                    ->toArray()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    // Si elijo curso, limpio programa y horario
+                                    $set('programa_id', null);
+                                    $set('horario_id', null);
+                                }
+                            }),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
 
-                    if (! empty($data['programa_id'])) {
-                        return $query->whereHas(
-                            'cronograma.matricula.horario',
-                            fn (Builder $q) => $q->where('id_programa', $data['programa_id'])
-                        );
-                    }
-
-                    if (! empty($data['horario_id'])) {
-                        return $query->whereHas(
-                            'cronograma.matricula',
-                            fn (Builder $q) => $q->where('horario_id', $data['horario_id'])
-                        );
-                    }
-
-                    if (! empty($data['curso_id'])) {
-                        return $query->whereHas(
-                            'cronograma.matricula',
-                            fn (Builder $q) => $q->where('id_curso', $data['curso_id'])
-                        );
-                    }
-
-                    return $query;
-                })
-                ->indicateUsing(function (array $data): ?string {
-                    if (! empty($data['programa_id'])) {
-                        $prog = Programa::find($data['programa_id']);
-                        return $prog ? 'Programa: '.$prog->nombre_programa : null;
-                    }
-
-                    if (! empty($data['horario_id'])) {
-                        $hor = Horario::find($data['horario_id']);
-                        if (! $hor) {
-                            return null;
+                        if (! empty($data['programa_id'])) {
+                            return $query->whereHas(
+                                'cronograma.matricula.horario',
+                                fn(Builder $q) => $q->where('id_programa', $data['programa_id'])
+                            );
                         }
 
-                        $programa = $hor->programa->nombre_programa ?? 'Sin programa';
+                        if (! empty($data['horario_id'])) {
+                            return $query->whereHas(
+                                'cronograma.matricula',
+                                fn(Builder $q) => $q->where('horario_id', $data['horario_id'])
+                            );
+                        }
 
-                        return 'Horario: '.$programa.' - Hor. '.$hor->id_horario;
-                    }
+                        if (! empty($data['curso_id'])) {
+                            return $query->whereHas(
+                                'cronograma.matricula',
+                                fn(Builder $q) => $q->where('id_curso', $data['curso_id'])
+                            );
+                        }
 
-                    if (! empty($data['curso_id'])) {
-                        $curso = Curso::find($data['curso_id']);
-                        return $curso ? 'Curso: '.$curso->nombre_curso : null;
-                    }
+                        return $query;
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if (! empty($data['programa_id'])) {
+                            $prog = Programa::find($data['programa_id']);
+                            return $prog ? 'Programa: ' . $prog->nombre_programa : null;
+                        }
 
-                    return null;
-                }),
+                        if (! empty($data['horario_id'])) {
+                            $hor = Horario::find($data['horario_id']);
+                            if (! $hor) {
+                                return null;
+                            }
+
+                            $programa = $hor->programa->nombre_programa ?? 'Sin programa';
+
+                            return 'Horario: ' . $programa . ' - Hor. ' . $hor->id_horario;
+                        }
+
+                        if (! empty($data['curso_id'])) {
+                            $curso = Curso::find($data['curso_id']);
+                            return $curso ? 'Curso: ' . $curso->nombre_curso : null;
+                        }
+
+                        return null;
+                    }),
 
                 // Filtro por estudiante
                 SelectFilter::make('estudiante')
                     ->label('Estudiante')
-                    ->options(fn () =>
+                    ->options(
+                        fn() =>
                         Estudiante::query()
                             ->whereHas('matriculas.cronograma.pagos')
                             ->get()
-                            ->mapWithKeys(fn (Estudiante $est) => [
+                            ->mapWithKeys(fn(Estudiante $est) => [
                                 $est->id => $est->nombre_completo . ' - ' . $est->nro_documento
                             ])
                             ->toArray()
                     )
                     ->searchable()
                     ->preload()
-                    ->query(fn (Builder $query, array $data): Builder =>
+                    ->query(
+                        fn(Builder $query, array $data): Builder =>
                         ! empty($data['value'])
                             ? $query->whereHas(
                                 'cronograma.matricula',
-                                fn (Builder $q) => $q->where('estudiante_id', $data['value'])
+                                fn(Builder $q) => $q->where('estudiante_id', $data['value'])
                             )
                             : $query
                     ),
             ])
 
-
-        ->recordActions([
+            ->defaultSort('created_at', 'desc')
+            ->recordActions([
                 Action::make('ver_evidencia')
                     ->label('')
                     ->tooltip('Ver evidencia')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
-                    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
-                    ->url(fn (Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
+                    ->visible(fn(Pago $record): bool => filled($record->evidencia_path))
+                    ->url(fn(Pago $record): string => Storage::disk('public')->url($record->evidencia_path))
                     ->openUrlInNewTab(),
 
                 Action::make('subir_evidencia')
@@ -335,7 +340,7 @@ class PagosTable
                     ->tooltip('Subir evidencia')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->color('success')
-                    ->visible(fn (Pago $record): bool => empty($record->evidencia_path))
+                    ->visible(fn(Pago $record): bool => empty($record->evidencia_path))
                     ->form([
                         Select::make('metodo_pago')
                             ->options([
@@ -355,7 +360,7 @@ class PagosTable
                     ])
                     ->action(function (Pago $record, array $data): void {
                         $service = app(\App\Services\PagoService::class);
-                        
+
                         try {
                             // Delegar toda la lógica al servicio
                             $service->registrarPago(
@@ -364,7 +369,7 @@ class PagosTable
                                 evidenciaPath: $data['evidencia'],
                                 usuarioId: auth()->id()
                             );
-                            
+
                             Notification::make()->title('Evidencia subida')->success()->send();
                         } catch (\Illuminate\Validation\ValidationException $e) {
                             Notification::make()
@@ -379,7 +384,7 @@ class PagosTable
                     ->label('Editar evidencia')
                     ->icon('heroicon-o-pencil')
                     ->color('info')
-                    ->visible(fn (Pago $record): bool => filled($record->evidencia_path))
+                    ->visible(fn(Pago $record): bool => filled($record->evidencia_path))
                     ->form([
                         Select::make('metodo_pago')
                             ->options([
@@ -399,7 +404,7 @@ class PagosTable
                     ])
                     ->action(function (Pago $record, array $data): void {
                         $service = app(\App\Services\PagoService::class);
-                        
+
                         try {
                             // Usar el servicio para actualizar el pago
                             $service->registrarPago(
@@ -408,7 +413,7 @@ class PagosTable
                                 evidenciaPath: $data['evidencia'],
                                 usuarioId: auth()->id()
                             );
-                            
+
                             Notification::make()->title('Evidencia actualizada')->success()->send();
                         } catch (\Illuminate\Validation\ValidationException $e) {
                             Notification::make()
@@ -423,9 +428,10 @@ class PagosTable
                     ->tooltip('Anular pago')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn (Pago $record): bool => 
-                        strtolower($record->estado) === 'pendiente' && 
-                        (auth()->user()->esAdmin() || auth()->user()->esDirectora())
+                    ->visible(
+                        fn(Pago $record): bool =>
+                        strtolower($record->estado) === 'pendiente' &&
+                            (auth()->user()->esAdmin() || auth()->user()->esDirectora())
                     )
                     ->requiresConfirmation()
                     ->modalHeading('¿Seguro que desea anular este pago?')
@@ -447,10 +453,8 @@ class PagosTable
                                 ->send();
                         }
                     }),
-                
-        ])
-        ->toolbarActions([
-                
-        ]);
+
+            ])
+            ->toolbarActions([]);
     }
 }
