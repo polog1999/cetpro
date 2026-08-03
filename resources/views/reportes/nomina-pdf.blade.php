@@ -135,7 +135,7 @@
         // $labelModulo = $esFormacionContinua ? 'CURSO' : 'MÓDULO';
         $labelModulo = 'MÓDULO';
         $nombrePrograma = $esFormacionContinua ? 'FORMACIÓN CONTINUA' : $horario->programa->nombre_programa;
-        $displayModulo = $esFormacionContinua ? ($horario->programa->nombre_programa ?? '-'): '';
+        $displayModulo = $esFormacionContinua ? $horario->programa->nombre_programa ?? '-' : '';
         $ciclo = $esFormacionContinua ? '' : 'AUXILIAR TÉCNICO';
 
         // Fechas de inicio y fin
@@ -158,12 +158,17 @@
         elseif ($horario->programa->cursos->isNotEmpty()) {
             $primerCurso = $horario->programa->cursos->sortBy('fecha_inicio')->first();
             $ultimoCurso = $horario->programa->cursos->sortByDesc('fecha_termino')->first();
-            $fechaInicio = $primerCurso->fecha_inicio
-                ? \Carbon\Carbon::parse($primerCurso->fecha_inicio)->format('d/m/Y')
+            // $fechaInicio = $primerCurso->fecha_inicio
+            //     ? \Carbon\Carbon::parse($primerCurso->fecha_inicio)->format('d/m/Y')
+            //     : '-';
+            // $fechaFin = $ultimoCurso->fecha_termino
+            //     ? \Carbon\Carbon::parse($ultimoCurso->fecha_termino)->format('d/m/Y')
+            //     : '-';
+
+            $fechaInicio = $horario->fecha_inicio
+                ? \Carbon\Carbon::parse($horario->fecha_inicio)->format('d/m/Y')
                 : '-';
-            $fechaFin = $ultimoCurso->fecha_termino
-                ? \Carbon\Carbon::parse($ultimoCurso->fecha_termino)->format('d/m/Y')
-                : '-';
+            $fechaFin = $horario->fecha_termino ? \Carbon\Carbon::parse($horario->fecha_termino)->format('d/m/Y') : '-';
         }
 
         // Datos para la línea Z

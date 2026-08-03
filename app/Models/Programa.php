@@ -25,7 +25,7 @@ class Programa extends Model
         'id_especialidad',   // 👈 ya NO id_rubro
         'tipo_programa',
         'creditos',
-        'horas'
+        'horas',
     ];
 
     protected $casts = [

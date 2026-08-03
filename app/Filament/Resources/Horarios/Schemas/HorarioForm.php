@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Utilities\Set;
 
 use App\Enums\TipoDocumento;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 
 class HorarioForm
 {
@@ -36,6 +37,7 @@ class HorarioForm
                         TipoPrograma::FORMACION_CONTINUA->value    => 'Formación continua',
                     ])
                     ->inline()
+                    ->live()
                     ->required()
                     ->live()
                     ->dehydrated(false)
@@ -60,7 +62,7 @@ class HorarioForm
                     ->options(function (Get $get) {
                         $tipo = $get('tipo_programa');
                         if (! $tipo) return [];
-                        
+
                         return Programa::query()
                             ->where('tipo_programa', $tipo)
                             ->orderBy('nombre_programa')
@@ -71,12 +73,12 @@ class HorarioForm
                     ->preload()
                     ->required()
                     ->live()
-                    ->disabled(fn (Get $get): bool => ! $get('tipo_programa'))
+                    ->disabled(fn(Get $get): bool => ! $get('tipo_programa'))
                     ->afterStateHydrated(function (Set $set, $state, $record) {
                         // Al editar, cargar los cursos del programa
                         if ($record && $state) {
                             $programa = Programa::with('cursos')->find($state);
-                            
+
                             if (! $programa || $programa->cursos->isEmpty()) {
                                 $set('cursos_programa', 'No hay cursos asignados a este programa.');
                                 return;
@@ -169,7 +171,7 @@ class HorarioForm
                             ->orderBy('apellido_materno')
                             ->orderBy('nombres')
                             ->get()
-                            ->mapWithKeys(fn (Docente $docente) => [
+                            ->mapWithKeys(fn(Docente $docente) => [
                                 $docente->id => $docente->nombre_completo,
                             ])
                             ->toArray();
@@ -177,7 +179,8 @@ class HorarioForm
                     ->searchable()
                     ->preload()
                     ->required()
-                    ->getOptionLabelUsing(fn ($value): ?string =>
+                    ->getOptionLabelUsing(
+                        fn($value): ?string =>
                         Docente::find($value)?->nombre_completo
                     )
                     ->createOptionForm([
@@ -186,10 +189,11 @@ class HorarioForm
                             ->options(TipoDocumento::class)
                             ->required()
                             ->live()
-                            ->afterStateUpdated(fn (Select $component) => $component
-                                ->getContainer()
-                                ->getComponent('docente_nro_documento')
-                                ?->state(null)
+                            ->afterStateUpdated(
+                                fn(Select $component) => $component
+                                    ->getContainer()
+                                    ->getComponent('docente_nro_documento')
+                                    ?->state(null)
                             ),
 
                         TextInput::make('nro_documento')
@@ -214,9 +218,9 @@ class HorarioForm
                                 }
                                 $isNumeric = $tipo?->isNumeric() ?? true;
                                 $maxLength = $tipo?->getMaxLength() ?? 8;
-                                
+
                                 $regex = $isNumeric ? '/[^0-9]/g' : '/[^a-zA-Z0-9]/g';
-                                
+
                                 return [
                                     'oninput' => "this.value = this.value.replace($regex, '').slice(0, $maxLength)",
                                 ];
@@ -259,7 +263,7 @@ class HorarioForm
                         return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
                             // Crear el docente
                             $docente = Docente::create($data);
-                            
+
                             // Buscar o crear el rol de Profesor
                             $rolProfesor = \App\Models\Role::firstOrCreate(
                                 ['nombre' => 'Profesor'],
@@ -268,7 +272,7 @@ class HorarioForm
                                     'es_admin' => false,
                                 ]
                             );
-                            
+
                             // Crear el usuario automáticamente
                             \App\Models\Usuario::create([
                                 'usuario' => $docente->nro_documento,
@@ -277,14 +281,14 @@ class HorarioForm
                                 'role_id' => $rolProfesor->id,
                                 'activo' => true,
                             ]);
-                            
+
                             \Filament\Notifications\Notification::make()
                                 ->success()
                                 ->title('Docente y usuario creados')
                                 ->body("Usuario: {$docente->nro_documento} / Contraseña: {$docente->nro_documento}")
                                 ->persistent()
                                 ->send();
-                            
+
                             return $docente->getKey();
                         });
                     }),
@@ -351,7 +355,7 @@ class HorarioForm
                                 // Verificar superposición de horas
                                 $query->where(function ($q) use ($horaInicio, $horaFin) {
                                     $q->where('hora_inicio', '<', $horaFin)
-                                      ->where('hora_fin', '>', $horaInicio);
+                                        ->where('hora_fin', '>', $horaInicio);
                                 });
 
                                 // Obtener horarios que coinciden en días y horas
@@ -368,7 +372,7 @@ class HorarioForm
                                 // Verificar si hay solapamiento de fechas con cada horario encontrado
                                 foreach ($horariosConflicto as $horarioExistente) {
                                     $programaExistente = $horarioExistente->programa;
-                                    
+
                                     if (!$programaExistente || $programaExistente->cursos->isEmpty()) {
                                         // Sin fechas del programa existente, consideramos conflicto
                                         $fail('Existe un cruce de horarios para el docente o el aula seleccionada.');
@@ -383,8 +387,8 @@ class HorarioForm
                                     // Verificar solapamiento de fechas
                                     // Hay solapamiento si: inicio1 <= fin2 AND inicio2 <= fin1
                                     if ($fechasExistente['inicio'] && $fechasExistente['fin']) {
-                                        $haySolapamientoFechas = 
-                                            $fechasActual['inicio'] <= $fechasExistente['fin'] && 
+                                        $haySolapamientoFechas =
+                                            $fechasActual['inicio'] <= $fechasExistente['fin'] &&
                                             $fechasExistente['inicio'] <= $fechasActual['fin'];
 
                                         if ($haySolapamientoFechas) {
@@ -409,6 +413,14 @@ class HorarioForm
                     ->numeric()
                     ->default(20)
                     ->required(),
+                DatePicker::make('fecha_inicio')
+                    ->label('Fecha de Inicio')
+                    ->visible(fn(Get $get) => $get('tipo_programa') == TipoPrograma::FORMACION_CONTINUA->value)
+                    ->nullable(),
+                DatePicker::make('fecha_termino')
+                    ->label('Fecha de Termino')
+                    ->visible(fn(Get $get) => $get('tipo_programa') == TipoPrograma::FORMACION_CONTINUA->value)
+                    ->nullable(),
 
                 // ACTIVO
                 \Filament\Forms\Components\Toggle::make('activo')

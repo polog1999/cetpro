@@ -6,6 +6,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
 use App\Enums\TipoPrograma;
+use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Utilities\Get;
 
 class ProgramaForm
@@ -48,9 +49,6 @@ class ProgramaForm
                     ->integer()
                     ->visible(fn(Get $get) => $get('tipo_programa') == TipoPrograma::FORMACION_CONTINUA)
                     ->nullable(),
-
-
-
                 Select::make('id_especialidad')
                     ->label('Especialidad')
                     ->relationship('especialidad', 'nombre_especialidad')
