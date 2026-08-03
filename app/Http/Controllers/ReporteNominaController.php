@@ -14,6 +14,7 @@ class ReporteNominaController extends Controller
 {
     public function stream($horario_id, $anio, $curso_id)
     {
+        
         $horario = Horario::with(['programa', 'docente'])->findOrFail($horario_id);
 
         // 1. Buscamos el nombre del curso/módulo
