@@ -238,7 +238,7 @@
             <td width="6%" class="bg-gray font-bold">LUGAR</td>
             <td width="35%" class="text-center font-bold">LA MOLINA</td>
             <td width="11%" class="bg-gray font-bold">DIRECCIÓN</td>
-            <td width="48%" class="text-center font-bold">CALLE LOS MANGOS 145</td>
+            <td width="48%" class="text-center font-bold">CALLE LOS ALMENDROS CUADRA 5</td>
         </tr>
     </table>
 
