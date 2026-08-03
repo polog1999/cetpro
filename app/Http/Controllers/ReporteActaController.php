@@ -55,6 +55,9 @@ class ReporteActaController extends Controller
                         ->orWhereNull('id_curso');
                 }
             })
+            ->whereHas('cronograma.pagos', function ($q) {
+                $q->where('estado', 'Cancelado');
+            })//FILTRA SOLO LAS MATRICULAS QUE PAGARON ALMENOS UNA VEZ
             ->where('codigo_inscripcion', 'like', $anio . '%')
             ->whereIn('estado', [EstadoMatricula::ENPROCESO->value, EstadoMatricula::CULMINADO->value])
             ->get();
