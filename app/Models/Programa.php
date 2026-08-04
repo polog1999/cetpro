@@ -24,10 +24,14 @@ class Programa extends Model
         'num_cursos',
         'id_especialidad',   // 👈 ya NO id_rubro
         'tipo_programa',
+        'creditos',
+        'horas',
+        'activo'
     ];
 
     protected $casts = [
         'tipo_programa' => TipoPrograma::class,
+        'activo' => 'boolean'
     ];
 
     public function especialidad()
