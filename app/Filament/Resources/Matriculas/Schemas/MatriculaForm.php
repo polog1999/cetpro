@@ -584,7 +584,7 @@ class MatriculaForm
                     ->label('Seleccionar Programa')
                     ->options(function (Get $get) {
                         $tipoMatricula = $get('tipo_matricula');
-                        $query = \App\Models\Programa::where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO);
+                        $query = \App\Models\Programa::where('activo', true)->where('tipo_programa', TipoPrograma::PROGRAMA_ESTUDIO);
 
                         // Solo filtrar completos si es matrícula por PROGRAMA completo.
                         // Para MODULO o UNIDAD, permitimos programas "incompletos" siempre que tengan cursos.
@@ -651,7 +651,7 @@ class MatriculaForm
                 Select::make('formacion_continua_intermediaria')
                     ->label('Seleccionar Formación Continua')
                     ->options(function () {
-                        return \App\Models\Programa::where('tipo_programa', TipoPrograma::FORMACION_CONTINUA)
+                        return \App\Models\Programa::where('activo', true)->where('tipo_programa', TipoPrograma::FORMACION_CONTINUA)
                             ->completos() // Solo programas completos
                             ->orderBy('nombre_programa')
                             ->pluck('nombre_programa', 'id_programa')

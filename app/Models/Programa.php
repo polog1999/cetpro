@@ -26,10 +26,12 @@ class Programa extends Model
         'tipo_programa',
         'creditos',
         'horas',
+        'activo'
     ];
 
     protected $casts = [
         'tipo_programa' => TipoPrograma::class,
+        'activo' => 'boolean'
     ];
 
     public function especialidad()

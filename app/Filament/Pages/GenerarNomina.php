@@ -64,7 +64,7 @@ class GenerarNomina extends Page
             return collect();
         }
 
-        $query = Programa::query();
+        $query = Programa::query()->where('activo',true);
 
         if (class_exists(TipoPrograma::class)) {
             $enumValue = $this->tipo_programa;

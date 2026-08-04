@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
 use App\Enums\TipoPrograma;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 
 class ProgramaForm
@@ -55,6 +56,8 @@ class ProgramaForm
                     ->searchable()
                     ->preload()
                     ->required(),
+                Toggle::make('activo')
+                ->label('Activo')
             ]);
     }
 }
