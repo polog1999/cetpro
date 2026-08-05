@@ -96,5 +96,11 @@ class Programa extends Model
         return $query->whereHas('cursos')
             ->whereRaw('(SELECT COALESCE(SUM(duracion), 0) FROM cursos WHERE cursos.id_programa = programas.id_programa) >= programas.duracion');
     }
-    
+    /**
+     * Obtiene la clave de ruta para el modelo (Evita que Filament confunda la PK con 'id').
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'id_programa';
+    }
 }

@@ -87,6 +87,15 @@ class ProgramasTable
                 //
             ])
             ->recordActions([
+                 // 👉 NUEVO BOTÓN PARA IR A UNIDADES UGEL
+                Action::make('unidadesUgel')
+                    ->label('Unidades UGEL')
+                    ->icon('heroicon-m-clipboard-document-list')
+                    ->color('info')
+                    ->button()
+                    ->url(fn (Programa $record): string =>
+                        ProgramaResource::getUrl('unidades-ugel', ['record' => $record])
+                    ),
                 Action::make('agregarCursos')
                     ->label(fn (Programa $record): string => 
                         $record->tipo_programa === TipoPrograma::PROGRAMA_ESTUDIO ? 'Módulos' : 'Cursos'

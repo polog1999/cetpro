@@ -23,6 +23,7 @@ return new class extends Migration {
             
             $table->unsignedBigInteger('curso_id');
             $table->foreign('curso_id')
+            ->nullable()
                 ->references('id_curso')
                 ->on('cursos')
                 ->cascadeOnDelete();

@@ -21,6 +21,7 @@ use Filament\Infolists\Components\TextEntry;
 use App\Filament\Resources\Programas\RelationManagers\CursosRelationManager;
 use App\Filament\Resources\Programas\Pages\ViewPrograma;
 use App\Enums\TipoPrograma;
+use App\Filament\Resources\Programas\Pages\GestionUnidadesUgel;
 
 class ProgramaResource extends Resource
 {
@@ -50,6 +51,7 @@ class ProgramaResource extends Resource
             'create' => CreatePrograma::route('/create'),
             'edit'   => EditPrograma::route('/{record}/edit'),
             'view'   => ViewPrograma::route('/{record}'),
+            'unidades-ugel' => GestionUnidadesUgel::route('/{record}/unidades-ugel'), // 👈 Añadido aquí
         ];
     }
 

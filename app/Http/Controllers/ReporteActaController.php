@@ -9,6 +9,8 @@ use App\Models\Curso;
 use App\Models\Unidad;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoPrograma;
+use App\Models\UnidadDidacticaUgel;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -28,19 +30,18 @@ class ReporteActaController extends Controller
         $esFormacionContinua = ($tipoProg == TipoPrograma::FORMACION_CONTINUA);
         $chtotal = '';
         if ($esFormacionContinua) {
-            $columnas = $horario->programa->cursos()->orderBy('fecha_inicio')->get();
+            $columnas = UnidadDidacticaUgel::where('programa_id', $horario->programa->id_programa)->orderBy('orden')->get();
             $nombrePrograma = 'FORMACIÓN CONTINUA';
             $nombreModulo = $horario->programa->nombre_programa;
             $chtotal = $horario->programa->creditos . ' / ' . $horario->programa->horas;
         } else {
-            $columnas = Unidad::where('id_curso', $curso_id)->orderBy('orden')->get();
+            $columnas = UnidadDidacticaUgel::where('programa_id', $horario->programa->id_programa)->where('curso_id', $curso_id)->orderBy('orden')->get();
 
             $nombrePrograma = $horario->programa->nombre_programa;
             $nombreModulo = mb_strtoupper($curso->nombre_curso);
             $chtotal = $curso->creditos . ' / ' . $curso->horas;
         }
         $totalColumnas = $columnas->count();
-
         // 1. OBTENEMOS LAS MATRÍCULAS CRUDAS (Agrupamos por estudiante para unificar duplicados)
         $matriculasCrudas = Matricula::with('estudiante')
             //MATRICULA DE PRUEBA CON ESTUDIANTE TEST
@@ -57,7 +58,7 @@ class ReporteActaController extends Controller
             })
             ->whereHas('cronograma.pagos', function ($q) {
                 $q->where('estado', 'Cancelado');
-            })//FILTRA SOLO LAS MATRICULAS QUE PAGARON ALMENOS UNA VEZ
+            }) //FILTRA SOLO LAS MATRICULAS QUE PAGARON ALMENOS UNA VEZ
             ->where('codigo_inscripcion', 'like', $anio . '%')
             ->whereIn('estado', [EstadoMatricula::ENPROCESO->value, EstadoMatricula::CULMINADO->value])
             ->get();
@@ -99,7 +100,7 @@ class ReporteActaController extends Controller
             }
 
             // Si es un curso/unidad normal, obtenemos su nombre
-            $nombreCol = $esFormacionContinua ? $col->nombre_curso : $col->nombre_unidad;
+            $nombreCol = $col->nombre ?? '';
 
             // Limpieza de texto para XML
             $nombreColLimpio = htmlspecialchars(mb_strtoupper($nombreCol), ENT_QUOTES, 'UTF-8');
@@ -115,7 +116,7 @@ class ReporteActaController extends Controller
         // Evaluamos correctamente y asignamos según el tipo de colección
         $valorEfsrt = '';
         if ($efsrt) {
-            $valorEfsrt = $esFormacionContinua ? $efsrt->nombre_curso : $efsrt->nombre_unidad;
+            $valorEfsrt = $efsrt->nombre ?? '';
         }
         $templateProcessor->setValue("efsrt", $valorEfsrt);
         $templateProcessor->setValue("c/h_efsrt", ($efsrt ? $efsrt->creditos . ' / ' . $efsrt->horas : '') ?? '');
@@ -160,13 +161,9 @@ class ReporteActaController extends Controller
 
                 // Buscamos usando whereIn con todas las matrículas del alumno
                 if (!empty($idsMatriculasDelAlumno) && $item) {
-                    $queryNota = Nota::with(['curso', 'unidad'])->whereIn('matricula_id', $idsMatriculasDelAlumno);
+                    $queryNota = Nota::whereIn('matricula_id', $idsMatriculasDelAlumno);
 
-                    if ($esFormacionContinua) {
-                        $queryNota->where('curso_id', $item->id_curso);
-                    } else {
-                        $queryNota->where('unidad_id', $item->id_unidad);
-                    }
+                    $queryNota->where('unidad_id', $item->id);
 
                     // 1. Ejecutamos la consulta para obtener el registro
                     $notaModel = $queryNota->first();
@@ -176,14 +173,14 @@ class ReporteActaController extends Controller
                     if ($notaModel) {
                         $esEfsrt = false;
 
-                        // Si la unidad es null, buscamos es_efsrt en curso
-                        if (is_null($notaModel->unidad_id) && $notaModel->curso) {
-                            $esEfsrt = (bool) $notaModel->curso->es_efsrt;
-                        }
-                        // Sino, si la unidad tiene un valor no null, buscamos en unidad
-                        elseif (!is_null($notaModel->unidad_id) && $notaModel->unidad) {
-                            $esEfsrt = (bool) $notaModel->unidad->es_efsrt;
-                        }
+                        // // Si la unidad es null, buscamos es_efsrt en curso
+                        // if (is_null($notaModel->unidad_id) && $notaModel->curso) {
+                        $esEfsrt = (bool) $notaModel->es_efsrt;
+                        // }
+                        // // Sino, si la unidad tiene un valor no null, buscamos en unidad
+                        // elseif (!is_null($notaModel->unidad_id) && $notaModel->unidad) {
+                        //     $esEfsrt = (bool) $notaModel->es_efsrt;
+                        // }
 
                         // Si no es EFSRT, asignamos la nota numérica
                         if (!$esEfsrt) {
