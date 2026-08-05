@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('matriculas', function (Blueprint $table) {
             $table->unsignedBigInteger('id_unidad')->nullable()->after('id_curso');
-            $table->foreign('id_unidad')->references('id_unidad')->on('unidades')->onDelete('set null');
+            $table->foreign('id_unidad')->references('id')->on('unidades_didacticas_ugel')->onDelete('set null');
         });
     }
 

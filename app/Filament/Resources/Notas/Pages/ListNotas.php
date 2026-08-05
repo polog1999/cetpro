@@ -8,7 +8,8 @@ use App\Models\Horario;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Programa;
-use App\Models\Unidad; // 👈 Importado
+use App\Models\UnidadDidacticaUgel;
+use App\Enums\EstadoMatricula;
 use App\Enums\TipoPrograma;
 use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -16,6 +17,9 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use \Illuminate\Support\Str;
 
 class ListNotas extends Page implements HasForms
 {
@@ -24,22 +28,15 @@ class ListNotas extends Page implements HasForms
     protected static string $resource = NotaResource::class;
     protected string $view = 'filament.resources.notas.pages.list-notas';
 
-    // Propiedades para los selectores
     public ?string $tipo_programa = null;
     public ?int $programa_id = null;
     public ?int $curso_id = null;
-    public ?int $unidad_id = null; // 👈 Añadido
+    public ?int $unidad_id = null;
     public ?int $horario_id = null;
 
-    // Array de notas
     public array $notas = [];
-
-    // Modal de confirmación
     public bool $showConfirmModal = false;
 
-    /**
-     * Ayudante seguro para verificar si se seleccionó Programa de Estudio
-     */
     public function esProgramaEstudio(): bool
     {
         if (!$this->tipo_programa) {
@@ -53,71 +50,39 @@ class ListNotas extends Page implements HasForms
         return $val === 'PROGRAMA_ESTUDIO' || (defined('\App\Enums\TipoPrograma::PROGRAMA_ESTUDIO') && $val === TipoPrograma::PROGRAMA_ESTUDIO->value);
     }
 
-    /**
-     * Verifica si el usuario tiene rol de Administrador o Directora.
-     */
     public function puedeEditarTodo(): bool
     {
         $user = auth()->user();
         return $user && ($user->esAdmin() || $user->esDirectora());
     }
 
-    /**
-     * Control estricto de permisos de escritura.
-     * - Admin y Docentes: Pueden registrar y editar.
-     * - Directora: Solo Lectura (Falso).
-     */
     public function puedeGuardarNotas(): bool
     {
         $user = auth()->user();
-
-        if (!$user) {
-            return false;
-        }
-
-        if ($user->esDirectora()) {
-            return false; // Directora solo puede visualizar
-        }
-
-        // Admin y Docentes sí pueden registrar y editar
+        if (!$user) return false;
+        if ($user->esDirectora()) return false;
         return $user->esAdmin() || $user->esProfesor();
     }
 
-    /**
-     * Mostrar modal de confirmación
-     */
     public function confirmarGuardar(): void
     {
         $this->showConfirmModal = true;
     }
-
-    /**
-     * Cancelar modal de confirmación
-     */
     public function cancelarConfirmacion(): void
     {
         $this->showConfirmModal = false;
     }
 
-    /**
-     * Obtener tipos de programa para el primer selector
-     */
     public function getTiposProgramaProperty(): array
     {
         return TipoPrograma::cases();
     }
 
-    /**
-     * Obtener programas correspondientes al tipo seleccionado y filtrados por Rol
-     */
     public function getProgramasProperty(): Collection
     {
-        if (!$this->tipo_programa) {
-            return collect();
-        }
+        if (!$this->tipo_programa) return collect();
 
         $query = Programa::query();
-
         if (class_exists(TipoPrograma::class)) {
             $enumValue = $this->tipo_programa;
             $query->where('tipo_programa', $enumValue);
@@ -126,33 +91,22 @@ class ListNotas extends Page implements HasForms
         }
 
         $user = auth()->user();
-
-        // Admin y Directora ven todos los programas de ese tipo
         if ($this->puedeEditarTodo()) {
             return $query->orderBy('nombre_programa')->pluck('nombre_programa', 'id_programa');
         }
 
-        // El docente solo ve los programas donde tiene horarios asignados activamente
         if ($user?->docente_id) {
             return $query->whereHas('horarios', function ($q) use ($user) {
-                $q->where('id_docente', $user->docente_id)
-                    ->where('activo', true);
-            })
-                ->orderBy('nombre_programa')
-                ->pluck('nombre_programa', 'id_programa');
+                $q->where('id_docente', $user->docente_id)->where('activo', true);
+            })->orderBy('nombre_programa')->pluck('nombre_programa', 'id_programa');
         }
 
         return collect();
     }
 
-    /**
-     * Obtener cursos del programa seleccionado
-     */
     public function getCursosProperty(): Collection
     {
-        if (!$this->programa_id) {
-            return collect();
-        }
+        if (!$this->programa_id) return collect();
 
         return Curso::where('id_programa', $this->programa_id)
             ->orderBy('fecha_inicio', 'asc')
@@ -160,51 +114,38 @@ class ListNotas extends Page implements HasForms
     }
 
     /**
-     * NUEVO: Obtener unidades didácticas si es Programa de Estudio
+     * UNIDADES DIDÁCTICAS DESDE LA NUEVA TABLA unidades_didacticas_ugel
      */
     public function getUnidadesProperty(): Collection
     {
-        if (!$this->curso_id || !$this->esProgramaEstudio()) {
-            return collect();
+        if (!$this->programa_id) return collect();
+
+        $query = UnidadDidacticaUgel::where('programa_id', $this->programa_id);
+
+        // Si es Programa de Estudio, filtramos estrictamente por el módulo (curso_id) seleccionado
+        if ($this->esProgramaEstudio()) {
+            if (!$this->curso_id) return collect();
+            $query->where('curso_id', $this->curso_id);
         }
 
-        $query = Unidad::where('id_curso', $this->curso_id);
-
-        if (method_exists(Unidad::class, 'scopeOrdenado')) {
-            $query->ordenado();
-        } else {
-            $query->orderBy('id_unidad', 'asc');
-        }
-
-        return $query->pluck('nombre_unidad', 'id_unidad');
+        return $query->orderBy('orden', 'asc')->pluck('nombre', 'id');
     }
 
-    /**
-     * Obtener horarios filtrados de forma estricta por rol
-     */
     public function getHorariosProperty(): Collection
     {
-        if (!$this->programa_id) {
-            return collect();
-        }
+        if (!$this->programa_id) return collect();
 
         $user = auth()->user();
-        if (!$user) {
-            return collect();
-        }
+        if (!$user) return collect();
 
-        $query = Horario::where('id_programa', $this->programa_id)
-            ->where('activo', true);
+        $query = Horario::where('id_programa', $this->programa_id)->where('activo', true);
 
-        // Filtro estricto por Rol
         if ($user->esAdmin() || $user->esDirectora()) {
-            // Admin y Directora ven todos los horarios activos del programa
             $horarios = $query->get();
         } elseif ($user->docente_id) {
-            // El docente solo ve sus propios horarios asignados
             $horarios = $query->where('id_docente', $user->docente_id)->get();
         } else {
-            return collect(); // Bloqueado si no cumple condiciones
+            return collect();
         }
 
         return $horarios->mapWithKeys(function ($horario) {
@@ -221,107 +162,68 @@ class ListNotas extends Page implements HasForms
         });
     }
 
-    /**
-     * Verificar si hay horarios asignados
-     */
     public function getTieneHorariosProperty(): bool
     {
         return $this->horarios->isNotEmpty();
     }
 
-    /**
-     * Obtener estudiantes matriculados
-     */
-    /**
-     * Obtener estudiantes cruzando curso Y unidad de forma estricta
-     */
     public function getEstudiantesProperty(): Collection
     {
-        if (!$this->horario_id || !$this->curso_id) {
-            return collect();
-        }
-
-        // Si es Programa de Estudio, exigimos que se seleccione una unidad antes de cargar alumnos
-        if ($this->esProgramaEstudio() && !$this->unidad_id) {
+        if (!$this->horario_id || !$this->unidad_id) {
             return collect();
         }
 
         $matriculas = Matricula::with(['estudiante'])
-            //MATRICULA DE PRUEBA CON ESTUDIANTE TEST
             ->where('id', '!=', 42)
             ->where('horario_id', $this->horario_id)
             ->whereIn('estado', [
                 \App\Enums\EstadoMatricula::ENPROCESO->value,
                 \App\Enums\EstadoMatricula::CULMINADO->value,
             ])
+            ->whereHas('cronograma.pagos', function ($q) {
+                $q->where('estado', 'Cancelado');
+            }) //FILTRA SOLO LAS MATRICULAS QUE PAGARON ALMENOS UNA VEZ
             ->where(function ($query) {
                 if ($this->esProgramaEstudio()) {
-                    // LÓGICA PARA PROGRAMA DE ESTUDIO
-
-                    // 1. Alumno matriculado específicamente en la Unidad seleccionada
-                    $query->where(function ($q) {
-                        $q->where('id_curso', $this->curso_id)
-                            ->where('id_unidad', $this->unidad_id);
-                    })
-                        // 2. O alumno matriculado en TODO el Módulo (unidad es null)
-                        ->orWhere(function ($q) {
-                            $q->where('id_curso', $this->curso_id)
-                                ->whereNull('id_unidad');
-                        })
-                        // 3. O alumno matriculado en TODO el Programa (curso y unidad null)
-                        ->orWhere(function ($q) {
-                            $q->whereNull('id_curso')
-                                ->whereNull('id_unidad');
-                        });
-                } else {
-                    // LÓGICA PARA FORMACIÓN CONTINUA
+                    // Programa de estudio: filtra si se matriculó en este módulo específico o en todo el programa
                     $query->where('id_curso', $this->curso_id)
+                        ->orWhereNull('id_curso');
+                } else {
+                    // Formación continua: muestra en todas las unidades si está en el curso o paquete completo
+                    $query->whereNotNull('id_curso')
                         ->orWhereNull('id_curso');
                 }
             })
-            ->get();
+            ->get()
+            ->unique('estudiante_id')
+            ->sortBy('estudiante.apellido_paterno')
+            ->values();
 
-        // NUEVO: Agrupamos por ID de estudiante para asegurar que no se dupliquen
-        // en la lista si tuvieran múltiples matrículas activas por algún error administrativo
-        $matriculasUnicas = $matriculas->unique('estudiante_id');
-
-        // Ordenamos la colección en memoria por apellido paterno
-        $matriculasOrdenadas = $matriculasUnicas->sortBy('estudiante.apellido_paterno');
-
-        // Mapeamos el resultado final
-        return $matriculasOrdenadas->map(function ($matricula) {
+        return $matriculas->map(function ($matricula) {
             $queryNota = Nota::where('matricula_id', $matricula->id)
-                ->where('curso_id', $this->curso_id);
+                ->where('unidad_id', $this->unidad_id);
 
-            // Condicional: Si es programa filtra por unidad_id, si es formación continua por nulo
-            if ($this->esProgramaEstudio()) {
-                $queryNota->where('unidad_id', $this->unidad_id);
-            } else {
-                $queryNota->whereNull('unidad_id');
+            if ($this->curso_id) {
+                $queryNota->where('curso_id', $this->curso_id);
             }
 
             $notaExistente = $queryNota->first();
 
             return [
                 'matricula_id' => $matricula->id,
-                'nombre_completo' => $matricula->estudiante?->nombre_completo ?? 'N/A',
+                'nombre_completo' => Str::upper("{$matricula->estudiante->apellido_paterno} {$matricula->estudiante->apellido_materno}, ") . trim(Str::title(Str::lower($matricula->estudiante->nombres))),
                 'dni' => $matricula->estudiante?->nro_documento ?? 'N/A',
                 'nota_actual' => $notaExistente?->nota_numerica,
                 'ya_tiene_nota' => $notaExistente !== null,
             ];
-        })
-            ->sortBy('nombre_completo') // 👈 1. Asegurar ordenamiento alfabético en PHP
-            ->values();
+        });
     }
 
-    /**
-     * Resets en cascada ante cambios de selectores
-     */
     public function updatedTipoPrograma(): void
     {
         $this->programa_id = null;
         $this->curso_id = null;
-        $this->unidad_id = null; // 👈 Añadido reset
+        $this->unidad_id = null;
         $this->horario_id = null;
         $this->notas = [];
     }
@@ -329,30 +231,25 @@ class ListNotas extends Page implements HasForms
     public function updatedProgramaId(): void
     {
         $this->curso_id = null;
-        $this->unidad_id = null; // 👈 Añadido reset
+        $this->unidad_id = null;
         $this->horario_id = null;
         $this->notas = [];
     }
 
     public function updatedCursoId(): void
     {
-        $this->unidad_id = null; // 👈 Añadido reset
-        $this->horario_id = null;
+        $this->unidad_id = null;
         $this->notas = [];
     }
 
     public function updatedUnidadId(): void
     {
-        $this->updatedHorarioId(); // Al cambiar unidad, cargar notas de esa unidad
+        $this->updatedHorarioId();
     }
 
-    /**
-     * Cargar notas de los estudiantes en el array del formulario
-     */
     public function updatedHorarioId(): void
     {
         $this->notas = [];
-
         foreach ($this->estudiantes as $estudiante) {
             $this->notas[$estudiante['matricula_id']] = $estudiante['nota_actual'] !== null
                 ? (string) intval($estudiante['nota_actual'])
@@ -360,95 +257,67 @@ class ListNotas extends Page implements HasForms
         }
     }
 
-    /**
-     * Guardar y actualizar las notas de forma segura
-     */
-    public function guardarNotas(): void
+   public function guardarNotas(): void
     {
         $user = auth()->user();
-
-        // 1. Validar permisos de escritura en servidor
         if (!$this->puedeGuardarNotas()) {
-            Notification::make()
-                ->danger()
-                ->title('Acceso Denegado')
-                ->body('Su usuario no tiene permisos para registrar o editar notas.')
-                ->send();
+            Notification::make()->danger()->title('Acceso Denegado')->body('Sin permisos de escritura.')->send();
             return;
         }
 
-        if (!$this->curso_id || !$this->horario_id) {
-            Notification::make()
-                ->danger()
-                ->title('Error')
-                ->body('Debe seleccionar programa, curso y horario.')
-                ->send();
+        if (!$this->unidad_id || !$this->horario_id) {
+            Notification::make()->danger()->title('Error')->body('Debe seleccionar la unidad didáctica y horario.')->send();
             return;
         }
 
-        // Obtener el ID del docente del horario seleccionado
         $horario = Horario::find($this->horario_id);
-        $docenteId = $horario?->id_docente;
-
-        // Si es un docente ordinario, validar que el horario seleccionado realmente le pertenece
-        if (!$user->esAdmin() && !$user->esDirectora()) {
-            if ($docenteId !== $user->docente_id) {
-                Notification::make()
-                    ->danger()
-                    ->title('Acceso Denegado')
-                    ->body('No tiene autorización para modificar notas en un horario ajeno.')
-                    ->send();
-                return;
-            }
-        }
+        $docenteId = $user->docente_id ?? $horario?->id_docente;
 
         if (!$docenteId) {
-            Notification::make()
-                ->danger()
-                ->title('Error de asignación')
-                ->body('El horario seleccionado no tiene un docente asignado.')
-                ->send();
+            Notification::make()->danger()->title('Error')->body('El horario no tiene docente asignado.')->send();
             return;
         }
 
         $guardadas = 0;
         $actualizadas = 0;
+        $eliminadas = 0; // 👈 Para llevar conteo de notas borradas
         $errores = 0;
-
-        // 👉 NUEVO: Obtenemos estrictamente los IDs de matrícula que pertenecen al horario actual
         $matriculasValidas = $this->estudiantes->pluck('matricula_id')->toArray();
 
         foreach ($this->notas as $matriculaId => $nota) {
+            if (!in_array($matriculaId, $matriculasValidas)) continue;
 
-            // 👉 NUEVO: Si por algún motivo quedó un ID de un horario viejo en memoria, lo saltamos
-            if (!in_array($matriculaId, $matriculasValidas)) {
-                continue;
+            // Buscamos si ya existe la nota en la BD para esta matrícula y unidad
+            $queryExistente = Nota::where('matricula_id', $matriculaId)
+                ->where('unidad_id', $this->unidad_id);
+
+            if ($this->curso_id) {
+                $queryExistente->where('curso_id', $this->curso_id);
             }
 
-            if ($nota === '' || $nota === null) {
-                continue;
+            $existente = $queryExistente->first();
+
+            // CASO A: EL USUARIO BORRÓ LA NOTA (DEJÓ EL INPUT VACÍO)
+            if (($nota === '' || $nota === null)) {
+                if ($existente) {
+                    try {
+                        $existente->delete(); // 👈 Si existía en la BD, la eliminamos
+                        $eliminadas++;
+                    } catch (\Exception $e) {
+                        $errores++;
+                    }
+                }
+                continue; // Pasamos al siguiente alumno
             }
 
+            // CASO B: EL USUARIO ESCRIBIÓ UNA NOTA VÁLIDA
             $notaNumerica = (int) $nota;
             if ($notaNumerica < 0 || $notaNumerica > 20) {
                 $errores++;
                 continue;
             }
 
-            // Filtrado condicional para buscar la nota existente
-            $queryExistente = Nota::where('matricula_id', $matriculaId)
-                ->where('curso_id', $this->curso_id);
-
-            if ($this->esProgramaEstudio()) {
-                $queryExistente->where('unidad_id', $this->unidad_id);
-            } else {
-                $queryExistente->whereNull('unidad_id');
-            }
-
-            $existente = $queryExistente->first();
-
             if ($existente) {
-                // Tanto administradores como docentes autorizados pueden editar y sobrescribir las notas
                 try {
                     $existente->update([
                         'nota_numerica' => $notaNumerica,
@@ -461,12 +330,12 @@ class ListNotas extends Page implements HasForms
                 continue;
             }
 
-            // Crear registro nuevo
+            // Crear registro nuevo si no existía
             try {
                 Nota::create([
                     'matricula_id' => $matriculaId,
                     'curso_id' => $this->curso_id,
-                    'unidad_id' => $this->esProgramaEstudio() ? $this->unidad_id : null, // 👈 Condicional según tipo
+                    'unidad_id' => $this->unidad_id,
                     'nota_numerica' => $notaNumerica,
                     'docente_id' => $docenteId,
                 ]);
@@ -476,43 +345,21 @@ class ListNotas extends Page implements HasForms
             }
         }
 
-        if ($guardadas > 0) {
-            Notification::make()
-                ->success()
-                ->title('Notas guardadas')
-                ->body("Se registraron {$guardadas} notas correctamente.")
-                ->send();
+        // Notificación detallada de lo que ocurrió
+        $mensajeBody = "Se procesaron los cambios correctamente.";
+        if ($eliminadas > 0) {
+            $mensajeBody .= " ({$eliminadas} nota(s) vaciada(s)).";
         }
 
-        if ($actualizadas > 0) {
-            Notification::make()
-                ->success()
-                ->title('Notas actualizadas')
-                ->body("Se modificaron {$actualizadas} notas correctamente.")
-                ->send();
-        }
-
-        if ($errores > 0) {
-            Notification::make()
-                ->danger()
-                ->title('Errores')
-                ->body("No se pudieron guardar {$errores} notas.")
-                ->send();
-        }
-
+        Notification::make()->success()->title('Notas procesadas correctamente')->body($mensajeBody)->send();
         $this->showConfirmModal = false;
-        // $this->updatedHorarioId();
     }
-
-    /**
-     * Cancelar y limpiar selección
-     */
     public function cancelar(): void
     {
         $this->tipo_programa = null;
         $this->programa_id = null;
         $this->curso_id = null;
-        $this->unidad_id = null; // 👈 Añadido
+        $this->unidad_id = null;
         $this->horario_id = null;
         $this->notas = [];
     }
