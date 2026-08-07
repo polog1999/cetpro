@@ -1004,8 +1004,8 @@ class MatriculaForm
                 // Envolvemos el Toggle dentro de un Group reactivo
                 \Filament\Schemas\Components\Group::make([
                     Toggle::make('generar_pago')
-                        ->label('¿Generar Cronograma y Pagos (Oracle)?')
-                        ->helperText('Desactive esta opción si a este estudiante no se le debe generar ningún número de liquidación ni cuotas de pago.')
+                        ->label('¿Generar Cronograma y Pagos?')
+                        ->helperText('Desactive esta opción si a este estudiante no se le debe generar ningún código de pago ni cuotas de pago.')
                         ->default(false)
                         ->dehydrateStateUsing(function ($state, Get $get) {
                              Log::info('Generar pago: '.$state);
