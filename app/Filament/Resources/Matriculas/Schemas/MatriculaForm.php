@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Matriculas\Schemas;
 
+use App\Enums\CondicionPago;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\TipoDocumento;
@@ -39,6 +40,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Toggle;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 
 class MatriculaForm
 {
@@ -574,7 +576,7 @@ class MatriculaForm
                     })
                     ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
                     ->dehydrated(true),
-                
+
                 // ----------------------------------------
                 // PROGRAMA INTERMEDIARIO (para Programa y Modulo)
                 // No se almacena, solo para filtrar
@@ -954,7 +956,7 @@ class MatriculaForm
                     })
                     ->disabled(fn($context) => $context === 'edit') // 👈 Bloqueado al editar
                     ->dehydrated(true),
-                    TextInput::make('num_cuotas_personalizado')
+                TextInput::make('num_cuotas_personalizado')
                     ->label('Meses a estudiar / Nro de Cuotas')
                     ->placeholder('Dejar en blanco para calcular todo el programa')
                     ->helperText('Indique cuántos meses pagará el alumno si solo estudiará un periodo parcial (ej: de Marzo a Julio = 5 cuotas).')
@@ -975,7 +977,66 @@ class MatriculaForm
                     ->visible(
                         fn(Get $get) =>
                         in_array($get('tipo_matricula'), [TipoMatricula::PROGRAMA, TipoMatricula::FORMACION_CONTINUA])
-                    )
+                    ),
+                // ----------------------------------------
+                // TIPO DE CONDICIÓN DE PAGO (Normal, Becado, Inabif)
+                // ----------------------------------------
+                \Filament\Forms\Components\Radio::make('condicion_pago')
+                    ->label('Condición del Estudiante')
+                    ->options(CondicionPago::class)
+                    ->inline()
+                    ->default(CondicionPago::NORMAL->value)
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Set $set) {
+                         Log::info('Condicion pago: '.$state->value);
+                        // Obtenemos el string de forma segura sin errores de conversión
+                        $valorStr = $state instanceof CondicionPago ? $state->value : (is_object($state) && method_exists($state, 'value') ? $state->value : (string) $state);
+
+                        if ($valorStr === 'becado') {
+                            $set('generar_pago', false);
+                        } elseif ($valorStr === 'normal') {
+                            $set('generar_pago', true);
+                        }
+                    })
+                    ->helperText('Seleccione la condición económica del estudiante.'),
+
+                // Envolvemos el Toggle dentro de un Group reactivo
+                \Filament\Schemas\Components\Group::make([
+                    Toggle::make('generar_pago')
+                        ->label('¿Generar Cronograma y Pagos (Oracle)?')
+                        ->helperText('Desactive esta opción si a este estudiante no se le debe generar ningún número de liquidación ni cuotas de pago.')
+                        ->default(false)
+                        ->dehydrateStateUsing(function ($state, Get $get) {
+                             Log::info('Generar pago: '.$state);
+                            // 👈 BLINDAJE TOTAL: Si elige becado, forzamos el valor a FALSE sin importar nada más
+                            $estado = $get('condicion_pago');
+                            $estadoStr = $estado instanceof CondicionPago ? $estado->value : (is_object($estado) && method_exists($estado, 'value') ? $estado->value : (string) $estado);
+
+                            if ($estadoStr === 'becado') {
+                                return false;
+                            }
+                            // Mensaje informativo simple
+                           
+                            return (bool) $state;
+                        })
+                        ->dehydrated(true),
+                ])
+                    ->visible(function (Get $get) {
+                        $estado = $get('condicion_pago');
+
+                        // Conversión segura a string evaluando si es el Enum exacto o un objeto
+                        if ($estado instanceof CondicionPago) {
+                            $estadoStr = $estado->value;
+                        } elseif (is_object($estado) && method_exists($estado, 'value')) {
+                            $estadoStr = $estado->value;
+                        } else {
+                            $estadoStr = (string) $estado;
+                        }
+
+                        return $estadoStr === 'inabif';
+                    }),
+
             ]);
     }
 
@@ -1038,12 +1099,12 @@ class MatriculaForm
 
                     $persona = Estudiante::where('nro_documento', $state)->first();
 
-                      if ($persona) {
-                    
+                    if ($persona) {
+
                         $set('nombres', null);
                         $set('apellido_paterno', null);
                         $set('apellido_materno', null);
-                      
+
                         Notification::make()
                             ->title('Ya se encuentra registrado')
                             ->success()

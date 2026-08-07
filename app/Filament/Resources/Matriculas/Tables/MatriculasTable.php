@@ -58,6 +58,9 @@ class MatriculasTable
                     ->label('Estado')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('condicion_pago')
+                ->label('Condición'),
+
 
                 TextColumn::make('tipo_matricula')
                     ->label('Tipo')
