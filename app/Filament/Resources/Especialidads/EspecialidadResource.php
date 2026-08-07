@@ -26,7 +26,7 @@ class EspecialidadResource extends Resource
     protected static ?string $pluralModelLabel = 'Servicios no Exclusivos (TUSNE)';
     protected static ?string $modelLabel = 'Servicio no Exclusivo (TUSNE)';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-ticket';
 
     protected static string | UnitEnum | null $navigationGroup = 'Gestión Académica';
 

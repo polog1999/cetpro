@@ -22,6 +22,7 @@ class Nota extends Model
     protected $fillable = [
         'matricula_id',
         'curso_id',
+         'unidad_id', // 👈 Añadido
         'docente_id',
         'nota_numerica',
         'nota_letra',
@@ -48,6 +49,11 @@ class Nota extends Model
     public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class, 'curso_id', 'id_curso');
+    }
+
+    public function unidad(): BelongsTo
+    {
+        return $this->belongsTo(UnidadDidacticaUgel::class, 'unidad_id', 'id');
     }
 
     /**

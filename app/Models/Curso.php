@@ -18,6 +18,13 @@ class Curso extends Model
         'fecha_inicio',
         'fecha_termino',
         'id_programa',
+        'creditos',
+        'horas',
+        'es_efsrt',
+        'capacidad'
+    ];
+    protected $casts = [
+        'es_efsrt' => 'boolean'
     ];
 
     public function programa()

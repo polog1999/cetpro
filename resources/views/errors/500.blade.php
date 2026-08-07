@@ -12,103 +12,119 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f3f4f6; /* Fondo gris claro estilo Filament (gray-100) */
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: #1f2937; /* Texto oscuro principal (gray-800) */
+            padding: 1rem;
         }
         
         .error-container {
-            background: white;
-            border-radius: 20px;
-            padding: 60px 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: #ffffff;
+            border-radius: 0.75rem; /* Bordes redondeados sutiles (rounded-xl) */
+            padding: 3rem 2.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Sombra suave tipo card */
+            border: 1px solid #e5e7eb; /* Borde fino sutil (gray-200) */
             text-align: center;
-            max-width: 600px;
-            margin: 20px;
+            max-width: 32rem;
+            width: 100%;
         }
         
         .error-code {
-            font-size: 120px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #e11d48; /* Color rojo de advertencia profesional */
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
         }
         
         .error-title {
-            font-size: 32px;
-            color: #2d3748;
-            margin-bottom: 15px;
+            font-size: 1.25rem;
+            color: #111827; /* (gray-900) */
+            margin-bottom: 0.75rem;
             font-weight: 600;
         }
         
         .error-message {
-            font-size: 18px;
-            color: #718096;
-            margin-bottom: 30px;
-            line-height: 1.6;
+            font-size: 0.95rem;
+            color: #4b5563; /* (gray-600) */
+            margin-bottom: 2rem;
+            line-height: 1.5;
         }
         
         .error-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
         }
         
-        .btn-home {
-            display: inline-block;
-            padding: 15px 40px;
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: white;
+        .btn-container {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem; /* (rounded-lg) */
+            font-weight: 500;
+            font-size: 0.875rem;
             text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 16px;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(250, 112, 154, 0.4);
-            margin: 5px;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background-color: #4f46e5; /* Color primario índole/morado profesional tipo Filament */
+            color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
         
-        .btn-home:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(250, 112, 154, 0.6);
+        .btn-primary:hover {
+            background-color: #4338ca;
         }
         
-        .btn-reload {
-            background: #4299e1;
-            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.4);
+        .btn-secondary {
+            background-color: #ffffff;
+            color: #374151; /* (gray-700) */
+            border-color: #d1d5db; /* (gray-300) */
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f9fafb; /* (gray-50) */
+            border-color: #9ca3af;
         }
         
         .info-box {
-            margin-top: 30px;
-            padding: 20px;
-            background: #fff5f5;
-            border-radius: 10px;
-            border-left: 4px solid #fc8181;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f9fafb; /* (gray-50) */
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            text-align: left;
         }
         
         .info-box p {
-            font-size: 14px;
-            color: #742a2a;
-            margin: 5px 0;
-            text-align: left;
+            font-size: 0.85rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
         }
         
         .info-box ul {
-            text-align: left;
-            margin-left: 20px;
-            margin-top: 10px;
+            margin-left: 1.25rem;
         }
         
         .info-box li {
-            font-size: 14px;
-            color: #742a2a;
-            margin: 5px 0;
+            font-size: 0.825rem;
+            color: #6b7280; /* (gray-500) */
+            margin: 0.25rem 0;
         }
     </style>
 </head>
@@ -118,24 +134,24 @@
         <div class="error-code">500</div>
         <h1 class="error-title">Error del Servidor</h1>
         <p class="error-message">
-            Ups! Algo salió mal en nuestro servidor. 
-            Nuestro equipo técnico ha sido notificado y está trabajando para resolver el problema.
+            Ups! Algo salió mal en el servidor. Informa sobre este inconveniente para poder solucionarlo.
         </p>
         
-        <a href="{{ url('/admin') }}" class="btn-home">Volver al Inicio</a>
-        <a href="javascript:location.reload()" class="btn-home btn-reload">Reintentar</a>
+        <div class="btn-container">
+            <a href="{{ url('/admin') }}" class="btn btn-primary">Volver al Inicio</a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">Reintentar</a>
+        </div>
         
         <div class="info-box">
             <p><strong>🔧 ¿Qué puedes hacer?</strong></p>
             <ul>
-                <li>Recargar la página en unos minutos</li>
-                <li>Verificar tu conexión a internet</li>
-                <li>Contactar al administrador si el problema persiste</li>
+                <li>Recargar la página en unos minutos.</li>
+                <li>Verificar tu conexión de red.</li>
             </ul>
             @if(config('app.debug') && isset($exception))
-                <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #feb2b2;">
-                    <strong>Detalles técnicos (solo en modo desarrollo):</strong><br>
-                    <code style="font-size: 12px;">{{ $exception->getMessage() }}</code>
+                <p style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb; color: #b91c1c;">
+                    <strong>Detalles técnicos:</strong><br>
+                    <code style="font-size: 0.75rem;">{{ $exception->getMessage() }}</code>
                 </p>
             @endif
         </div>

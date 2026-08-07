@@ -21,7 +21,7 @@ class EmpleadoResource extends Resource
 {
     protected static ?string $model = Empleado::class;
     
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
     protected static string | UnitEnum | null $navigationGroup = 'Gestión de Usuarios';
 
     public static function form(Schema $schema): Schema

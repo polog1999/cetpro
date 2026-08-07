@@ -16,7 +16,7 @@ class DocumentoResource extends Resource
 {
     protected static ?string $model = Estudiante::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static string | UnitEnum | null $navigationGroup = 'Gestión estudiantil';
 

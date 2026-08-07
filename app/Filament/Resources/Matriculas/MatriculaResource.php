@@ -21,9 +21,9 @@ class MatriculaResource extends Resource
 {
     protected static ?string $model = Matricula::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
-    //protected static string|UnitEnum|null $navigationGroup = 'Gestión de Matrícula';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestión estudiantil';
 
     public static function form(Schema $schema): Schema
     {

@@ -93,7 +93,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     public function esDirectora(): bool
     {
-        return $this->role?->nombre === 'Directora' || (is_null($this->directora_id)  && is_null($this->directora_id));
+        return $this->role?->nombre === 'Directora';
     }
     /**
      * Verificar si el usuario es administrador

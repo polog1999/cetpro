@@ -130,7 +130,8 @@ class HorariosTable
                     )
                     ->searchable(),
             ])
-            ->actions([
+            ->recordActions([
+                
                 ViewAction::make('verAlumnos')
                     ->label('Ver Alumnos')
                     ->icon('heroicon-m-users')
@@ -148,7 +149,9 @@ class HorariosTable
                         // Cargar relaciones necesarias
                         $record->load([
                             'programa.especialidad',
-                            'programa.cursos',
+                            'programa.cursos' => function ($query) {
+            $query->orderBy('fecha_inicio', 'asc');
+        },
                             'docente',
                         ]);
                         

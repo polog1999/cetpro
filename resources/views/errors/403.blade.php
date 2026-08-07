@@ -12,102 +12,115 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f3f4f6; /* Fondo gris claro estilo Filament (gray-100) */
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: #1f2937; /* Texto oscuro principal (gray-800) */
+            padding: 1rem;
         }
         
         .error-container {
-            background: white;
-            border-radius: 20px;
-            padding: 60px 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: #ffffff;
+            border-radius: 0.75rem; /* Bordes redondeados sutiles (rounded-xl) */
+            padding: 3rem 2.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Sombra suave tipo card */
+            border: 1px solid #e5e7eb; /* Borde fino sutil (gray-200) */
             text-align: center;
-            max-width: 500px;
-            margin: 20px;
+            max-width: 32rem;
+            width: 100%;
         }
         
         .error-code {
-            font-size: 100px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #e11d48; /* Rojo profesional adaptado para error/advertencia */
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
         }
         
         .error-title {
-            font-size: 28px;
-            color: #2d3748;
-            margin-bottom: 15px;
+            font-size: 1.25rem;
+            color: #111827; /* (gray-900) */
+            margin-bottom: 0.75rem;
             font-weight: 600;
         }
         
         .error-message {
-            font-size: 16px;
-            color: #718096;
-            margin-bottom: 30px;
-            line-height: 1.6;
+            font-size: 0.95rem;
+            color: #4b5563; /* (gray-600) */
+            margin-bottom: 2rem;
+            line-height: 1.5;
         }
         
         .error-icon {
-            font-size: 60px;
-            margin-bottom: 10px;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 14px 35px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 15px;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-            margin: 5px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
-        }
-        
-        .btn-secondary {
-            background: #718096;
-            box-shadow: 0 4px 15px rgba(113, 128, 150, 0.4);
-        }
-        
-        .btn-secondary:hover {
-            box-shadow: 0 6px 20px rgba(113, 128, 150, 0.6);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
         }
         
         .buttons {
             display: flex;
-            flex-wrap: wrap;
+            gap: 0.75rem;
             justify-content: center;
-            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem; /* (rounded-lg) */
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background-color: #4f46e5; /* Color primario índole/morado profesional tipo Filament */
+            color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        
+        .btn-secondary {
+            background-color: #ffffff;
+            color: #374151; /* (gray-700) */
+            border-color: #d1d5db; /* (gray-300) */
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f9fafb; /* (gray-50) */
+            border-color: #9ca3af;
         }
         
         .info-box {
-            margin-top: 25px;
-            padding: 15px;
-            background: #fff5f5;
-            border-radius: 10px;
-            border-left: 4px solid #f5576c;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f9fafb; /* (gray-50) */
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
             text-align: left;
         }
         
         .info-box p {
-            font-size: 13px;
-            color: #4a5568;
-            margin: 3px 0;
+            font-size: 0.85rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box p:not(:first-child) {
+            font-size: 0.825rem;
+            color: #6b7280; /* (gray-500) */
+            margin-bottom: 0.25rem;
         }
     </style>
 </head>
@@ -117,23 +130,23 @@
         <div class="error-code">403</div>
         <h1 class="error-title">Acceso Denegado</h1>
         <p class="error-message">
-            No tienes permisos para acceder a esta sección.
+            No tienes los permisos necesarios para acceder a esta sección de la plataforma.
         </p>
         
         <div class="buttons">
             @auth
-                <a href="{{ url('/admin') }}" class="btn">Ir al Panel</a>
+                <a href="{{ url('/admin') }}" class="btn btn-primary">Ir al Panel</a>
                 <a href="javascript:history.back()" class="btn btn-secondary">Regresar</a>
             @else
-                <a href="{{ route('filament.admin.auth.login') }}" class="btn">Iniciar Sesión</a>
+                <a href="{{ route('filament.admin.auth.login') }}" class="btn btn-primary">Iniciar Sesión</a>
             @endauth
         </div>
         
         @auth
         <div class="info-box">
-            <p><strong>💡 ¿Por qué veo esto?</strong></p>
-            <p>Tu cuenta no tiene los permisos necesarios para esta página.</p>
-            <p>Contacta al administrador si necesitas acceso.</p>
+            <p><strong>💡 ¿Por qué ves esto?</strong></p>
+            <p>Tu cuenta actual no cuenta con los roles o privilegios asignados para visualizar esta página.</p>
+            <p>Comunícate con el administrador del sistema si requieres acceso.</p>
         </div>
         @endauth
     </div>

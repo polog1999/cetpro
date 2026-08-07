@@ -28,6 +28,8 @@ class Horario extends Model
         'aula',
         'vacantes',
         'activo',
+        'fecha_inicio',
+        'fecha_termino'
     ];
 
     protected $casts = [
@@ -37,6 +39,8 @@ class Horario extends Model
         'activo'      => 'boolean',
         'hora_inicio' => 'datetime:H:i:s',
         'hora_fin'    => 'datetime:H:i:s',
+        'fecha_inicio' => 'date',
+        'fecha_termino' => 'date'
     ];
 
     public function programa()
@@ -50,7 +54,7 @@ class Horario extends Model
     }
 
     public function matriculas(): HasMany
-{
-    return $this->hasMany(Matricula::class, 'horario_id', 'id_horario');
-}
+    {
+        return $this->hasMany(Matricula::class, 'horario_id', 'id_horario');
+    }
 }

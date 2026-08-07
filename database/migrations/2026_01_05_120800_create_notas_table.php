@@ -23,6 +23,7 @@ return new class extends Migration {
             
             $table->unsignedBigInteger('curso_id');
             $table->foreign('curso_id')
+            ->nullable()
                 ->references('id_curso')
                 ->on('cursos')
                 ->cascadeOnDelete();
@@ -46,7 +47,7 @@ return new class extends Migration {
             $table->timestamps();
             
             // Solo una nota por curso por matrícula
-            $table->unique(['matricula_id', 'curso_id'], 'notas_matricula_curso_unique');
+            // $table->unique(['matricula_id', 'curso_id', 'unidad_id'], 'notas_matricula_curso_unique');
             
             // Índices para búsquedas frecuentes
             $table->index('curso_id');
