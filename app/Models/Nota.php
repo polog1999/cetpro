@@ -53,7 +53,7 @@ class Nota extends Model
 
     public function unidad(): BelongsTo
     {
-        return $this->belongsTo(Unidad::class, 'unidad_id', 'id_unidad');
+        return $this->belongsTo(UnidadDidacticaUgel::class, 'unidad_id', 'id');
     }
 
     /**
