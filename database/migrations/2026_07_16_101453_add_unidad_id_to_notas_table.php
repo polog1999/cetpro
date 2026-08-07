@@ -12,8 +12,8 @@ return new class extends Migration
             // Añadimos el campo unidad_id apuntando a la tabla unidades (id_unidad)
             $table->foreignId('unidad_id')
                 ->nullable()
-                ->constrained('unidades', 'id_unidad')
-                ->onDelete('cascade');
+                ->constrained('unidades_didacticas_ugel', 'id')
+                ->onDelete('restrict');
         });
     }
 

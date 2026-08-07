@@ -175,7 +175,7 @@ class ReporteActaController extends Controller
 
                         // // Si la unidad es null, buscamos es_efsrt en curso
                         // if (is_null($notaModel->unidad_id) && $notaModel->curso) {
-                        $esEfsrt = (bool) $notaModel->es_efsrt;
+                        $esEfsrt = (bool) $notaModel->unidad->es_efsrt;
                         // }
                         // // Sino, si la unidad tiene un valor no null, buscamos en unidad
                         // elseif (!is_null($notaModel->unidad_id) && $notaModel->unidad) {
@@ -215,11 +215,12 @@ class ReporteActaController extends Controller
             // ==========================================
             if ($efsrt && !empty($idsMatriculasDelAlumno)) {
                 $queryEfsrt = Nota::whereIn('matricula_id', $idsMatriculasDelAlumno);
-                if ($esFormacionContinua) {
-                    $queryEfsrt->where('curso_id', $efsrt->id_curso);
-                } else {
-                    $queryEfsrt->where('unidad_id', $efsrt->id_unidad);
-                }
+                // if ($esFormacionContinua) {
+                //     $queryEfsrt->where('curso_id', $efsrt->id_curso);
+                // } else {
+                //     $queryEfsrt->where('unidad_id', $efsrt->id_unidad);
+                // }
+                  $queryEfsrt->where('unidad_id', $efsrt->id);
                 $notaEfsrtModel = $queryEfsrt->first();
                 if ($notaEfsrtModel && $notaEfsrtModel->nota_numerica !== null) {
                     $notaEfsrtVal = str_pad((int) $notaEfsrtModel->nota_numerica, 2, '0', STR_PAD_LEFT);
@@ -228,7 +229,7 @@ class ReporteActaController extends Controller
 
             // Inyectamos en las dos variantes de marcadores por si acaso tu Word usa con o sin guion bajo
             $templateProcessor->setValue("nota_efsrt{$i}", $notaEfsrtVal);
-            $templateProcessor->setValue("nota_efsrt_{$i}", $notaEfsrtVal);
+            // $templateProcessor->setValue("nota_efsrt_{$i}", $notaEfsrtVal);
             // Calcular el promedio numérico como un entero para las condiciones
             $promedioNum = $conNota > 0 ? (int) round($suma / $conNota) : null;
             $promedioFormateado = $promedioNum !== null ? str_pad($promedioNum, 2, '0', STR_PAD_LEFT) : '';
