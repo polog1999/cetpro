@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoMatricula;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,4 +58,22 @@ class Horario extends Model
     {
         return $this->hasMany(Matricula::class, 'horario_id', 'id_horario');
     }
+    public function getInscritosCount(): int
+{
+    $anio = now()->year; // O el año que necesites evaluar
+
+    return $this->matriculas()
+        ->where('id', '!=', 42)
+     
+        // ->whereHas('cronograma.pagos', function ($q) {
+        //     $q->where('estado', 'Cancelado');
+        // })
+        ->where('codigo_inscripcion', 'like', $anio . '%')
+        ->whereIn('estado', [
+            EstadoMatricula::ENPROCESO->value,
+            EstadoMatricula::CULMINADO->value
+        ])
+        ->distinct('estudiante_id')
+        ->count();
+}
 }

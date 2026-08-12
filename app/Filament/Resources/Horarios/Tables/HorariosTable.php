@@ -52,10 +52,10 @@ class HorariosTable
                 TextColumn::make('turno')
                     ->label('Turno')
                     ->badge()
-                    ->formatStateUsing(fn (?Turno $state) => $state?->getLabel())
-                    ->color(fn (?Turno $state) => 'primary'),
+                    ->formatStateUsing(fn(?Turno $state) => $state?->getLabel())
+                    ->color(fn(?Turno $state) => 'primary'),
 
-                
+
                 TextColumn::make('dias')
                     ->label('Días')
                     ->formatStateUsing(function ($state) {
@@ -75,18 +75,17 @@ class HorariosTable
                     })
                     ->sortable(),
 
-                TextColumn::make('matriculas_count')
+                TextColumn::make('inscritos_count')
                     ->label('Inscritos')
-                    ->counts('matriculas')
+                    ->getStateUsing(fn($record) => $record->getInscritosCount())
                     ->badge()
-                    ->color('success')
-                    ->sortable(),
+                    ->color('success'),
 
                 TextColumn::make('modalidad')
                     ->label('Modalidad')
                     ->badge()
-                    ->formatStateUsing(fn (?Modalidad $state) => $state?->getLabel())
-                    ->color(fn (?Modalidad $state) => $state?->getColor()),
+                    ->formatStateUsing(fn(?Modalidad $state) => $state?->getLabel())
+                    ->color(fn(?Modalidad $state) => $state?->getColor()),
 
                 TextColumn::make('aula')
                     ->label('Aula')
@@ -113,7 +112,7 @@ class HorariosTable
 
                 SelectFilter::make('id_docente')
                     ->label('Docente')
-                    ->options(fn () => Docente::all()->pluck('nombre_completo', 'id'))
+                    ->options(fn() => Docente::all()->pluck('nombre_completo', 'id'))
                     ->searchable()
                     ->preload(),
 
@@ -123,22 +122,23 @@ class HorariosTable
 
                 SelectFilter::make('aula')
                     ->label('Aula')
-                    ->options(fn () => Horario::whereNotNull('aula')
-                        ->distinct()
-                        ->pluck('aula', 'aula')
-                        ->toArray()
+                    ->options(
+                        fn() => Horario::whereNotNull('aula')
+                            ->distinct()
+                            ->pluck('aula', 'aula')
+                            ->toArray()
                     )
                     ->searchable(),
             ])
             ->recordActions([
-                
+
                 ViewAction::make('verAlumnos')
                     ->label('Ver Alumnos')
                     ->icon('heroicon-m-users')
                     ->button()
                     ->color('info')
-                    ->url(fn (Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
-                
+                    ->url(fn(Horario $record): string => HorarioResource::getUrl('ver-alumnos', ['record' => $record])),
+
                 Action::make('visualizar_pdf')
                     ->label('')
                     ->tooltip('Visualizar PDF')
@@ -150,19 +150,19 @@ class HorariosTable
                         $record->load([
                             'programa.especialidad',
                             'programa.cursos' => function ($query) {
-            $query->orderBy('fecha_inicio', 'asc');
-        },
+                                $query->orderBy('fecha_inicio', 'asc');
+                            },
                             'docente',
                         ]);
-                        
+
                         // Generar PDF
                         $pdf = Pdf::loadView('pdf.horario-pdf', [
                             'horario' => $record,
                         ]);
-                        
+
                         // Convertir PDF a base64 para mostrarlo en iframe
                         $pdfBase64 = base64_encode($pdf->output());
-                        
+
                         return view('components.pdf-preview', [
                             'pdfBase64' => $pdfBase64,
                         ]);
@@ -182,15 +182,15 @@ class HorariosTable
                                         'programa.cursos',
                                         'docente',
                                     ]);
-                                    
+
                                     // Generar PDF
                                     $pdf = Pdf::loadView('pdf.horario-pdf', [
                                         'horario' => $record,
                                     ]);
-                                    
+
                                     // Nombre del archivo
                                     $filename = 'horario-' . $record->id_horario . '.pdf';
-                                    
+
                                     // Retornar PDF como descarga
                                     return response()->streamDownload(function () use ($pdf) {
                                         echo $pdf->output();
@@ -201,8 +201,9 @@ class HorariosTable
                     ->modalWidth('7xl'),
                 DeleteAction::make()
                     ->label('')
-                    ->visible(fn () => !auth()->user()?->esProfesor())
-                    ->before(fn (DeleteAction $action, $record) => 
+                    ->visible(fn() => !auth()->user()?->esProfesor())
+                    ->before(
+                        fn(DeleteAction $action, $record) =>
                         self::preventDeleteWithDependencies(
                             $action,
                             $record,
@@ -214,8 +215,9 @@ class HorariosTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn () => !auth()->user()?->esProfesor())
-                        ->before(fn (DeleteBulkAction $action, $records) => 
+                        ->visible(fn() => !auth()->user()?->esProfesor())
+                        ->before(
+                            fn(DeleteBulkAction $action, $records) =>
                             self::preventBulkDeleteWithDependencies(
                                 $action,
                                 $records,
@@ -229,12 +231,12 @@ class HorariosTable
             ->modifyQueryUsing(function (Builder $query) {
                 /** @var Usuario|null $user */
                 $user = Auth::user();
-                
+
                 // Si es profesor, mostrar solo sus horarios
                 if ($user instanceof Usuario && $user->esProfesor() && $user->docente_id) {
                     $query->where('id_docente', $user->docente_id);
                 }
-                
+
                 return $query;
             });
     }
