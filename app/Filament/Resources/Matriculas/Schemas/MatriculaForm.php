@@ -1005,7 +1005,7 @@ class MatriculaForm
                 \Filament\Schemas\Components\Group::make([
                     Toggle::make('generar_pago')
                         ->label('¿Generar Cronograma y Pagos?')
-                        ->helperText('Desactive esta opción si a este estudiante no se le debe generar ningún código de pago ni cuotas de pago.')
+                        ->helperText('Active esta opción si a este estudiante se le debe generar código de pago y cuotas de pago.')
                         ->default(false)
                         ->dehydrateStateUsing(function ($state, Get $get) {
                              Log::info('Generar pago: '.$state);
