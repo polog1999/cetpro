@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CondicionPago;
 use App\Models\Horario;
 use App\Models\Matricula;
 use App\Enums\EstadoMatricula;
@@ -58,6 +59,7 @@ class ReporteNominaController extends Controller
             $est = $mat->estudiante;
             $generoLabel = $est->genero instanceof TipoGenero ? $est->genero->value : $est->genero;
             $letraSexo = ($generoLabel === TipoGenero::MASCULINO->value) ? 'H' : 'M';
+            $condicion = $mat->condicion_pago === CondicionPago::NORMAL ? 'P' : ($mat->condicion_pago === CondicionPago::BECADO ? 'G' : ($mat->condicion_pago === CondicionPago::INABIF ? 'B' : ''));
 
             if ($letraSexo === 'H') $totalHombres++;
             else $totalMujeres++;
@@ -67,7 +69,7 @@ class ReporteNominaController extends Controller
                 'apellidos_nombres' => Str::upper("{$est->apellido_paterno} {$est->apellido_materno}, ") . trim(Str::title(Str::lower($est->nombres))),
                 'sexo' => $letraSexo,
                 'edad' => $est->fecha_nacimiento ? \Carbon\Carbon::parse($est->fecha_nacimiento)->age : '-',
-                'condicion' => 'P'
+                'condicion' => $condicion
             ];
         });
 

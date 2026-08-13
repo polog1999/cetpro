@@ -52,6 +52,15 @@ class CreateMatricula extends CreateRecord
         }
         
         try {
+            // 👉 AGREGAR ESTO: Si la condición es becado, forzamos generar_pago en false
+            if (isset($data['condicion_pago'])) {
+                $condicion = is_object($data['condicion_pago']) ? $data['condicion_pago']->value : (string) $data['condicion_pago'];
+                
+                if ($condicion === 'becado') {
+                    $data['generar_pago'] = false;
+                }
+            }
+
             // 2. Crear la matrícula usando el modelo nativo
             return static::getModel()::create($data);
         } catch (\Exception $e) {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CondicionPago;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -17,6 +18,7 @@ use App\Models\Cronograma;
 use App\Enums\EstadoMatricula;
 use App\Enums\TipoMatricula;
 use App\Enums\TipoCertificado;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 
 class Matricula extends Model
@@ -47,6 +49,9 @@ class Matricula extends Model
         'tipo_certificado',
         'cobrar_mes_actual', // 👈 Añadir aquí temporalmente
         'num_cuotas_personalizado', // 👈 Añadir aquí
+        'condicion_pago', // 👈 Asegúrate de que estén aquí
+        'generar_pago',   // 👈 Asegúrate de que estén aquí
+
 
     ];
 
@@ -54,6 +59,8 @@ class Matricula extends Model
         'estado'           => EstadoMatricula::class,
         'tipo_matricula'   => TipoMatricula::class,
         'tipo_certificado' => TipoCertificado::class,
+         'condicion_pago'   => CondicionPago::class, // 👈 Opcional pero recomendado
+        'generar_pago'     => 'boolean',            // 👈 Opcional pero recomendado
     ];
 
     public function estudiante(): BelongsTo
@@ -644,8 +651,10 @@ class Matricula extends Model
         // DESPUÉS de guardar: generar cronograma
         static::created(function (Matricula $matricula) {
             // No generar cronograma si es importación de alumno antiguo
-            if ($matricula->skipCronogramaGeneration) {
+            if ($matricula->skipCronogramaGeneration || $matricula->generar_pago === false) {
+                // Notification::make()->title('No se generaron codigo de pagos.')->send();
                 return;
+                
             }
             $matricula->generarCronograma();
         });
@@ -804,7 +813,8 @@ class Matricula extends Model
         return $cronograma;
     }
 
-    public function cambiarHorario(int $horario_id) {
+    public function cambiarHorario(int $horario_id)
+    {
         $this->update([
             'horario_id' => $horario_id
         ]);
