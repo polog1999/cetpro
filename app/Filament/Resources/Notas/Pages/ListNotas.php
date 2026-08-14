@@ -82,7 +82,8 @@ class ListNotas extends Page implements HasForms
     {
         if (!$this->tipo_programa) return collect();
 
-        $query = Programa::query();
+        $query = Programa::query()
+        ->where('activo', true);
         if (class_exists(TipoPrograma::class)) {
             $enumValue = $this->tipo_programa;
             $query->where('tipo_programa', $enumValue);
