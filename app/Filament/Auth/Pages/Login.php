@@ -14,25 +14,25 @@ use MarcoGermani87\FilamentCaptcha\Forms\Components\CaptchaField;
 class Login extends BaseLogin
 {
 
-     public function form(Schema $schema): Schema
-{
-    return parent::form($schema)
-        ->components([
-            $this->getEmailFormComponent(),
-            $this->getPasswordFormComponent(),
-            $this->getRememberFormComponent(),
+    public function form(Schema $schema): Schema
+    {
+        return parent::form($schema)
+            ->components([
+                $this->getEmailFormComponent(),
+                $this->getPasswordFormComponent(),
+                $this->getRememberFormComponent(),
 
-            CaptchaField::make('captcha')
-    ->label('Verificación de seguridad')
-    ->extraAttributes([
-        'class' => 'w-full'
-    ])
-        ]);
-}
+                CaptchaField::make('captcha')
+                    ->label('Verificación de seguridad')
+                    ->extraAttributes([
+                        'class' => 'w-full'
+                    ])
+            ]);
+    }
    
 
     // Trait HasCustomLayout removido
-    
+
     /**
      * Texto de bienvenida profesional
      */
@@ -45,7 +45,15 @@ class Login extends BaseLogin
             </div>
         ');
     }
-    
+    protected function getPasswordFormComponent(): TextInput
+    {
+        return TextInput::make('password')
+            ->label('Contraseña')
+            ->password()
+            ->revealable()
+            ->required()
+            ->autocomplete('current-password');
+    }
     protected function getEmailFormComponent(): TextInput
     {
         return TextInput::make('usuario')
@@ -93,7 +101,7 @@ class Login extends BaseLogin
         }
 
         session()->regenerate();
-        
+
         // Si es alumno (estudiante), redirigir al portal en lugar del admin
         if ($user->esAlumno()) {
             return new class implements \Filament\Auth\Http\Responses\Contracts\LoginResponse {
@@ -106,6 +114,4 @@ class Login extends BaseLogin
 
         return app(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class);
     }
-
-    
 }
