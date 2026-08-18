@@ -1,0 +1,123 @@
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:wsp1_2="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsp="http://www.w3.org/ns/ws-policy" xmlns:tns="http://ws.reniec.gob.pe/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" targetNamespace="http://ws.reniec.gob.pe/">
+   <wsdl:types>
+      <xsd:schema xmlns:ns0="http://ws.reniec.gob.pe/" xmlns:ns8="http://ws.reniec.gob.pe/" xmlns:ns7="http://ws.reniec.gob.pe/" xmlns:ns9="http://ws.reniec.gob.pe/" xmlns:ns10="http://ws.reniec.gob.pe/" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://ws.reniec.gob.pe/">
+         <xsd:complexType name="peticionActualizarCredencial">
+            <xsd:sequence>
+               <xsd:element minOccurs="0" name="credencialAnterior" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="credencialNueva" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="nuDni" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="nuRuc" type="xsd:string"/>
+            </xsd:sequence>
+         </xsd:complexType>
+         <xsd:complexType name="peticionConsulta">
+            <xsd:sequence>
+               <xsd:element minOccurs="0" name="nuDniConsulta" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="nuDniUsuario" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="nuRucUsuario" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="password" type="xsd:string"/>
+            </xsd:sequence>
+         </xsd:complexType>
+         <xsd:complexType name="resultadoActualizacionCredencial">
+            <xsd:sequence>
+               <xsd:element minOccurs="0" name="coResultado" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="deResultado" type="xsd:string"/>
+            </xsd:sequence>
+         </xsd:complexType>
+         <xsd:complexType name="resultadoConsulta">
+            <xsd:sequence>
+               <xsd:element minOccurs="0" name="coResultado" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="datosPersona" type="ns0:datosPersona"/>
+               <xsd:element minOccurs="0" name="deResultado" type="xsd:string"/>
+            </xsd:sequence>
+         </xsd:complexType>
+         <xsd:complexType name="datosPersona">
+            <xsd:sequence>
+               <xsd:element minOccurs="0" name="apPrimer" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="apSegundo" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="direccion" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="estadoCivil" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="foto" type="xsd:base64Binary"/>
+               <xsd:element minOccurs="0" name="prenombres" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="restriccion" type="xsd:string"/>
+               <xsd:element minOccurs="0" name="ubigeo" type="xsd:string"/>
+            </xsd:sequence>
+         </xsd:complexType>
+         <xsd:element name="consultar">
+            <xsd:complexType>
+               <xsd:sequence>
+                  <xsd:element form="unqualified" name="arg0" nillable="true" type="ns0:peticionConsulta"/>
+               </xsd:sequence>
+            </xsd:complexType>
+         </xsd:element>
+         <xsd:element name="actualizarcredencial">
+            <xsd:complexType>
+               <xsd:sequence>
+                  <xsd:element form="unqualified" name="arg0" nillable="true" type="ns0:peticionActualizarCredencial"/>
+               </xsd:sequence>
+            </xsd:complexType>
+         </xsd:element>
+         <xsd:element name="consultarResponse">
+            <xsd:complexType>
+               <xsd:sequence>
+                  <xsd:element form="unqualified" name="return" nillable="true" type="ns0:resultadoConsulta"/>
+               </xsd:sequence>
+            </xsd:complexType>
+         </xsd:element>
+         <xsd:element name="actualizarcredencialResponse">
+            <xsd:complexType>
+               <xsd:sequence>
+                  <xsd:element form="unqualified" name="return" nillable="true" type="ns0:resultadoActualizacionCredencial"/>
+               </xsd:sequence>
+            </xsd:complexType>
+         </xsd:element>
+      </xsd:schema>
+   </wsdl:types>
+   <wsdl:message name="actualizarcredencial">
+      <wsdl:part name="parameters" element="tns:actualizarcredencial"/>
+   </wsdl:message>
+   <wsdl:message name="actualizarcredencialResponse">
+      <wsdl:part name="parameters" element="tns:actualizarcredencialResponse"/>
+   </wsdl:message>
+   <wsdl:message name="consultar">
+      <wsdl:part name="parameters" element="tns:consultar"/>
+   </wsdl:message>
+   <wsdl:message name="consultarResponse">
+      <wsdl:part name="parameters" element="tns:consultarResponse"/>
+   </wsdl:message>
+   <wsdl:portType name="RENIECCDniPortType">
+      <wsdl:operation name="actualizarcredencial">
+         <wsdl:input message="tns:actualizarcredencial" wsaw:Action="actualizarcredencial"/>
+         <wsdl:output message="tns:actualizarcredencialResponse" wsaw:Action="http://ws.reniec.gob.pe/ConsultaPide/actualizarcredencialResponse"/>
+      </wsdl:operation>
+      <wsdl:operation name="consultar">
+         <wsdl:input message="tns:consultar" wsaw:Action="consultar"/>
+         <wsdl:output message="tns:consultarResponse" wsaw:Action="http://ws.reniec.gob.pe/ConsultaPide/consultarResponse"/>
+      </wsdl:operation>
+   </wsdl:portType>
+   <wsdl:binding name="RENIECCDniSoap11Binding" type="tns:RENIECCDniPortType">
+      <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+      <wsdl:operation name="actualizarcredencial">
+         <soap:operation soapAction="actualizarcredencial" style="document"/>
+         <wsdl:input>
+            <soap:body use="literal"/>
+         </wsdl:input>
+         <wsdl:output>
+            <soap:body use="literal"/>
+         </wsdl:output>
+      </wsdl:operation>
+      <wsdl:operation name="consultar">
+         <soap:operation soapAction="consultar" style="document"/>
+         <wsdl:input>
+            <soap:body use="literal"/>
+         </wsdl:input>
+         <wsdl:output>
+            <soap:body use="literal"/>
+         </wsdl:output>
+      </wsdl:operation>
+   </wsdl:binding>
+   <wsdl:service name="RENIECCDni">
+      <wsdl:port name="RENIECCDniHttpsSoap11Endpoint" binding="tns:RENIECCDniSoap11Binding">
+         <soap:address location="https://ws2.pide.gob.pe/services/RENIECCDni.RENIECCDniHttpsSoap11Endpoint"/>
+      </wsdl:port>
+   </wsdl:service>
+</wsdl:definitions>

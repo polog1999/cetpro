@@ -8,6 +8,7 @@ use App\Http\Controllers\EvidenciaPagoController;
 use App\Http\Controllers\ReporteActaController;
 use App\Http\Controllers\ReporteNominaController;
 use App\Http\Controllers\StudentPortalController;
+use App\Services\PideService;
 
 // Rutas seguras para evidencias de pago (con control de acceso)
 Route::middleware(['web', 'auth'])->group(function () {
@@ -55,7 +56,8 @@ Route::get('/', function () {
     return redirect('/admin');
 });
 
-
+// Route::get('apiperu/{dni}',[PideService::class,'apiPeruDni']);
+// Route::get('apiperu/{dni}',[PideService::class,'apiPeruDni']);
 // Redirección para el middleware auth si intenta ir a 'login'
 Route::get('/login', function () {
     return redirect()->route('filament.admin.auth.login');
