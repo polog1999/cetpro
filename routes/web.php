@@ -51,6 +51,10 @@ Route::get('/reportes/nomina/{horario_id}/{anio}/{curso_id}', [ReporteNominaCont
     Route::get('/reportes/acta/{horario_id}/{anio}/{curso_id}', [ReporteActaController::class, 'stream'])
     ->name('reportes.acta.stream')
     ->middleware(['web', 'auth']);
+
+Route::get('/reportes/censo/{anio}', [\App\Http\Controllers\ReporteCensoController::class, 'descargar'])
+    ->name('reportes.censo.descargar')
+    ->middleware(['web', 'auth']);
 // Ruta raíz
 Route::get('/', function () {
     return redirect('/admin');

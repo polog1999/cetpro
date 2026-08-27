@@ -21,6 +21,7 @@
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
         "marcogermani87/filament-captcha": "^2.2",
+        "phpoffice/phpspreadsheet": "^1.30",
         "phpoffice/phpword": "^1.4"
     },
     "require-dev": {
