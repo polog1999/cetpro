@@ -100,6 +100,7 @@ class MatriculasTable
             ->filters([
                   // 👉 NUEVO FILTRO: AÑO DE MATRÍCULA
                 SelectFilter::make('anio_matricula')
+                ->default(now()->year)
                     ->label('Año de Matrícula')
                     ->options(function () {
                         // Extraemos los años únicos de la columna created_at
