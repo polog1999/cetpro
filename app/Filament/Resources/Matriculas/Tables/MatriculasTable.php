@@ -98,6 +98,54 @@ class MatriculasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                  // 👉 NUEVO FILTRO: AÑO DE MATRÍCULA
+                SelectFilter::make('anio_matricula')
+                    ->label('Año de Matrícula')
+                    ->options(function () {
+                        // Extraemos los años únicos de la columna created_at
+                        $anios = Matricula::selectRaw('EXTRACT(YEAR FROM created_at) as anio')
+                            ->distinct()
+                            ->orderBy('anio', 'desc')
+                            ->pluck('anio', 'anio')
+                            ->toArray();
+                        
+                        // Si está vacío, por lo menos mostramos el año actual
+                        if (empty($anios)) {
+                            $anios[date('Y')] = date('Y');
+                        }
+                        
+                        return $anios;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!empty($data['value'])) {
+                            return $query->whereYear('created_at', $data['value']);
+                        }
+                        return $query;
+                    }),
+
+                // 👉 NUEVO FILTRO: MES DE MATRÍCULA
+                SelectFilter::make('mes_matricula')
+                    ->label('Mes de Matrícula')
+                    ->options([
+                        '1' => 'Enero',
+                        '2' => 'Febrero',
+                        '3' => 'Marzo',
+                        '4' => 'Abril',
+                        '5' => 'Mayo',
+                        '6' => 'Junio',
+                        '7' => 'Julio',
+                        '8' => 'Agosto',
+                        '9' => 'Septiembre',
+                        '10' => 'Octubre',
+                        '11' => 'Noviembre',
+                        '12' => 'Diciembre',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!empty($data['value'])) {
+                            return $query->whereMonth('created_at', $data['value']);
+                        }
+                        return $query;
+                    }),
                 // Filtro por Nombre de Estudiante
                 Filter::make('estudiante')
                     ->form([
